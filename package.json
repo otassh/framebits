@@ -1,0 +1,30 @@
+{
+  "name": "algorithco-ui-monorepo",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.29.3",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "build:registry": "pnpm --filter @algorithco-ui/builder build:registry",
+    "new-component": "tsx scripts/new-component.ts",
+    "db:sync": "pnpm --filter @algorithco-ui/db db:sync",
+    "db:migrate": "pnpm --filter @algorithco-ui/db db:migrate",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.14.0",
+    "eslint": "^9.14.0",
+    "prettier": "^3.3.3",
+    "turbo": "^2.5.4",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.14.0",
+    "vitest": "^3.2.4"
+  }
+}
