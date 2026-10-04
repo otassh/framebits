@@ -29,6 +29,9 @@ pnpm test
 
 Node >= 22, pnpm only.
 
+> Windows note: deploy scripts are bash/POSIX. Develop inside WSL2 or Git Bash
+> so shell scripts keep LF line endings (enforced by `.gitattributes`).
+
 ## Architecture
 
 ```mermaid
@@ -48,4 +51,5 @@ Reading components (CLI/website) never hits the API or DB — served as static f
 - `CONTRIBUTING.md` — how to add a component (see Task 6+; generator: `pnpm new-component <slug> --category=<cat>`)
 - `deploy/README.md` — VPS setup, hardening, backup/restore
 
-<!-- TODO(question): confirm production DOMAIN (currently algorithco.dev placeholder) and CLI default registry URL. -->
+<!-- TODO(question): confirm production DOMAIN (currently algorithco.dev placeholder, defined once in packages/shared/src/site.ts) and CLI default registry URL. -->
+<!-- TODO(question): choose a license before public launch (repo is private until then; no LICENSE file yet). -->
