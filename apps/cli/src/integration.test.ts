@@ -233,7 +233,7 @@ const NO_ALIAS: Record<string, string> = {
 beforeAll(async () => {
   previousCwd = process.cwd();
   outDir = await mkdtemp(join(tmpdir(), "cli-registry-"));
-  const { loadRegistry } = await import("@algorithco-ui/builder");
+  const { loadRegistry } = await import("@framebits/builder");
   const { buildTree } = await import("../../../packages/builder/src/registry/emit.js");
   const loaded = await loadRegistry({ registryRoot: registrySource, skipTypecheck: true });
   if (loaded.diagnostics.some((d) => d.severity === "error")) {
@@ -462,7 +462,7 @@ describe("cli integration (real builder output)", () => {
     const dir = await makeProject(NEXT_APP_SRC);
     try {
       await initProject(dir, baseUrl);
-      const config = JSON.parse(await readFile(join(dir, "algorithco-ui.json"), "utf8")) as {
+      const config = JSON.parse(await readFile(join(dir, "framebits.json"), "utf8")) as {
         framework: string;
         aliases: Record<string, string>;
       };
@@ -477,7 +477,7 @@ describe("cli integration (real builder output)", () => {
     const noSrc = await makeProject(NEXT_NO_SRC);
     try {
       await initProject(noSrc, baseUrl);
-      const config = JSON.parse(await readFile(join(noSrc, "algorithco-ui.json"), "utf8")) as {
+      const config = JSON.parse(await readFile(join(noSrc, "framebits.json"), "utf8")) as {
         framework: string;
       };
       expect(config.framework).toBe("next");
@@ -487,7 +487,7 @@ describe("cli integration (real builder output)", () => {
     const vite = await makeProject(VITE_REFS);
     try {
       await initProject(vite, baseUrl);
-      const config = JSON.parse(await readFile(join(vite, "algorithco-ui.json"), "utf8")) as {
+      const config = JSON.parse(await readFile(join(vite, "framebits.json"), "utf8")) as {
         framework: string;
       };
       expect(config.framework).toBe("vite");
@@ -500,7 +500,7 @@ describe("cli integration (real builder output)", () => {
     const dir = await makeProject(TAILWIND_V4);
     try {
       await initProject(dir, baseUrl);
-      const config = JSON.parse(await readFile(join(dir, "algorithco-ui.json"), "utf8")) as {
+      const config = JSON.parse(await readFile(join(dir, "framebits.json"), "utf8")) as {
         tailwind: { version: number };
       };
       expect(config.tailwind.version).toBe(4);
@@ -600,7 +600,7 @@ describe("cli integration (real builder output)", () => {
       expect(aurora).toContain("AuroraText");
       const cn = await readFile(join(dir, "src", "lib", "cn.ts"), "utf8");
       expect(cn).toContain("cn");
-      const config = JSON.parse(await readFile(join(dir, "algorithco-ui.json"), "utf8")) as {
+      const config = JSON.parse(await readFile(join(dir, "framebits.json"), "utf8")) as {
         installed: Record<string, { version: string }>;
       };
       expect(config.installed["aurora-text"]?.version).toBeDefined();
@@ -688,7 +688,7 @@ describe("cli integration (real builder output)", () => {
     const dir = await makeProject(CUSTOM_ALIAS);
     try {
       await initProject(dir, baseUrl);
-      const config = JSON.parse(await readFile(join(dir, "algorithco-ui.json"), "utf8")) as {
+      const config = JSON.parse(await readFile(join(dir, "framebits.json"), "utf8")) as {
         aliases: { lib: string };
       };
       expect(config.aliases.lib).toBe("~/lib");
@@ -731,11 +731,11 @@ describe("cli integration (real builder output)", () => {
       const result = await runAddIn(dir, ["shimmer-button"]);
       expect(result.code).toBe(0);
       const css = await readFile(join(dir, "src", "app", "globals.css"), "utf8");
-      expect(css).toContain("/* algorithco-ui:begin shimmer-button */");
+      expect(css).toContain("/* framebits:begin shimmer-button */");
       expect(css).toContain("@theme {");
       expect(css).toContain("--animate-shimmer: shimmer 2s linear infinite;");
       expect(css).toContain("@keyframes shimmer {");
-      expect(css).toContain("/* algorithco-ui:end shimmer-button */");
+      expect(css).toContain("/* framebits:end shimmer-button */");
       expect(result.installs).toEqual(["pnpm add clsx@^2.0.0 tailwind-merge@^3.0.0"]);
     } finally {
       await rm(dir, { recursive: true, force: true });
@@ -783,7 +783,7 @@ describe("cli integration (real builder output)", () => {
       expect(result.code).toBe(0);
       const out = result.output.out.join("");
       expect(out).toContain("Manual steps:");
-      expect(out).toContain("algorithco-ui:begin shimmer-button");
+      expect(out).toContain("framebits:begin shimmer-button");
       expect(out).toContain("@keyframes shimmer");
       expect(result.installs.length).toBeGreaterThan(0);
     } finally {
@@ -812,7 +812,7 @@ describe("cli integration (real builder output)", () => {
       expect(result.installs).toEqual([]);
       expect(result.output.out.join("")).toContain("pnpm add clsx@^2.0.0 motion@^14.0.0 tailwind-merge@^3.0.0");
       const css = await readFile(join(dir, "src", "app", "globals.css"), "utf8");
-      expect(css).not.toContain("algorithco-ui:begin");
+      expect(css).not.toContain("framebits:begin");
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -826,7 +826,7 @@ describe("cli integration (real builder output)", () => {
       const result = await runAddIn(dir, ["shimmer-button"], { noStyles: true });
       expect(result.code).toBe(0);
       expect(await readFile(join(dir, "src", "app", "globals.css"), "utf8")).toBe(before);
-      expect(result.output.out.join("")).toContain("algorithco-ui:begin shimmer-button");
+      expect(result.output.out.join("")).toContain("framebits:begin shimmer-button");
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -842,7 +842,7 @@ describe("cli integration (real builder output)", () => {
       const out = result.output.out.join("");
       expect(out).toContain("patch-css");
       expect(out).toContain("pnpm add clsx@^2.0.0 tailwind-merge@^3.0.0");
-      expect(out).toContain("algorithco-ui:begin shimmer-button");
+      expect(out).toContain("framebits:begin shimmer-button");
       expect(result.installs).toEqual([]);
       expect(snapshotsEqual(before, await snapshotDir(dir))).toBe(true);
     } finally {
@@ -893,13 +893,13 @@ describe("cli integration (real builder output)", () => {
     const dir = await makeProject(NEXT_APP_SRC);
     try {
       await initProject(dir, baseUrl);
-      const configBefore = await readFile(join(dir, "algorithco-ui.json"), "utf8");
+      const configBefore = await readFile(join(dir, "framebits.json"), "utf8");
       const cssBefore = await readFile(join(dir, "src", "app", "globals.css"), "utf8");
       const state: FakeInstallerState = { calls: [], failNext: true };
       const result = await runAddIn(dir, ["shimmer-button"], { installerState: state });
       expect(result.code).toBe(1);
       expect(result.error).toContain("fake install boom");
-      expect(await readFile(join(dir, "algorithco-ui.json"), "utf8")).toBe(configBefore);
+      expect(await readFile(join(dir, "framebits.json"), "utf8")).toBe(configBefore);
       expect(await readFile(join(dir, "src", "app", "globals.css"), "utf8")).toBe(cssBefore);
       const pkg = JSON.parse(await readFile(join(dir, "package.json"), "utf8")) as Record<string, unknown>;
       expect("clsx" in ((pkg["dependencies"] ?? {}) as Record<string, unknown>)).toBe(false);

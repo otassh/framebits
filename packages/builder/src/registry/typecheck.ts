@@ -1,9 +1,9 @@
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { satisfiesSemverRange } from "@algorithco-ui/shared";
+import { satisfiesSemverRange } from "@framebits/shared";
 import ts from "typescript";
-import type { Meta } from "@algorithco-ui/shared";
+import type { Meta } from "@framebits/shared";
 import type { Diagnostic } from "./types.js";
 
 /**

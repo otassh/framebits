@@ -1,7 +1,7 @@
 /**
  * Plan-then-apply: build the COMPLETE plan before writing anything (C11, E2).
  */
-import type { RegistryItem } from "@algorithco-ui/shared";
+import type { RegistryItem } from "@framebits/shared";
 import { integrityError } from "../errors.js";
 import { rewriteImports, type AliasPrefixes } from "../rewrite/index.js";
 import { detectCollision, scanMarkers } from "../styles/patch.js";

@@ -3,7 +3,7 @@ import {
   MetaSchema,
   type ComponentStyles,
   type Meta,
-} from "@algorithco-ui/shared";
+} from "@framebits/shared";
 import type { DiscoveredFile, DiscoveredItem } from "./discover.js";
 import type { Diagnostic } from "./types.js";
 function err(diagnostics: Diagnostic[], diagnostic: Diagnostic): void {

@@ -1,1 +1,1 @@
-export const DB_PACKAGE_NAME = "@algorithco-ui/db";
+export const DB_PACKAGE_NAME = "@framebits/db";

@@ -2,10 +2,10 @@
  * CLI config load/write (C7). Validated with CliConfigSchema, 2-space indent,
  * LF, trailing newline, atomic temp+rename.
  */
-import { CliConfigSchema, type CliConfig } from "@algorithco-ui/shared";
+import { CliConfigSchema, type CliConfig } from "@framebits/shared";
 import { configError } from "../errors.js";
 
-export const CONFIG_FILE_NAME = "algorithco-ui.json";
+export const CONFIG_FILE_NAME = "framebits.json";
 
 export interface ConfigFs {
   readFile(path: string): Promise<string | undefined>;
@@ -88,7 +88,7 @@ export function mergeInitConfig(
   const registry = options.registryFlag ?? existing?.registry ?? detected.registry;
   if (existing === undefined) {
     return {
-      $schema: "https://algorithco.dev/schema/config.json",
+      $schema: "https://framebits.dev/schema/config.json",
       schemaVersion: 1,
       registry,
       framework: detected.framework,

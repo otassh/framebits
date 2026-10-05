@@ -5,22 +5,22 @@
 > NOT BUILT / NOT VERIFIED.
 >
 > Update 2026-10-05: Tasks 1–4a DONE (merged through PR #4). Task 4b (in progress):
-> branch `task-4b-builder-emit`, draft PR otassh/algorithco-ui#5 (unmerged —
+> branch `task-4b-builder-emit`, draft PR otassh/framebits#5 (unmerged —
 > awaiting owner review).
 
 ## 1. Snapshot
 
 - Date/time: 2026-10-05 (commands run this session; repo timestamps are +0500).
 - Current branch: `main`, tracking `origin/main`
-  (1b: remote `origin` → `https://github.com/otassh/algorithco-ui.git`, private repo,
-  created via `gh repo create otassh/algorithco-ui --private --source=. --remote=origin --push`).
+  (1b: remote `origin` → `https://github.com/otassh/framebits.git`, private repo,
+  created via `gh repo create otassh/framebits --private --source=. --remote=origin --push`).
 - HEAD commit: `3c0dd1c` `chore: opt out of turbo AGENTS.md guidance rewrites`
   (1b: 8 commits at Task-1b push time; see below. This report update will be #9.)
 - Number of commits: 8 (`d06c7e8` skeleton, `a0ae742` domain const, `65419b5` this report,
   `b4f2166` master prompt + AGENTS rule, `5c46663` PROJECT_NAME, `c5e55a9` CI hardening,
   `43222eb` esbuild approval, `3c0dd1c` turbo opt-out).
 - Working tree: CLEAN.
-- Remote: CONFIGURED (`origin`, GitHub `otassh/algorithco-ui`, private). Everything pushed.
+- Remote: CONFIGURED (`origin`, GitHub `otassh/framebits`, private). Everything pushed.
   First CI run `37256803283` on push: GREEN — both matrix jobs (`ci (22)` 32s, `ci (24)` 44s),
   all steps pass (install, lint, typecheck, test, build). Only annotations (warnings, non-failing):
   Node.js-20-based actions deprecation notice; `ubuntu-latest` → Ubuntu 26 migration notice.
@@ -36,26 +36,26 @@
   is satisfied but pinned/deviation note: resolved version is 2.11.7, not 2.5.x).
 - Vitest: `3.2.7` actually executed (packages declare `vitest: ^3.2.4`; range satisfied).
 
-Branding values (searched via grep for `PROJECT_NAME|DOMAIN|REGISTRY_URL|PLACEHOLDER_DOMAIN|DEFAULT_REGISTRY|algorithco`):
+Branding values (searched via grep for `PROJECT_NAME|DOMAIN|REGISTRY_URL|PLACEHOLDER_DOMAIN|DEFAULT_REGISTRY|framebits`):
 
-- `PROJECT_NAME`: (1b: RESOLVED) `"Algorithco UI"` — defined ONCE in
+- `PROJECT_NAME`: (1b: RESOLVED) `"Framebits"` — defined ONCE in
   `packages/shared/src/site.ts`, re-exported via `packages/shared/src/index.ts`,
   asserted in `packages/shared/src/index.test.ts`. Grep confirms no other source file
   duplicates the string (hits only: `site.ts`, the test assertion, `README.md` title
   heading, `MASTER_PROMPT.md`).
-- CLI name: `algorithco-ui` — defined in `apps/cli/package.json` (`"name": "algorithco-ui"`,
-  `"bin": { "algorithco-ui": "./dist/cli.js" }`) and mirrored as `CLI_PACKAGE_NAME` in
+- CLI name: `framebits` — defined in `apps/cli/package.json` (`"name": "framebits"`,
+  `"bin": { "framebits": "./dist/cli.js" }`) and mirrored as `CLI_PACKAGE_NAME` in
   `apps/cli/src/index.ts`. Two declarations of the same string (package.json + const) — minor duplication.
-- DOMAIN: placeholder `algorithco.dev` — defined ONCE in code: `packages/shared/src/site.ts`
-  (`export const PLACEHOLDER_DOMAIN = "algorithco.dev"`). Confirmed single definition;
+- DOMAIN: placeholder `framebits.dev` — defined ONCE in code: `packages/shared/src/site.ts`
+  (`export const PLACEHOLDER_DOMAIN = "framebits.dev"`). Confirmed single definition;
   `DEFAULT_REGISTRY_URL` is derived from it in the same file. Re-exported (not redeclared)
   via `packages/shared/src/index.ts`. No duplicates in code.
-- Default registry URL: `https://algorithco.dev/r` — derived in `packages/shared/src/site.ts`
+- Default registry URL: `https://framebits.dev/r` — derived in `packages/shared/src/site.ts`
   (`export const DEFAULT_REGISTRY_URL = \`https://${PLACEHOLDER_DOMAIN}/r\``). The same literal
-  value also appears in `.env.example` as `REGISTRY_URL=https://algorithco.dev/r` (env example,
+  value also appears in `.env.example` as `REGISTRY_URL=https://framebits.dev/r` (env example,
   not code — acceptable, but it is a second copy of the string an operator must keep in sync).
-- Root package name `algorithco-ui-monorepo` (`package.json`), workspace packages
-  `@algorithco-ui/{shared,db,builder,config,api}` + `apps/web` (placeholder, NOT a package —
+- Root package name `framebits-monorepo` (`package.json`), workspace packages
+  `@framebits/{shared,db,builder,config,api}` + `apps/web` (placeholder, NOT a package —
   no `package.json`, so not a pnpm workspace member).
 
 ## 2. Task progress table
@@ -132,7 +132,7 @@ untracked; no `dist/` output exists on disk — glob `*/dist/**` is empty, consi
 Top-level purpose (one line each):
 
 - `apps/api` — Hono server (planned; currently a 1-line stub).
-- `apps/cli` — the `algorithco-ui` npm CLI package (planned; currently a 1-line stub).
+- `apps/cli` — the `framebits` npm CLI package (planned; currently a 1-line stub).
 - `apps/web` — placeholder; explicitly out of scope (website later).
 - `packages/shared` — Zod schemas + inferred types (planned; currently only site constants, NO Zod yet).
 - `packages/db` — Drizzle schema/migrations/client/seed (planned; currently a stub).
@@ -147,13 +147,13 @@ Top-level purpose (one line each):
 
 Conventions observed in every package/app: ESM (`"type": "module"`), `main`/`types` → `./src/index.ts`,
 scripts `{build: tsc --noEmit, lint: eslint ., typecheck: tsc --noEmit, test: vitest run}`,
-devDeps `{@algorithco-ui/config: workspace:*, eslint ^9.14.0, typescript ^5.6.3, vitest ^3.2.4}`.
+devDeps `{@framebits/config: workspace:*, eslint ^9.14.0, typescript ^5.6.3, vitest ^3.2.4}`.
 NO runtime `dependencies` in ANY package (all `dependencies` objects are absent).
 NO `zod`, `hono`, `drizzle-orm` in the lockfile (only transitive `cac@6.7.14` via
 `vite-node` — i.e. the vitest toolchain — and root-devDep `tsx@4.23.15`, whose own deps are
 `esbuild` + `fsevents`).
 
-### packages/shared (`@algorithco-ui/shared`) — partial (constants only)
+### packages/shared (`@framebits/shared`) — partial (constants only)
 
 - Purpose: canonical contracts (Zod schemas + types) + site constants. Only the constants exist.
 - Status: partial. Source LOC: 10 (`index.ts` 3 + `site.ts` 7); tests: 1 file, 2 tests (13 lines).
@@ -165,10 +165,10 @@ NO `zod`, `hono`, `drizzle-orm` in the lockfile (only transitive `cac@6.7.14` vi
   `index.ts` re-export implemented. NO Zod schemas, NO types, NO hashing, NO allowlists —
   all NOT BUILT.
 
-### packages/db (`@algorithco-ui/db`) — stub
+### packages/db (`@framebits/db`) — stub
 
 - Purpose: Drizzle schema, migrations, db client, seed/sync.
-- Status: stub. Source LOC: 1 (`index.ts` = `export const DB_PACKAGE_NAME = "@algorithco-ui/db"`).
+- Status: stub. Source LOC: 1 (`index.ts` = `export const DB_PACKAGE_NAME = "@framebits/db"`).
   Tests: 1 file, 1 test (asserts the name string).
 - Public exports: `DB_PACKAGE_NAME` only.
 - Runtime deps: none (no `drizzle-orm`, no `postgres`/`pg` driver).
@@ -176,17 +176,17 @@ NO `zod`, `hono`, `drizzle-orm` in the lockfile (only transitive `cac@6.7.14` vi
   but those scripts DO NOT EXIST in this package.json → running them would FAIL.
 - Implemented vs stub: everything is a stub; no schema, no migrations dir, no client, no seed/sync.
 
-### packages/builder (`@algorithco-ui/builder`) — stub
+### packages/builder (`@framebits/builder`) — stub
 
 - Purpose: registry build pipeline (validate → hash → emit static `/r/*.json`).
 - Status: stub. Source LOC: 1 (`BUILDER_PACKAGE_NAME` const). Tests: 1 file, 1 test.
 - Public exports: `BUILDER_PACKAGE_NAME` only.
 - Runtime deps: none. Scripts: standard 4 (NO `build:registry` script here, although the ROOT
-  package.json references `pnpm --filter @algorithco-ui/builder build:registry` → that
+  package.json references `pnpm --filter @framebits/builder build:registry` → that
   root script would FAIL today).
 - Implemented vs stub: all stub; no pipeline code.
 
-### apps/api (`@algorithco-ui/api`) — stub
+### apps/api (`@framebits/api`) — stub
 
 - Purpose: Hono server (events ingestion, stats, admin).
 - Status: stub. Source LOC: 1 (`API_PACKAGE_NAME` const). Tests: 1 file, 1 test.
@@ -194,9 +194,9 @@ NO `zod`, `hono`, `drizzle-orm` in the lockfile (only transitive `cac@6.7.14` vi
 - Runtime deps: none (no `hono`, no `zod`).
 - Implemented vs stub: all stub; no routes, no env parsing (Task 8), no middleware.
 
-### apps/cli (`algorithco-ui`) — stub
+### apps/cli (`framebits`) — stub
 
-- Purpose: the published `algorithco-ui` CLI (`add <slug>` etc.), `bin: algorithco-ui → ./dist/cli.js`.
+- Purpose: the published `framebits` CLI (`add <slug>` etc.), `bin: framebits → ./dist/cli.js`.
 - Status: stub. Source LOC: 1 (`CLI_PACKAGE_NAME` const). Tests: 1 file, 1 test.
 - Note: `engines: node >=20` here vs root `>=22` — INCONSISTENT (minor; CLI allows Node 20, repo says 22+).
 - `bin` points at `./dist/cli.js` but there is NO build that emits `dist/` (build = `tsc --noEmit`);
@@ -208,7 +208,7 @@ NO `zod`, `hono`, `drizzle-orm` in the lockfile (only transitive `cac@6.7.14` vi
 - Only `apps/web/README.md` ("Out of scope for now"). No package.json → not in the
   pnpm workspace, invisible to turbo. Correct per out-of-scope rule.
 
-### packages/config (`@algorithco-ui/config`) — complete
+### packages/config (`@framebits/config`) — complete
 
 - Purpose: shared build configs. The only complete package.
 - Source LOC: 58 (`eslint.base.js` 26 + `prettier.base.js` 9 + `tsconfig.base.json` 23). Tests: 0
@@ -237,15 +237,15 @@ schema (component meta, registry index, events, config) is NOT BUILT. Deviation 
 - Dependency allowlist: NOT IMPLEMENTED. Category list: NOT IMPLEMENTED (no categories exist;
   `registry/registry.lock.json` = `{ "version": 1, "components": {} }` placeholder;
   no `registry/components/` or `registry/lib/` directories).
-- Only contract-like facts on disk: `PLACEHOLDER_DOMAIN = "algorithco.dev"` and
-  `DEFAULT_REGISTRY_URL = "https://algorithco.dev/r"` (`packages/shared/src/site.ts`).
+- Only contract-like facts on disk: `PLACEHOLDER_DOMAIN = "framebits.dev"` and
+  `DEFAULT_REGISTRY_URL = "https://framebits.dev/r"` (`packages/shared/src/site.ts`).
 
 ## 6. Tooling and configuration
 
 Root scripts (`package.json`): `build`/`lint`/`typecheck`/`test` → `turbo run <task>`;
-`build:registry` → `pnpm --filter @algorithco-ui/builder build:registry` (BROKEN today —
+`build:registry` → `pnpm --filter @framebits/builder build:registry` (BROKEN today —
 target script absent); `new-component` → `tsx scripts/new-component.ts` (throws Task-3 stub);
-`db:sync` / `db:migrate` → filter to `@algorithco-ui/db` scripts that DO NOT EXIST (BROKEN today);
+`db:sync` / `db:migrate` → filter to `@framebits/db` scripts that DO NOT EXIST (BROKEN today);
 `format` → `prettier --write .`. 3 of 9 root scripts reference non-existent targets.
 
 Turborepo task graph (`turbo.json`): tasks `build` (dependsOn `^build`, outputs `dist/**`),
@@ -344,7 +344,7 @@ not this session — this session wrote no code):
    with zero emit config; will need replacing once `dist/` artifacts (CLI bin) are required.
 3. `typescript-eslint` `strictTypeChecked` preset — strongest default linting.
 4. `no-console: error` — enforces AGENTS.md logging ban mechanically.
-5. Branding placeholder `algorithco.dev` centralized in `packages/shared/src/site.ts` (HEAD commit).
+5. Branding placeholder `framebits.dev` centralized in `packages/shared/src/site.ts` (HEAD commit).
 6. `turbo.json` `outputs: ["dist/**"]` pre-declared for a `dist/` nothing emits yet — forward-looking.
 7. `.gitattributes` `eol=lf` + README Windows/WSL2 note — cross-platform shell-script safety.
 8. `registry.lock.json` `{version: 1, components: {}}` placeholder reserves the index shape.
@@ -363,9 +363,9 @@ oversights, not deliberate choices; (d) is turbo-default behavior.
 
 `TODO(question)` in code (grep; 4 hits, 3 unique):
 
-1. `packages/shared/src/site.ts:1` — `// TODO(question): confirm production DOMAIN; algorithco.dev is a placeholder.`
+1. `packages/shared/src/site.ts:1` — `// TODO(question): confirm production DOMAIN; framebits.dev is a placeholder.`
 2. `scripts/new-component.ts:1` — `// TODO(question): Task 3 — implement the new-component generator (scaffold registry/components/<category>/<slug>/ + update registry.lock.json).`
-3. `README.md:54` — `<!-- TODO(question): confirm production DOMAIN (currently algorithco.dev placeholder, defined once in packages/shared/src/site.ts) and CLI default registry URL. -->`
+3. `README.md:54` — `<!-- TODO(question): confirm production DOMAIN (currently framebits.dev placeholder, defined once in packages/shared/src/site.ts) and CLI default registry URL. -->`
 4. `README.md:55` — `<!-- TODO(question): choose a license before public launch (repo is private until then; no LICENSE file yet). -->`
    (`AGENTS.md:9` is the rule defining the convention, not a question.)
 
@@ -373,10 +373,10 @@ Other TODO/FIXME/HACK: NONE (grep for `TODO|FIXME|HACK` returned only the above 
 
 Questions needing the owner:
 
-1. What is the real production DOMAIN (replace `algorithco.dev`)? Also confirm the default registry URL.
+1. What is the real production DOMAIN (replace `framebits.dev`)? Also confirm the default registry URL.
 2. Which license? (Needed before public launch; currently no LICENSE file.)
 3. (1b: RESOLVED — master prompt committed at `docs/MASTER_PROMPT.md`; task names/criteria known.)
-4. (1b: RESOLVED — `PROJECT_NAME = "Algorithco UI"` added to `packages/shared/src/site.ts`, commit `5c46663`.)
+4. (1b: RESOLVED — `PROJECT_NAME = "Framebits"` added to `packages/shared/src/site.ts`, commit `5c46663`.)
 5. (1b: RESOLVED — CLI `engines >= 20` is intentional per MASTER_PROMPT §16 decision 2, not a bug.)
 6. (1b: RESOLVED — esbuild allowed via `onlyBuiltDependencies` in `pnpm-workspace.yaml`, commit `43222eb`.)
 7. (1b: RESOLVED — owner chose trailer-only) Agent commits carry
@@ -391,7 +391,7 @@ Questions needing the owner:
 
 ## 10. Known issues and risks
 
-- (1b: RESOLVED) Remote/push/CI — repo created as private `otassh/algorithco-ui`, all pushed,
+- (1b: RESOLVED) Remote/push/CI — repo created as private `otassh/framebits`, all pushed,
   first CI run green (see §1). Remaining: branch protection NOT enabled yet (deliberate;
   recommendation for owner in §12 below).
 - HIGH — `apps/cli` `bin` (`./dist/cli.js`) is unbuildable: `build` = `tsc --noEmit`, so the
@@ -473,11 +473,11 @@ checks uncached; commit as one task-commit.
 Prerequisites from the owner: (a) go-ahead for Task 2 (STOP here until given);
 (b) production DOMAIN decision (still placeholder); (c) license choice;
 (d) co-author identity for agent commits (§9 Q7). Git identity unchanged (global, §9 Q7).
-No remote/push/CI prerequisites remain — repo is live at `otassh/algorithco-ui`.
+No remote/push/CI prerequisites remain — repo is live at `otassh/framebits`.
 
 Branch protection — NOT enabled yet (per instruction). When CI has been green once
 (it has: run `37256803283`), recommended exact settings for `main`:
-`gh api repos/otassh/algorithco-ui/branches/main/protection -X PUT -f required_status_checks[strict]=true -f required_status_checks[checks][]['context']='ci (22)' -f required_status_checks[checks][]['context']='ci (24)' -f enforce_admins=true -f required_pull_request_reviews[required_approving_review_count]=1 -f required_pull_request_reviews[dismiss_stale_reviews]=true -f restrictions='null' -f required_linear_history=true -f allow_force_pushes=false -f allow_deletions=false`
+`gh api repos/otassh/framebits/branches/main/protection -X PUT -f required_status_checks[strict]=true -f required_status_checks[checks][]['context']='ci (22)' -f required_status_checks[checks][]['context']='ci (24)' -f enforce_admins=true -f required_pull_request_reviews[required_approving_review_count]=1 -f required_pull_request_reviews[dismiss_stale_reviews]=true -f restrictions='null' -f required_linear_history=true -f allow_force_pushes=false -f allow_deletions=false`
 (or the same via Settings → Branches → Add rule: require status checks `ci (22)` + `ci (24)`,
 require PR review ×1, dismiss stale reviews, require linear history, block force pushes/deletions,
 include administrators). Awaiting owner go-ahead.
@@ -497,7 +497,7 @@ include administrators). Awaiting owner go-ahead.
 5. Run/verify from root: `pnpm.cmd install --frozen-lockfile`,
    `pnpm.cmd turbo run lint typecheck test build --force` (24 tasks, ~13s; build warns
    "no output files" — expected, noEmit until Task 5). Remote: `origin` =
-   `github.com/otassh/algorithco-ui` (private); CI matrix [22, 24], green on run 37256803283.
+   `github.com/otassh/framebits` (private); CI matrix [22, 24], green on run 37256803283.
 6. Current state: branch `task-4b-builder-emit`, draft PR open (CI pending at last edit),
    NOT merged. Builder complete through emit (typecheck/env/versioning/archive/search);
    3 samples + lock committed on the branch. Root `new-component` + `build:registry`

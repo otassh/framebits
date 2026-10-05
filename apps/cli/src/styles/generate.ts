@@ -9,11 +9,11 @@ import type { ValidatedStyles } from "./validate.js";
 export type TailwindMajor = 3 | 4;
 
 export function beginMarker(slug: string): string {
-  return `/* algorithco-ui:begin ${slug} */`;
+  return `/* framebits:begin ${slug} */`;
 }
 
 export function endMarker(slug: string): string {
-  return `/* algorithco-ui:end ${slug} */`;
+  return `/* framebits:end ${slug} */`;
 }
 
 function keyframesBlock(frames: ValidatedStyles["keyframes"], baseIndent: number): string[] {

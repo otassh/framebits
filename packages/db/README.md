@@ -1,1 +1,1 @@
-# @algorithco-ui/db
+# @framebits/db

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { applyPlan, assertSafeTarget, type ApplyFs, type ApplyInput } from "./index.js";
-import type { CliConfig } from "@algorithco-ui/shared";
+import type { CliConfig } from "@framebits/shared";
 
 function baseConfig(): CliConfig {
   return {
-    $schema: "https://algorithco.dev/schema/config.json",
+    $schema: "https://framebits.dev/schema/config.json",
     schemaVersion: 1,
     registry: "https://x/r",
     framework: "next",
@@ -236,7 +236,7 @@ describe("apply", () => {
       "/tmp/journal",
     );
     expect(result.cssPatched).toEqual(["/proj/src/app/globals.css"]);
-    expect(fs.files.get("/proj/src/app/globals.css")).toContain("algorithco-ui:begin shimmer-button");
+    expect(fs.files.get("/proj/src/app/globals.css")).toContain("framebits:begin shimmer-button");
     expect(saved.installed).toEqual({});
   });
 

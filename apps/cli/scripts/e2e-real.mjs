@@ -251,7 +251,7 @@ async function scenarioVite(workRoot, registryUrl) {
 async function main() {
   const scenario = process.argv[2] ?? "all";
   log(`e2e-real pins: ${JSON.stringify(PINS)}`);
-  await run("pnpm", ["--filter", "algorithco-ui", "build"], { cwd: repoRoot, timeout: 300000 });
+  await run("pnpm", ["--filter", "framebits", "build"], { cwd: repoRoot, timeout: 300000 });
   const regOut = mkdtempSync(join(tmpdir(), "e2e-reg-"));
   const regArchive = mkdtempSync(join(tmpdir(), "e2e-archive-"));
   const workRoot = mkdtempSync(join(tmpdir(), "e2e-work-"));

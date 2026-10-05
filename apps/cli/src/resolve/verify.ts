@@ -10,7 +10,7 @@ import {
   SCHEMA_VERSION,
   verifyItemHash,
   type RegistryItem,
-} from "@algorithco-ui/shared";
+} from "@framebits/shared";
 import { integrityError } from "../errors.js";
 
 export const MAX_FILES_PER_ITEM = 50;
@@ -35,7 +35,7 @@ export function verifyItem(
   ) {
     throw integrityError(
       `registry item "${requestedSlug}" needs schemaVersion ${String(raw.schemaVersion)} (this CLI supports ${String(SCHEMA_VERSION)})`,
-      "update algorithco-ui to the latest version",
+      "update framebits to the latest version",
     );
   }
   const parsed = RegistryItemSchema.safeParse(raw);

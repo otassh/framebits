@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import MiniSearch from "minisearch";
-import { RegistryIndexSchema, verifyItemHash } from "@algorithco-ui/shared";
+import { RegistryIndexSchema, verifyItemHash } from "@framebits/shared";
 import type { RegistryItemModel } from "./index.js";
 import {
   buildTree,
@@ -110,7 +110,7 @@ describe("buildTree determinism", () => {
       });
       const tree = buildTree(items, plans, GIT_SHA, GENERATED_AT, "0.0.0");
       const search: unknown = JSON.parse(tree.files.get("search-index.json") as string);
-      const parsed = (await import("@algorithco-ui/shared")).SearchIndexSchema.parse(search);
+      const parsed = (await import("@framebits/shared")).SearchIndexSchema.parse(search);
       const mini = MiniSearch.loadJSON(JSON.stringify(parsed.index), {
         fields: ["title", "tags", "category", "description"],
       });
@@ -142,7 +142,7 @@ describe("buildTree determinism", () => {
         expect(await writeBuildTree(out, tree)).toEqual([]);
         // Read the emitted file back from disk (not the in-memory tree) and verify.
         const raw: unknown = JSON.parse(await readFile(join(out, "r", "aurora-text.json"), "utf8"));
-        const { RegistryItemSchema } = await import("@algorithco-ui/shared");
+        const { RegistryItemSchema } = await import("@framebits/shared");
         const parsed = RegistryItemSchema.parse(raw);
         expect(verifyItemHash(parsed, parsed.hash)).toBe(true);
       } finally {

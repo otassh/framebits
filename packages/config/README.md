@@ -1,1 +1,1 @@
-# @algorithco-ui/config
+# @framebits/config

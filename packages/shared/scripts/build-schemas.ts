@@ -2,7 +2,7 @@
  * Writes one JSON Schema file per contract schema to `dist-schemas/`
  * (later published under `/schema/*.json` by the builder).
  *
- * Usage: `pnpm --filter @algorithco-ui/shared build:schemas`
+ * Usage: `pnpm --filter @framebits/shared build:schemas`
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";

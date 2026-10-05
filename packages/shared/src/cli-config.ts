@@ -4,7 +4,7 @@ import { SCHEMA_VERSION } from "./registry-item.js";
 import { SemverVersionSchema } from "./semver.js";
 import { Sha256HashSchema } from "./hashable-json.js";
 
-/** One entry of the `installed` map in `algorithco-ui.json`. */
+/** One entry of the `installed` map in `framebits.json`. */
 export const InstalledEntrySchema = z
   .object({
     version: SemverVersionSchema,
@@ -15,7 +15,7 @@ export const InstalledEntrySchema = z
 export type InstalledEntry = z.infer<typeof InstalledEntrySchema>;
 
 /**
- * `algorithco-ui.json` in the user's project root (MASTER_PROMPT Section 4.5).
+ * `framebits.json` in the user's project root (MASTER_PROMPT Section 4.5).
  *
  * `registry` must be `https://` (with `http://localhost` / `127.0.0.1` allowed for
  * development). URL *syntax* is validated here; reachability is a CLI runtime concern.

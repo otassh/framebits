@@ -3,7 +3,7 @@
  * deterministic topological order (dependencies first). Exactly one fetch
  * per slug (cached).
  */
-import type { RegistryItem } from "@algorithco-ui/shared";
+import type { RegistryItem } from "@framebits/shared";
 import { integrityError } from "../errors.js";
 import {
   fetchJsonText,

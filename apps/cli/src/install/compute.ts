@@ -6,7 +6,7 @@ import {
   doSemverRangesIntersect,
   isSemverSubset,
   satisfiesSemverRange,
-} from "@algorithco-ui/shared";
+} from "@framebits/shared";
 
 export interface DeclaredPackages {
   dependencies: Record<string, string>;

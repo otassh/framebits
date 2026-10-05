@@ -3,7 +3,7 @@ import {
   bumpSemverVersion,
   isGreaterSemverVersion,
   type RegistryLock,
-} from "@algorithco-ui/shared";
+} from "@framebits/shared";
 import type { RegistryItemModel } from "./index.js";
 import type { Diagnostic } from "./types.js";
 

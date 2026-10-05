@@ -1,4 +1,4 @@
-# CLI (`algorithco-ui`)
+# CLI (`framebits`)
 
 Task 5a: packaging, detection, config, `init`, `add` file pipeline. Task 5b:
 Tailwind styles are written into the CSS entry as marker blocks and missing
@@ -9,7 +9,7 @@ npm dependencies are installed (see below). Out of scope: telemetry,
 
 ### `init [--yes] [--cwd <dir>] [--registry <url>]`
 
-Detects the project and writes `algorithco-ui.json` (2-space indent, LF,
+Detects the project and writes `framebits.json` (2-space indent, LF,
 trailing newline, atomic temp+rename). Idempotent: re-running preserves
 `installed` and unrelated fields; with an existing config, interactive init
 asks before changing values, `--yes` keeps existing values and fills missing
@@ -40,7 +40,7 @@ Detection:
 
 ### `add <slug...> [--overwrite] [--dry-run] [--yes] [--cwd <dir>] [--registry <url>] [--debug]`
 
-`add` before `init` → exit 2 ("run `algorithco-ui init` first"). Slug args
+`add` before `init` → exit 2 ("run `framebits init` first"). Slug args
 (`slug` or `slug@1.2.3`) are validated before any request. Exactly one network
 fetch per item.
 
@@ -87,9 +87,9 @@ replaces MASTER_PROMPT Section 9 step 8). Styles from `item.tailwind` and
 marker-delimited blocks, one per item slug:
 
 ```css
-/* algorithco-ui:begin shimmer-button */
+/* framebits:begin shimmer-button */
 ...
-/* algorithco-ui:end shimmer-button */
+/* framebits:end shimmer-button */
 ```
 
 Mapping (property names are emitted verbatim — the `shimmer-button` sample

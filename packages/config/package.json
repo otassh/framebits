@@ -1,5 +1,5 @@
 {
-  "name": "@algorithco-ui/config",
+  "name": "@framebits/config",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -7,9 +7,9 @@
     "./tsconfig.base.json": "./tsconfig.base.json"
   },
   "scripts": {
-    "build": "echo \"@algorithco-ui/config: nothing to build\"",
+    "build": "echo \"@framebits/config: nothing to build\"",
     "lint": "prettier --check .",
-    "typecheck": "echo \"@algorithco-ui/config: nothing to typecheck\"",
+    "typecheck": "echo \"@framebits/config: nothing to typecheck\"",
     "test": "vitest run --passWithNoTests"
   },
   "devDependencies": {

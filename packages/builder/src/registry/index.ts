@@ -1,5 +1,5 @@
 import ts from "typescript";
-import type { ComponentStyles, Meta } from "@algorithco-ui/shared";
+import type { ComponentStyles, Meta } from "@framebits/shared";
 import { discoverRegistry, type DiscoveredItem } from "./discover.js";
 import {
   analyzeSource,

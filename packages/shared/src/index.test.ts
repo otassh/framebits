@@ -16,16 +16,16 @@ import {
 
 describe("shared stub", () => {
   it("exposes a package name", () => {
-    expect(SHARED_PACKAGE_NAME).toBe("@algorithco-ui/shared");
+    expect(SHARED_PACKAGE_NAME).toBe("@framebits/shared");
   });
 
   it("defines the domain and default registry URL in one place", () => {
-    expect(PLACEHOLDER_DOMAIN).toBe("algorithco.dev");
+    expect(PLACEHOLDER_DOMAIN).toBe("framebits.dev");
     expect(DEFAULT_REGISTRY_URL).toBe(`https://${PLACEHOLDER_DOMAIN}/r`);
   });
 
   it("defines the project name in one place", () => {
-    expect(PROJECT_NAME).toBe("Algorithco UI");
+    expect(PROJECT_NAME).toBe("Framebits");
   });
 
   it("exports every contract schema and hash helper by name", () => {

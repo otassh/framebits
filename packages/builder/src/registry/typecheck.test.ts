@@ -2,7 +2,7 @@ import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { MetaSchema, type Meta } from "@algorithco-ui/shared";
+import { MetaSchema, type Meta } from "@framebits/shared";
 import { loadRegistry } from "./index.js";
 import { makeRegistry, metaJson, rmRegistry } from "./test-helpers.js";
 import { rewriteDemoImport, runTypecheck, type TypecheckItem } from "./typecheck.js";

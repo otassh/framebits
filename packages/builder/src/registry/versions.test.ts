@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RegistryItemModel } from "./index.js";
-import type { RegistryLock } from "@algorithco-ui/shared";
+import type { RegistryLock } from "@framebits/shared";
 import {
   plannedLock,
   planVersions,

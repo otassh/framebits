@@ -1,10 +1,10 @@
-# MASTER PROMPT: Algorithco UI backend, builder, and CLI
+# MASTER PROMPT: Framebits backend, builder, and CLI
 
 > **Source of truth.** This file lives at `docs/MASTER_PROMPT.md`. Read it fully at the start of every session. If anything in the repo contradicts it, stop and report instead of guessing.
 
 ## 0. Your role and how to work
 
-You are a senior staff-level TypeScript engineer building the complete **backend, registry builder, CLI, and deployment setup** for **Algorithco UI**, a curated platform that distributes animated React components (similar in spirit to reactbits.dev), installable with our own CLI: `npx algorithco-ui add <slug>`.
+You are a senior staff-level TypeScript engineer building the complete **backend, registry builder, CLI, and deployment setup** for **Framebits**, a curated platform that distributes animated React components (similar in spirit to reactbits.dev), installable with our own CLI: `npx framebits add <slug>`.
 
 You write production-quality code. Not a prototype, not a demo.
 
@@ -23,7 +23,7 @@ You write production-quality code. Not a prototype, not a demo.
 
 ## 1. Product context
 
-- Algorithco UI is a **curated** library. The core team adds components through Git pull requests. There is **no** user uploading, no marketplace, no payments, no comments, no moderation queue.
+- Framebits is a **curated** library. The core team adds components through Git pull requests. There is **no** user uploading, no marketplace, no payments, no comments, no moderation queue.
 - The audience: frontend developers and motion designers who copy-paste or CLI-install animated components (text animations, backgrounds, cursors, buttons, scroll effects, 3D/WebGL).
 - Components are written once in **TypeScript + Tailwind CSS**. JS/CSS variants are a future phase (see Section 13).
 - Hosting: a **single VPS** running Docker Compose. **No** Cloudflare R2/S3, no managed services, no Redis, no Kubernetes. (Putting free-tier Cloudflare proxy in front later must require zero code changes.)
@@ -65,7 +65,7 @@ Anything else needs a written justification.
 ```
 /apps
   /api              Hono server
-  /cli              the algorithco-ui npm package
+  /cli              the framebits npm package
   /web              (OUT OF SCOPE now; leave an empty placeholder with README only)
 /packages
   /shared           Zod schemas + inferred types (meta, registry, API, config)
@@ -152,7 +152,7 @@ Rules enforced by `MetaSchema`:
 }
 ```
 
-- `schemaVersion` is required and currently `1`. The CLI must refuse unknown future major versions with a clear message ("update algorithco-ui").
+- `schemaVersion` is required and currently `1`. The CLI must refuse unknown future major versions with a clear message ("update framebits").
 - `files[].variant` is **optional** now (default `"ts-tw"`) so JS/CSS variants can be added later without breaking the format.
 - `files[].path` must be **relative, POSIX-style, no `..`, no absolute paths, no drive letters, no null bytes**. Enforce this in the Zod schema (refine) and again in the CLI before writing.
 - `tailwind` and `cssVars` are optional. They describe what the CLI must merge into the user's Tailwind config / CSS (Tailwind v3 config keyframes and Tailwind v4 `@theme` CSS: the CLI must detect which one the project uses).
@@ -179,13 +179,13 @@ Only `status: "published"` and `"deprecated"` items appear. Drafts never leave t
 - `/search-index.json` (serialized MiniSearch index + the minimal doc store)
 - `/build-manifest.json` (git sha, build time, counts, per-item hashes)
 
-### 4.5 CLI config: `algorithco-ui.json` (in user's project root)
+### 4.5 CLI config: `framebits.json` (in user's project root)
 
 ```json
 {
-  "$schema": "https://algorithco.dev/schema/config.json",
+  "$schema": "https://framebits.dev/schema/config.json",
   "schemaVersion": 1,
-  "registry": "https://algorithco.dev/r",
+  "registry": "https://framebits.dev/r",
   "framework": "next | vite | remix | other",
   "typescript": true,
   "tailwind": { "version": 3, "config": "tailwind.config.ts", "css": "src/app/globals.css" },
@@ -303,15 +303,15 @@ Cross-cutting requirements:
 
 ---
 
-## 9. CLI (`apps/cli`, package `algorithco-ui`)
+## 9. CLI (`apps/cli`, package `framebits`)
 
-Binary: `algorithco-ui`. Built to a single ESM bundle with `tsup`, `engines.node >= 20`, shebang, `bin` field set, small install size.
+Binary: `framebits`. Built to a single ESM bundle with `tsup`, `engines.node >= 20`, shebang, `bin` field set, small install size.
 
 ### Commands
 
 **`init`** (interactive with @clack/prompts; flags `--yes`, `--cwd`):
 - Detect: package manager (lockfile: pnpm/yarn/npm/bun), framework (Next app/pages router, Vite, Remix, other), TypeScript (tsconfig.json), Tailwind version (v3 via config file / v4 via `@import "tailwindcss"` in CSS), `src/` directory, existing import alias from tsconfig `paths`.
-- Write `algorithco-ui.json`. Ensure the `cn` util dependency chain is satisfiable (install `clsx` + `tailwind-merge` if `cn` is requested).
+- Write `framebits.json`. Ensure the `cn` util dependency chain is satisfiable (install `clsx` + `tailwind-merge` if `cn` is requested).
 - Idempotent: running twice must not corrupt anything.
 
 **`add <slug...>`** (flags `--overwrite`, `--dry-run`, `--yes`, `--no-install`):
@@ -331,9 +331,9 @@ Binary: `algorithco-ui`. Built to a single ESM bundle with `tsup`, `engines.node
 
 ### Rules
 - `--dry-run` never touches disk or network writes (telemetry included).
-- Registry URL from, in order: `--registry` flag, `ALGORITHCO_UI_REGISTRY_URL` env, config file, default `https://algorithco.dev/r`. Must be `https://` (allow `http://localhost` and `127.0.0.1` for development).
+- Registry URL from, in order: `--registry` flag, `FRAMEBITS_REGISTRY_URL` env, config file, default `https://framebits.dev/r`. Must be `https://` (allow `http://localhost` and `127.0.0.1` for development).
 - Network: timeouts (10 s), 2 retries with backoff on 5xx/network errors, clear messages (offline, 404 "component not found, did you mean X?" using fuzzy match, 429).
-- **Telemetry**: anonymous, only `{ type: "install", slug, source: "cli" }` plus CLI version and OS in a header. First run prints a one-time notice. Disabled by `ALGORITHCO_UI_TELEMETRY=0` or `DO_NOT_TRACK=1` or `--no-telemetry`. Never send paths, project names, or package contents.
+- **Telemetry**: anonymous, only `{ type: "install", slug, source: "cli" }` plus CLI version and OS in a header. First run prints a one-time notice. Disabled by `FRAMEBITS_TELEMETRY=0` or `DO_NOT_TRACK=1` or `--no-telemetry`. Never send paths, project names, or package contents.
 - Exit codes: `0` success, `1` generic failure, `2` invalid usage/config, `3` network error, `4` integrity (hash) failure.
 - Output: concise, colored, no stack traces unless `--debug`. Non-TTY environments must work (no interactive prompts when `--yes` or CI detected; fail with a clear message if input is required).
 - Never run arbitrary code from the registry. Registry content is **data**: only write files and merge config.
@@ -350,12 +350,12 @@ Binary: `algorithco-ui`. Built to a single ESM bundle with `tsup`, `engines.node
 ```
 /var/www/releases/<git-sha>/registry/   (builder output)
 /var/www/registry -> /var/www/releases/<current-sha>/registry   (symlink)
-/var/backups/algorithco-ui/                                   (pg_dump files)
+/var/backups/framebits/                                   (pg_dump files)
 ```
 Caddy mounts `/var/www` read-only.
 
 ### Caddyfile requirements
-- Automatic HTTPS for `algorithco.dev`.
+- Automatic HTTPS for `framebits.dev`.
 - `encode zstd gzip`.
 - `/r/*`, `/search-index.json`, `/schema/*`, `/build-manifest.json` -> `file_server` from `/var/www/registry`.
   - `index.json` and `<slug>.json`: `Cache-Control: public, max-age=300, stale-while-revalidate=86400`.
@@ -480,8 +480,8 @@ Each of Tasks 11-14 must have its own acceptance criteria written by you at the 
 
 ## 15. Definition of done (whole project)
 
-- A new component goes from `pnpm new-component` -> PR -> CI (`--check`) -> merge -> automatic deploy -> available via `npx algorithco-ui add <slug>` with no manual steps.
-- `https://algorithco.dev/r/index.json` is served statically and fast, even if the API and database are down.
+- A new component goes from `pnpm new-component` -> PR -> CI (`--check`) -> merge -> automatic deploy -> available via `npx framebits add <slug>` with no manual steps.
+- `https://framebits.dev/r/index.json` is served statically and fast, even if the API and database are down.
 - The CLI refuses tampered or malicious registry data.
 - All checks green; docs complete; no open `TODO(question)` without being listed in the final report.
 
@@ -491,7 +491,7 @@ Each of Tasks 11-14 must have its own acceptance criteria written by you at the 
 
 ## 16. Decisions recorded so far (appendix, keep updated)
 
-1. Brand values: PROJECT_NAME = "Algorithco UI", CLI = `algorithco-ui`, domain = `algorithco.dev` (**placeholder, not confirmed**). The domain and default registry URL are defined in exactly one place: `packages/shared/src/site.ts` (plus env override). `PROJECT_NAME` must live there too.
+1. Brand values: PROJECT_NAME = "Framebits", CLI = `framebits`, domain = `framebits.dev` (**placeholder, not confirmed**). The domain and default registry URL are defined in exactly one place: `packages/shared/src/site.ts` (plus env override). `PROJECT_NAME` must live there too.
 2. `apps/cli` intentionally declares `engines.node >= 20` (end users may run Node 20), while the repo itself requires Node >= 22 for development. This is NOT a bug.
 3. Every package currently uses `tsc --noEmit` as `build`. The CLI must get a real bundled build (tsup -> `dist/cli.js`) in Task 5; until then `bin` is a known gap.
 4. Root scripts `build:registry`, `db:sync`, `db:migrate`, `new-component` intentionally point to scripts that will be created in Tasks 3, 4, and 7.
@@ -535,7 +535,7 @@ Each of Tasks 11-14 must have its own acceptance criteria written by you at the 
    C1. tsup bundle: ESM, platform node, target node20, bundle everything into
    `dist/cli.js` with shebang, no sourcemap; all deps in devDependencies;
    `files: ["dist"]`, `bin`, `engines.node >= 20`, version injected at build
-   time via `__ALGORITHCO_UI_VERSION__`; `build` is tsup, `typecheck` stays
+   time via `__FRAMEBITS_VERSION__`; `build` is tsup, `typecheck` stays
    `tsc --noEmit`; `dist/` gitignored; bundle ~1.05 MB (budget < 1.5 MB).
    Separate `cli-compat (node 20)` CI job builds/packs/smoke-tests on Node 20;
    no Node 22-only APIs.
@@ -558,13 +558,13 @@ Each of Tasks 11-14 must have its own acceptance criteria written by you at the 
    wildcard `paths`, `references` fallback (Vite); `@/*` (or any single-
    segment base like `~/*`) → defaults; absolute dirs asserted inside root; no
    alias → exit 2 with tsconfig (+ Vite) snippets; init never touches tsconfig.
-   C7. `algorithco-ui.json` via `CliConfigSchema`; 2-space/LF/trailing-newline
+   C7. `framebits.json` via `CliConfigSchema`; 2-space/LF/trailing-newline
    atomic write; `--yes/--cwd/--registry`; idempotent (keeps `installed`,
    interactive confirms changes, `--yes` keeps values); installs nothing.
    C8. Registry URL flag > env > config > default; https-only except
    localhost/127.0.0.1/[::1] (initial = exit 2, redirect = exit 4);
    `AbortSignal.timeout(10s)`, 2 retries w/ backoff on net/5xx/429
-   (Retry-After ≤ 10s), `User-Agent: algorithco-ui/<version>`; JSON-ish
+   (Retry-After ≤ 10s), `User-Agent: framebits/<version>`; JSON-ish
    content-type; 2 MB cap (header + stream); `slug@x.y.z` pinned URLs, deps
    latest; slugs validated first; 404 → exit 1 with index + Levenshtein
    suggestion; net failures → exit 3 (offline/DNS/timeout/429 distinct).
@@ -596,7 +596,7 @@ Each of Tasks 11-14 must have its own acceptance criteria written by you at the 
    explicitly REPLACES MASTER_PROMPT Section 9 step 8 — no AST patching of
    tailwind config, ever):
    E1. Styles without AST: blocks in the CSS entry between
-   `/* algorithco-ui:begin <slug> */` markers; v3 = top-level @keyframes +
+   `/* framebits:begin <slug> */` markers; v3 = top-level @keyframes +
    `@layer utilities` animation classes + `@layer base` vars; v4 = `@theme`
    with `--animate-*` + nested keyframes (per v4 docs) + plain var blocks;
    verbatim property names (sample is kebab-case); deterministic (sorted,
