@@ -378,9 +378,11 @@ Questions needing the owner:
 4. (1b: RESOLVED — `PROJECT_NAME = "Algorithco UI"` added to `packages/shared/src/site.ts`, commit `5c46663`.)
 5. (1b: RESOLVED — CLI `engines >= 20` is intentional per MASTER_PROMPT §16 decision 2, not a bug.)
 6. (1b: RESOLVED — esbuild allowed via `onlyBuiltDependencies` in `pnpm-workspace.yaml`, commit `43222eb`.)
-7. (NEW 1b) Co-authorship: owner asked the agent to co-author. What `Co-authored-by:` name/email
-   should the agent put on its commits? (Git identity itself left untouched per instruction:
-   `user.name`/`user.email` come from global `C:/Users/user/.gitconfig`, no local overrides.)
+7. (1b: RESOLVED — owner chose trailer-only) Agent commits carry
+   `Co-Authored-By: opencode <noreply@opencode.ai>` (official upstream convention, verified in
+   `sst/opencode` repo `packages/opencode/src/tool/bash.txt`). No bot footer line. Applies to
+   agent-authored commits going forward; past pushed commits NOT rewritten. Git identity itself
+   untouched (global `C:/Users/user/.gitconfig`, no local overrides).
 
 ## 10. Known issues and risks
 
@@ -496,6 +498,9 @@ include administrators). Awaiting owner go-ahead.
    rest are stubs (7 tests green). Root scripts `build:registry`/`db:sync`/`db:migrate` point at
    future Task 3/4/7 code — intentional, do not stub. CLI `bin/dist` gap lands in Task 5.
 7. Exact next action: Task 2 (`packages/shared` schemas+hashing) — AWAITING owner go-ahead. STOP.
+8. Agent commit attribution (owner decision 2026-10-05): every agent-authored commit ends with
+   trailer `Co-Authored-By: opencode <noreply@opencode.ai>` (upstream OpenCode convention).
+   No bot footer line. Never rewrite pushed history to add it. Never touch git identity config.
 8. Non-negotiable AGENTS.md rules (13 now; #1 = master prompt first): 1 task=1 commit; criteria
    verified before done; strict TS + ESM + Node22 + pnpm; Zod-only validation w/ schemas in
    `shared`; approved-deps only; smoke tests everywhere; secrets in `.env` only (+ keep
