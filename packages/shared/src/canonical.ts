@@ -15,9 +15,16 @@ export class CanonicalizeError extends Error {
 }
 
 function compareKeys(a: string, b: string): number {
+  // UTF-16 code unit order (plain JS relational semantics, no locale, no code-point
+  // collation). This is what RFC 8785 requires for key sorting.
   if (a < b) return -1;
   if (a > b) return 1;
   return 0;
+}
+
+function isPlainObject(value: object): boolean {
+  const proto: unknown = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
 }
 
 export function canonicalize(value: unknown): string {
@@ -35,6 +42,11 @@ export function canonicalize(value: unknown): string {
     return `[${value.map((entry) => canonicalize(entry)).join(",")}]`;
   }
   if (typeof value === "object") {
+    if (!isPlainObject(value)) {
+      throw new CanonicalizeError(
+        "cannot canonicalize non-plain objects (only object literals and arrays are hashable)",
+      );
+    }
     const entries = Object.entries(value).sort(([a], [b]) => compareKeys(a, b));
     const body = entries
       .map(([key, entryValue]) => `${JSON.stringify(key)}:${canonicalize(entryValue)}`)

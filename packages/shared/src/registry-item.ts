@@ -61,6 +61,12 @@ export const RegistryItemSchema = z
       .refine(
         (files) => new Set(files.map((file) => file.path)).size === files.length,
         "file paths must be unique within one item",
+      )
+      .refine(
+        (files) =>
+          new Set(files.map((file) => file.path.toLowerCase().normalize("NFC"))).size ===
+          files.length,
+        "file paths must be unique within one item (case-insensitive)",
       ),
     tailwind: TailwindFragmentSchema.optional(),
     cssVars: CssVarsSchema.optional(),

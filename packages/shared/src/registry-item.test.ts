@@ -88,6 +88,24 @@ describe("RegistryItemSchema", () => {
 
   it.each([
     ["duplicate file paths", { files: [{ ...validFile }, { ...validFile }] }],
+    [
+      "case-insensitive duplicate paths",
+      {
+        files: [
+          { ...validFile, path: "components/ui/Aurora-Text.tsx" },
+          { ...validFile, path: "components/ui/aurora-text.tsx" },
+        ],
+      },
+    ],
+    [
+      "unicode-normalization duplicate paths",
+      {
+        files: [
+          { ...validFile, path: "components/ui/Caf\u00e9.tsx" },
+          { ...validFile, path: "components/ui/Cafe\u0301.tsx" },
+        ],
+      },
+    ],
     ["no files", { files: [] }],
     ["bad version", { version: "^1.0.0" }],
     ["bad hash", { hash: "abc" }],

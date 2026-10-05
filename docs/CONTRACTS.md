@@ -22,12 +22,15 @@
 | Search | `SearchQuerySchema` | `api.ts` | `q` 1–100; optional category; limit 1–50 default 20 (coerced) |
 | Errors | `ErrorResponseSchema` | `api.ts` | `{error: {code, message, details[]}}`, details default `[]` |
 | Paths | `RelativePathSchema` | `paths.ts` | see Path rules below (shared by registry files and CLI targets) |
-| Hash-safe JSON | `HashableJsonValueSchema` | `hashable-json.ts` | integers only (floats rejected at parse); no `undefined` |
+| Hash-safe JSON | `HashableJsonValueSchema` | `hashable-json.ts` | string leaves only (no numbers/booleans/null); no `undefined` |
 
 Supporting: `CATEGORIES` (`categories.ts`), `ALLOWED_DEPENDENCIES`
 (`allowed-dependencies.ts`), `SemverRangeSchema`/`SemverVersionSchema` (`semver.ts`,
-backed by the `semver` package — see justification below), `SCHEMA_VERSION = 1` and
-`DEFAULT_VARIANT = "ts-tw"` (`registry-item.ts`).
+backed by the `semver` package — see justification below; ranges must additionally be
+BOUNDED: every `||` branch needs an upper bound, so `*`, `x`, `latest`, `>=0.0.0`,
+`>0` are rejected), `SCHEMA_VERSION = 1` and `DEFAULT_VARIANT = "ts-tw"`
+(`registry-item.ts`). Duplicate file paths are rejected case-insensitively after NFC
+normalization (comparison only; stored content is never NFC-normalized).
 
 JSON Schemas for publication under `/schema/*.json` are generated with native
 Zod 4 `z.toJSONSchema` (`json-schemas.ts`, script `build:schemas`).
@@ -51,17 +54,26 @@ Zod 4 `z.toJSONSchema` (`json-schemas.ts`, script `build:schemas`).
 - Excluded: `version`, `hash`, `title`, timestamps, and everything else — including
   `schemaVersion`. Consequence (deliberate): a registry-format change does NOT change
   item hashes; format migrations must be handled outside the hash (builder Task 4).
-- Golden vectors (locked in `hash.test.ts`; the `simple` vector additionally verified
-  with a hand-built canonical string via node:crypto and Windows certutil):
+- Golden vectors (locked in `hash.test.ts`; every vector's canonical string is
+  embedded next to it and each hash was confirmed with Windows certutil on exact bytes):
   - simple → `sha256:d0881b…af45d7`
   - unicode content → `sha256:257aa2…22322`
   - tailwind+cssVars → `sha256:65c0b9…e8f12`
+  - astral key (`U+FF5E`) + astral content → `sha256:4d9488…57424`
+
+## Hash algorithm versioning
+
+Any change to normalization (`normalizeFileContent`, `normalizeItemForHash`) or
+canonicalization (`canonicalize`) MUST bump `schemaVersion` and keep the old verifier
+available: old registry blobs stay verifiable, and the golden vectors above pin the
+current algorithm — changing them without a `schemaVersion` bump is a bug, not a fix.
 
 ## Path rules (`RelativePathSchema`)
 
 Reject: empty; length > 200; leading `/`; drive letters (`C:`); backslashes;
 `..`/`.` segments; empty segments (`//`, trailing `/`); null bytes/control chars;
-leading/trailing spaces (whole path and per segment); more than 10 segments;
+leading/trailing spaces (whole path and per segment); segments ending with `.`;
+`< > " : | ? *` in any segment; more than 10 segments;
 Windows reserved device names (`CON PRN AUX NUL COM1–9 LPT1–9`, case-insensitive,
 with or without extension) in any segment. Everything else — including uppercase —
 is accepted.

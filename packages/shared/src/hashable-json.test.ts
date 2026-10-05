@@ -19,21 +19,15 @@ describe("Sha256HashSchema", () => {
 });
 
 describe("HashableJsonValueSchema", () => {
-  it.each([
-    "text",
-    3,
-    -5,
-    true,
-    false,
-    null,
-    [1, "a", null],
-    { a: { b: [1, 2] } },
-  ])("accepts %j", (value) => {
-    expect(HashableJsonValueSchema.safeParse(value).success).toBe(true);
-  });
+  it.each([["text"], [["a", "b"]], [{ a: { b: "c" } }], [{ arr: [{ deep: "x" }] }]])(
+    "accepts %j",
+    (value) => {
+      expect(HashableJsonValueSchema.safeParse(value).success).toBe(true);
+    },
+  );
 
-  it.each([[1.5], [Number.NaN], [Number.POSITIVE_INFINITY], [undefined], [() => 0]])(
-    "rejects non-hashable value",
+  it.each([[[3]], [[true]], [[null]], [[1.5]], [[undefined]], [[() => 0]]])(
+    "rejects non-string leaves",
     (value) => {
       expect(HashableJsonValueSchema.safeParse(value).success).toBe(false);
     },
@@ -43,8 +37,8 @@ describe("HashableJsonValueSchema", () => {
     expect(HashableJsonValueSchema.safeParse(1n).success).toBe(false);
   });
 
-  it("rejects nested floats with a path", () => {
-    const result = HashableJsonValueSchema.safeParse({ keyframes: { from: { opacity: 0.5 } } });
+  it("rejects nested numbers with a path", () => {
+    const result = HashableJsonValueSchema.safeParse({ keyframes: { from: { opacity: 0 } } });
     expect(result.success).toBe(false);
   });
 });

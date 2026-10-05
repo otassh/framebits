@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   SemverRangeSchema,
   SemverVersionSchema,
+  isBoundedSemverRange,
   isValidSemverRange,
   isValidSemverVersion,
 } from "./semver.js";
@@ -20,6 +21,22 @@ describe("isValidSemverRange", () => {
   });
 });
 
+describe("isBoundedSemverRange", () => {
+  it.each(["^11.0.0", "~1.2.3", "1.2.3", ">=1.0.0 <2.0.0", "1.x", "<2.0.0", "1.2.3 - 2.3.4"])(
+    "accepts bounded %s",
+    (range) => {
+      expect(isBoundedSemverRange(range)).toBe(true);
+    },
+  );
+
+  it.each(["*", "x", ">=0.0.0", ">0", ">=1", ">=1.0.0 || >=3.0.0", ""])(
+    "rejects unbounded %s",
+    (range) => {
+      expect(isBoundedSemverRange(range)).toBe(false);
+    },
+  );
+});
+
 describe("isValidSemverVersion", () => {
   it.each(["1.0.0", "0.0.1", "2.3.4-beta.1", "10.20.30"])("accepts %s", (version) => {
     expect(isValidSemverVersion(version)).toBe(true);
@@ -31,13 +48,12 @@ describe("isValidSemverVersion", () => {
 });
 
 describe("SemverRangeSchema", () => {
-  it("accepts valid ranges", () => {
-    expect(SemverRangeSchema.safeParse("^11.0.0").success).toBe(true);
+  it.each(["^11.0.0", "~1.2.3", "1.2.3", ">=1.0.0 <2.0.0"])("accepts %s", (range) => {
+    expect(SemverRangeSchema.safeParse(range).success).toBe(true);
   });
 
-  it("rejects empty and invalid ranges", () => {
-    expect(SemverRangeSchema.safeParse("").success).toBe(false);
-    expect(SemverRangeSchema.safeParse("banana").success).toBe(false);
+  it.each(["", "*", "x", "latest", "banana", ">=0.0.0", ">0", ">=1"])("rejects %s", (range) => {
+    expect(SemverRangeSchema.safeParse(range).success).toBe(false);
   });
 });
 

@@ -9,6 +9,11 @@ import { z } from "zod";
  * metadata, `*`, `||`). Hand-rolling it would be incomplete and would drift from what
  * npm itself accepts. `semver@7` is tiny, dependency-free, and the same implementation
  * family npm ships with — it is the definition of correctness here.
+ *
+ * On top of validity, dependency ranges must be BOUNDED: every `||` branch must have
+ * an upper bound (`<`, `<=`, or an exact pin). Wildcards (`*`, `x`), `latest`, and
+ * open-ended ranges (`>=0.0.0`, `>0`, `>=1`) resolve to arbitrary future versions and
+ * are rejected. Accepted: carets, tildes, exact versions, bounded comparator ranges.
  */
 
 export function isValidSemverRange(range: string): boolean {
@@ -19,11 +24,42 @@ export function isValidSemverVersion(version: string): boolean {
   return semver.valid(version) !== null;
 }
 
-/** Accepts anything `semver.validRange` accepts (`^11.0.0`, `~1.2`, `>=1 <2`, `*`, ...). */
+/** True when every `||` branch of the range has an upper bound. Assumes validity. */
+export function isBoundedSemverRange(range: string): boolean {
+  let parsed: semver.Range;
+  try {
+    parsed = new semver.Range(range);
+  } catch {
+    return false;
+  }
+  if (parsed.set.length === 0) return false;
+  return parsed.set.every((comparators) =>
+    comparators.some((comparator) => isUpperBound(comparator)),
+  );
+}
+
+/**
+ * `<` / `<=` bound above. So does an exact pin (`op === ""` with a real version).
+ * The wildcard sentinel also carries `op === ""` but has an empty value —
+ * semver collapses `*`, `x`, `""`, and `>=0.0.0` into it, so it must not count.
+ */
+function isUpperBound(comparator: semver.Comparator): boolean {
+  if (comparator.operator === "<" || comparator.operator === "<=") return true;
+  return comparator.operator === "" && comparator.value !== "";
+}
+
+/**
+ * Accepts bounded ranges only (`^11.0.0`, `~1.2.3`, `1.2.3`, `>=1.0.0 <2.0.0`).
+ * Rejects `*`, `x`, `latest`, empty, and effectively unbounded ranges.
+ */
 export const SemverRangeSchema = z
   .string()
   .min(1, "must not be empty")
-  .refine((range) => isValidSemverRange(range), "must be a valid semver range");
+  .refine((range) => isValidSemverRange(range), "must be a valid semver range")
+  .refine(
+    (range) => isBoundedSemverRange(range),
+    "must be a bounded range (wildcards and open-ended ranges are rejected)",
+  );
 
 /** Accepts exact versions only (`1.0.0`, prereleases included, no ranges). */
 export const SemverVersionSchema = z

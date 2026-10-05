@@ -10,31 +10,19 @@ export type Sha256Hash = z.infer<typeof Sha256HashSchema>;
 /**
  * JSON-compatible value that is safe to hash.
  *
- * Numbers are restricted to integers: the canonical form must contain no floats,
- * so non-integers are rejected at parse time (with a schema path) instead of
- * failing later inside the hasher. `undefined` is not a member: absent optional
- * fields are omitted, never serialized.
+ * Leaves are STRINGS ONLY (deliberate): Tailwind fragments and CSS variables are
+ * string-valued in practice (`"0"`, `"16px"`, `"fade 1s"`), and forbidding numbers,
+ * booleans, and null removes the entire float/canonical-number problem at parse time
+ * instead of failing later inside the hasher. `undefined` is not a member: absent
+ * optional fields are omitted, never serialized.
  */
 export type HashableJsonValue =
   | string
-  | number
-  | boolean
-  | null
   | HashableJsonValue[]
   | { [key: string]: HashableJsonValue };
 
-const IntegerSchema = z
-  .number()
-  .refine(
-    (n) => Number.isInteger(n),
-    "must be an integer (floats cannot be hashed deterministically)",
-  );
-
 export const HashableJsonValueSchema: z.ZodType<HashableJsonValue> = z.union([
   z.string(),
-  IntegerSchema,
-  z.boolean(),
-  z.null(),
   z.array(z.lazy((): z.ZodType<HashableJsonValue> => HashableJsonValueSchema)),
   z.record(z.string(), z.lazy((): z.ZodType<HashableJsonValue> => HashableJsonValueSchema)),
 ]);
