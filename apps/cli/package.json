@@ -16,7 +16,7 @@
     "build": "tsup",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "pnpm build && vitest run",
     "pack": "pnpm build && pnpm pack --pack-destination ./dist-pack",
     "smoke": "node scripts/pack-smoke.mjs"
   },
