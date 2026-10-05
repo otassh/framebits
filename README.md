@@ -1,4 +1,10 @@
+<p align="center">
+  <img src="assets/framebits-logo.png" alt="Framebits" width="480" />
+</p>
+
 # Framebits
+
+[![Sponsor](https://img.shields.io/badge/sponsor-30363D?style=for-the-badge&logo=GitHub-Sponsors&logoColor=#EA4AAA)](https://github.com/sponsors/otassh)
 
 Curated platform distributing animated React components, installable with our own CLI: `npx framebits add <slug>`.
 
@@ -53,3 +59,7 @@ Reading components (CLI/website) never hits the API or DB — served as static f
 
 <!-- TODO(question): confirm production DOMAIN (currently framebits.dev placeholder, defined once in packages/shared/src/site.ts) and CLI default registry URL. -->
 <!-- TODO(question): choose a license before public launch (repo is private until then; no LICENSE file yet). -->
+
+## Sponsoring
+
+If this project saves you or your company time, consider [sponsoring ongoing maintenance](https://github.com/sponsors/otassh).
