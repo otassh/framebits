@@ -1,11 +1,17 @@
 /**
- * Atomic apply with journal + rollback (C14).
+ * Atomic apply with journal + rollback (C14, E5).
  * Writes via temp file in the same directory + rename; creates dirs as needed.
  * Before writing, realpaths the nearest existing ancestor and asserts it is
  * inside realpath(projectRoot); refuses to write through an existing symlink.
+ *
+ * Journal order: files -> CSS patches -> installer -> config (last). The
+ * installer runs after files+CSS so a failed install rolls everything back
+ * while leaving the config untouched.
  */
 import type { CliConfig } from "@algorithco-ui/shared";
 import type { PlannedFile } from "../plan/index.js";
+import { computePatched } from "../styles/patch.js";
+import { tailLines, INSTALL_TAIL_LINES, type InstallOutcome } from "../install/run.js";
 
 export interface ApplyFs {
   lstat(path: string): Promise<{ isSymbolicLink: boolean; isDirectory: boolean } | undefined>;
@@ -19,9 +25,31 @@ export interface ApplyFs {
   copyForBackup(from: string, to: string): Promise<void>;
 }
 
+export interface CssApplyPatch {
+  absPath: string;
+  rel: string;
+  slug: string;
+  blockInner: string;
+  /** True when the block already differs (conflict resolved to overwrite). */
+  overwrite: boolean;
+}
+
+export interface InstallerCommand {
+  program: string;
+  args: string[];
+  cwd: string;
+  display: string;
+  /** Package names being installed (for the summary; scope-aware). */
+  packages: string[];
+}
+
 export interface ApplyInput {
   projectRoot: string;
   files: readonly PlannedFile[];
+  css: readonly CssApplyPatch[];
+  /** Absolute paths to snapshot before install (package.json, lockfile). */
+  snapshotFiles: readonly string[];
+  installer: { command: InstallerCommand; run: () => Promise<InstallOutcome> } | undefined;
   config: CliConfig;
   versions: ReadonlyMap<string, { version: string; hash: string }>;
   writeConfig: (next: CliConfig) => Promise<void>;
@@ -32,6 +60,9 @@ export interface ApplyInput {
 export interface ApplyResult {
   written: string[];
   skipped: string[];
+  cssPatched: string[];
+  installed: string[];
+  installSkipped: boolean;
 }
 
 function posixDirname(path: string): string {
@@ -99,10 +130,11 @@ export async function applyPlan(
   const projectRootReal = await fs.realpath(input.projectRoot);
   const written: string[] = [];
   const skipped: string[] = [];
+  const cssPatched: string[] = [];
   const journal: JournalEntry[] = [];
   const previousConfig: CliConfig = JSON.parse(JSON.stringify(input.config)) as CliConfig;
 
-  async function rollback(): Promise<string[]> {
+  async function rollback(restoreConfig: boolean): Promise<string[]> {
     const failures: string[] = [];
     for (let i = journal.length - 1; i >= 0; i--) {
       const entry = journal[i] as JournalEntry;
@@ -121,14 +153,47 @@ export async function applyPlan(
         );
       }
     }
-    try {
-      await input.writeConfig(previousConfig);
-    } catch (error) {
-      failures.push(
-        `config rollback failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
+    if (restoreConfig) {
+      try {
+        await input.writeConfig(previousConfig);
+      } catch (error) {
+        failures.push(
+          `config rollback failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
     }
     return failures;
+  }
+
+  async function writeThroughJournal(target: string, content: string): Promise<void> {
+    await assertSafeTarget(fs, input.projectRoot, projectRootReal, target);
+    const dir = posixDirname(target.replace(/\\/g, "/"));
+    const createdDirs: string[] = [];
+    let cursor = dir;
+    const rootClean = normalizeForCompare(input.projectRoot);
+    while (
+      normalizeForCompare(cursor) !== rootClean &&
+      normalizeForCompare(cursor).startsWith(`${rootClean}/`)
+    ) {
+      const stat = await fs.lstat(cursor);
+      if (stat === undefined) {
+        await fs.mkdir(cursor);
+        createdDirs.unshift(cursor);
+      }
+      const parent = posixDirname(cursor);
+      if (parent === cursor) break;
+      cursor = parent;
+    }
+    const existing = await fs.readFile(target);
+    let backup: string | undefined;
+    if (existing !== undefined) {
+      backup = `${journalDir}/backup-${String(journal.length)}`;
+      await fs.copyForBackup(target, backup);
+    }
+    const staging = `${target}.tmp-${String(Date.now())}-${String(journal.length)}`;
+    await fs.writeFile(staging, content);
+    await fs.rename(staging, target);
+    journal.push({ target, backup, created: existing === undefined, createdDirs });
   }
 
   try {
@@ -143,40 +208,62 @@ export async function applyPlan(
       if (file.action === "conflict" && !input.overwrite) {
         throw new Error(`conflict at ${file.targetRel} (use --overwrite)`);
       }
-      await assertSafeTarget(fs, input.projectRoot, projectRootReal, file.targetAbs);
-      const dir = posixDirname(file.targetAbs.replace(/\\/g, "/"));
-      const createdDirs: string[] = [];
-      let cursor = dir;
-      const rootClean = normalizeForCompare(input.projectRoot);
-      while (
-        normalizeForCompare(cursor) !== rootClean &&
-        normalizeForCompare(cursor).startsWith(`${rootClean}/`)
-      ) {
-        const stat = await fs.lstat(cursor);
-        if (stat === undefined) {
-          await fs.mkdir(cursor);
-          createdDirs.unshift(cursor);
-        }
-        const parent = posixDirname(cursor);
-        if (parent === cursor) break;
-        cursor = parent;
-      }
-      const existing = await fs.readFile(file.targetAbs);
-      let backup: string | undefined;
-      if (existing !== undefined) {
-        backup = `${journalDir}/backup-${String(journal.length)}`;
-        await fs.copyForBackup(file.targetAbs, backup);
-      }
-      const staging = `${file.targetAbs}.tmp-${String(Date.now())}-${String(journal.length)}`;
-      await fs.writeFile(staging, file.content);
-      await fs.rename(staging, file.targetAbs);
-      journal.push({
-        target: file.targetAbs,
-        backup,
-        created: existing === undefined,
-        createdDirs,
-      });
+      await writeThroughJournal(file.targetAbs, file.content);
       written.push(file.targetAbs);
+    }
+
+    for (const patch of input.css) {
+      if (input.skipSlugs.has(patch.slug)) {
+        skipped.push(patch.absPath);
+        continue;
+      }
+      const current = await fs.readFile(patch.absPath);
+      if (current === undefined) {
+        throw new Error(`CSS entry disappeared: ${patch.rel}`);
+      }
+      const computed = computePatched({
+        current,
+        slug: patch.slug,
+        blockInner: patch.blockInner,
+        overwrite: patch.overwrite || input.overwrite,
+      });
+      if (computed.action === "unchanged") continue;
+      if (computed.action === "conflict") {
+        throw new Error(`conflict at ${patch.rel} (use --overwrite)`);
+      }
+      await writeThroughJournal(patch.absPath, computed.next);
+      cssPatched.push(patch.absPath);
+    }
+
+    let installed: string[] = [];
+    if (input.installer !== undefined) {
+      const snapshots = new Map<string, string | undefined>();
+      for (const path of input.snapshotFiles) {
+        snapshots.set(path, await fs.readFile(path));
+      }
+      const outcome = await input.installer.run();
+      if (outcome.timedOut || (outcome.exitCode ?? 1) !== 0) {
+        for (const [path, before] of snapshots) {
+          const after = await fs.readFile(path);
+          if (after !== before) {
+            if (before === undefined) {
+              await fs.rm(path);
+            } else {
+              await fs.writeFile(path, before);
+            }
+          }
+        }
+        const failures = await rollback(false);
+        const tail = tailLines(`${outcome.stdout}\n${outcome.stderr}`, INSTALL_TAIL_LINES).trim();
+        const base = outcome.timedOut
+          ? `package install timed out: ${input.installer.command.display}`
+          : `package install failed: ${input.installer.command.display}${tail === "" ? "" : `\n${tail}`}`;
+        if (failures.length > 0) {
+          throw new Error(`${base} (rollback failures: ${failures.join("; ")})`);
+        }
+        throw new Error(base);
+      }
+      installed = input.installer.command.packages;
     }
 
     const next: CliConfig = JSON.parse(JSON.stringify(input.config)) as CliConfig;
@@ -185,9 +272,11 @@ export async function applyPlan(
       next.installed[slug] = { version: entry.version, hash: entry.hash };
     }
     await input.writeConfig(next);
-    return { written, skipped };
+    return { written, skipped, cssPatched, installed, installSkipped: input.installer === undefined };
   } catch (error) {
-    const failures = await rollback();
+    // Config was never written on this path (it is the last step), so there
+    // is nothing to restore — pass false to leave it untouched.
+    const failures = await rollback(false);
     const base = error instanceof Error ? error.message : String(error);
     if (failures.length > 0) {
       throw new Error(`${base} (rollback failures: ${failures.join("; ")})`);

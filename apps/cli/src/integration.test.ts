@@ -85,6 +85,7 @@ async function buildSnapshot(projectRoot: string): Promise<{
   | {
     dependencies?: Record<string, string> | undefined;
     devDependencies?: Record<string, string> | undefined;
+    peerDependencies?: Record<string, string> | undefined;
     packageManager?: string | undefined;
   }
   | undefined;
@@ -97,6 +98,7 @@ async function buildSnapshot(projectRoot: string): Promise<{
     | {
       dependencies?: Record<string, string> | undefined;
       devDependencies?: Record<string, string> | undefined;
+      peerDependencies?: Record<string, string> | undefined;
       packageManager?: string | undefined;
     }
     | undefined;
@@ -119,6 +121,7 @@ async function buildSnapshot(projectRoot: string): Promise<{
         packageJson = {
           dependencies: pick("dependencies"),
           devDependencies: pick("devDependencies"),
+          peerDependencies: pick("peerDependencies"),
           packageManager: typeof manager === "string" ? manager : undefined,
         };
       }
@@ -183,6 +186,29 @@ const VITE_REFS: Record<string, string> = {
 const TAILWIND_V4: Record<string, string> = {
   ...NEXT_APP_SRC,
   "src/app/globals.css": '@import "tailwindcss";\n',
+};
+
+const NO_TAILWIND: Record<string, string> = {
+  "package.json": JSON.stringify({
+    name: "fixture",
+    dependencies: { react: "^19.0.0" },
+    devDependencies: { typescript: "^5.0.0" },
+  }),
+  "tsconfig.json": JSON.stringify({ compilerOptions: { baseUrl: ".", paths: { "@/*": ["./src/*"] } } }),
+  "src/app/layout.tsx": "export default function Root(): null { return null; }\n",
+  "pnpm-lock.yaml": "lockfileVersion: 9\n",
+};
+
+const CSS_ENTRY_MISSING: Record<string, string> = {
+  "package.json": JSON.stringify({
+    name: "fixture",
+    dependencies: { next: "^15.0.0", react: "^19.0.0" },
+    devDependencies: { typescript: "^5.0.0" },
+  }),
+  "tsconfig.json": JSON.stringify({ compilerOptions: { baseUrl: ".", paths: { "@/*": ["./src/*"] } } }),
+  "src/app/layout.tsx": "export default function Root(): null { return null; }\n",
+  "tailwind.config.ts": "export default {};\n",
+  "pnpm-lock.yaml": "lockfileVersion: 9\n",
 };
 
 const CUSTOM_ALIAS: Record<string, string> = {
@@ -304,16 +330,33 @@ async function initProject(dir: string, registry: string): Promise<void> {
 interface AddRun {
   code: number;
   output: ReturnType<typeof createBufferedOutput>;
+  installs: string[];
+  error: string;
+}
+
+export interface FakeInstallerState {
+  calls: string[];
+  failNext: boolean;
 }
 
 async function runAddIn(
   dir: string,
   slugs: string[],
-  options?: { overwrite?: boolean; dryRun?: boolean },
+  options?: {
+    overwrite?: boolean;
+    dryRun?: boolean;
+    noInstall?: boolean;
+    noStyles?: boolean;
+    yes?: boolean;
+    installerState?: FakeInstallerState | undefined;
+    nodeModules?: Record<string, string> | undefined;
+  },
 ): Promise<AddRun> {
   const output = createBufferedOutput();
   const snap = await buildSnapshot(dir);
   const journalDir = await mkdtemp(join(tmpdir(), "cli-journal-"));
+  const installs: string[] = [];
+  const failState = options?.installerState;
   try {
     await runAdd(
       {
@@ -321,7 +364,9 @@ async function runAddIn(
         slugs,
         overwrite: options?.overwrite === true,
         dryRun: options?.dryRun === true,
-        yes: true,
+        yes: options?.yes !== false,
+        noInstall: options?.noInstall === true,
+        noStyles: options?.noStyles === true,
         registryFlag: baseUrl,
         debug: false,
       },
@@ -333,6 +378,46 @@ async function runAddIn(
         interactive: false,
         fetchFn: globalThis.fetch,
         sleep: (): Promise<void> => Promise.resolve(),
+        installer: {
+          run: (command) => {
+            installs.push(`${command.program} ${command.args.join(" ")}`);
+            if (failState !== undefined) failState.calls.push(`${command.program} ${command.args.join(" ")}`);
+            if (failState?.failNext === true) {
+              failState.failNext = false;
+              return Promise.resolve({ exitCode: 1, timedOut: false, stdout: "", stderr: "fake install boom" });
+            }
+            // Mimic a real installer: record the ranges in package.json.
+            return readFile(join(dir, "package.json"), "utf8").then(
+              (text) => {
+                let raw: unknown;
+                try {
+                  raw = JSON.parse(text) as unknown;
+                } catch {
+                  return { exitCode: 0, timedOut: false, stdout: "", stderr: "" };
+                }
+                if (typeof raw !== "object" || raw === null) {
+                  return { exitCode: 0, timedOut: false, stdout: "", stderr: "" };
+                }
+                const record = raw as Record<string, unknown>;
+                const deps: Record<string, string> =
+                  typeof record["dependencies"] === "object" && record["dependencies"] !== null
+                    ? { ...(record["dependencies"] as Record<string, string>) }
+                    : {};
+                for (const spec of command.args.slice(1)) {
+                  const at = spec.lastIndexOf("@");
+                  if (at <= 0) continue;
+                  deps[spec.slice(0, at)] = spec.slice(at + 1);
+                }
+                record["dependencies"] = deps;
+                return writeFile(join(dir, "package.json"), `${JSON.stringify(record, null, 2)}\n`, "utf8").then(
+                  () => ({ exitCode: 0 as const, timedOut: false as const, stdout: "", stderr: "" }),
+                  () => ({ exitCode: 0 as const, timedOut: false as const, stdout: "", stderr: "" }),
+                );
+              },
+              () => ({ exitCode: 0 as const, timedOut: false as const, stdout: "", stderr: "" }),
+            );
+          },
+        },
         snapshot: {
           files: snap.files,
           dirs: snap.dirs,
@@ -347,17 +432,26 @@ async function runAddIn(
             (text): string => text,
             (): undefined => undefined,
           ),
+        readNodeModuleVersion: (name: string): Promise<string | undefined> => {
+          const pinned = options?.nodeModules?.[name];
+          return Promise.resolve(pinned);
+        },
         listExistingPaths: () => readDirRecursive(dir),
         journalDir,
       },
     );
-    return { code: 0, output };
+    return { code: 0, output, installs, error: "" };
   } catch (error) {
     const code = typeof error === "object" && error !== null && "exitCode" in error &&
         typeof error.exitCode === "number"
       ? error.exitCode
       : 1;
-    return { code, output };
+    return {
+      code,
+      output,
+      installs,
+      error: error instanceof Error ? error.message : String(error),
+    };
   } finally {
     await rm(journalDir, { recursive: true, force: true });
   }
@@ -500,7 +594,8 @@ describe("cli integration (real builder output)", () => {
       await initProject(dir, baseUrl);
       const first = await runAddIn(dir, ["aurora-text"]);
       expect(first.code).toBe(0);
-      expect(first.output.out.join("").toLowerCase()).toContain("manual steps");
+      expect(first.installs).toEqual(["pnpm add clsx@^2.0.0 motion@^14.0.0 tailwind-merge@^3.0.0"]);
+      expect(first.output.out.join("")).toContain("done:");
       const aurora = await readFile(join(dir, "src", "components", "ui", "aurora-text.tsx"), "utf8");
       expect(aurora).toContain("AuroraText");
       const cn = await readFile(join(dir, "src", "lib", "cn.ts"), "utf8");
@@ -511,9 +606,12 @@ describe("cli integration (real builder output)", () => {
       expect(config.installed["aurora-text"]?.version).toBeDefined();
       expect(config.installed["cn"]?.version).toBeDefined();
 
+      const before = await snapshotDir(dir);
       const second = await runAddIn(dir, ["aurora-text"]);
       expect(second.code).toBe(0);
       expect(second.output.out.join("")).toContain("already installed");
+      expect(second.installs).toEqual([]);
+      expect(snapshotsEqual(before, await snapshotDir(dir))).toBe(true);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -614,4 +712,223 @@ describe("cli integration (real builder output)", () => {
       await rm(dir, { recursive: true, force: true });
     }
   }, 60000);
+
+  it("404 suggests did-you-mean (exit 1)", async () => {
+    const dir = await makeProject(NEXT_APP_SRC);
+    try {
+      await initProject(dir, baseUrl);
+      const result = await runAddIn(dir, ["aurora-tex"]);
+      expect(result.code).toBe(1);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 60000);
+
+  it("v4 styles: shimmer block lands in the CSS entry with @theme", async () => {
+    const dir = await makeProject(TAILWIND_V4);
+    try {
+      await initProject(dir, baseUrl);
+      const result = await runAddIn(dir, ["shimmer-button"]);
+      expect(result.code).toBe(0);
+      const css = await readFile(join(dir, "src", "app", "globals.css"), "utf8");
+      expect(css).toContain("/* algorithco-ui:begin shimmer-button */");
+      expect(css).toContain("@theme {");
+      expect(css).toContain("--animate-shimmer: shimmer 2s linear infinite;");
+      expect(css).toContain("@keyframes shimmer {");
+      expect(css).toContain("/* algorithco-ui:end shimmer-button */");
+      expect(result.installs).toEqual(["pnpm add clsx@^2.0.0 tailwind-merge@^3.0.0"]);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 120000);
+
+  it("v3 styles: shimmer block uses top-level keyframes plus utilities layer", async () => {
+    const dir = await makeProject(NEXT_APP_SRC);
+    try {
+      await initProject(dir, baseUrl);
+      const result = await runAddIn(dir, ["shimmer-button"]);
+      expect(result.code).toBe(0);
+      const css = await readFile(join(dir, "src", "app", "globals.css"), "utf8");
+      expect(css).toContain("@keyframes shimmer {");
+      expect(css).toContain("@layer utilities {");
+      expect(css).toContain(".animate-shimmer {");
+      expect(css).not.toContain("@theme");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 120000);
+
+  it("second shimmer add is a complete no-op including CSS", async () => {
+    const dir = await makeProject(NEXT_APP_SRC);
+    try {
+      await initProject(dir, baseUrl);
+      const first = await runAddIn(dir, ["shimmer-button"]);
+      expect(first.code).toBe(0);
+      const before = await snapshotDir(dir);
+      const second = await runAddIn(dir, ["shimmer-button"]);
+      expect(second.code).toBe(0);
+      expect(second.output.out.join("")).toContain("already installed");
+      expect(second.installs).toEqual([]);
+      expect(snapshotsEqual(before, await snapshotDir(dir))).toBe(true);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 120000);
+
+  it("missing Tailwind prints a manual snippet and exits 0", async () => {
+    const dir = await makeProject(NO_TAILWIND);
+    try {
+      await initProject(dir, baseUrl);
+      const result = await runAddIn(dir, ["shimmer-button"]);
+      expect(result.code).toBe(0);
+      const out = result.output.out.join("");
+      expect(out).toContain("Manual steps:");
+      expect(out).toContain("algorithco-ui:begin shimmer-button");
+      expect(out).toContain("@keyframes shimmer");
+      expect(result.installs.length).toBeGreaterThan(0);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 120000);
+
+  it("missing CSS entry prints a manual snippet and exits 0", async () => {
+    const dir = await makeProject(CSS_ENTRY_MISSING);
+    try {
+      await initProject(dir, baseUrl);
+      const result = await runAddIn(dir, ["shimmer-button"]);
+      expect(result.code).toBe(0);
+      expect(result.output.out.join("")).toContain("Manual steps:");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 120000);
+
+  it("--no-install prints the command and never runs it", async () => {
+    const dir = await makeProject(NEXT_APP_SRC);
+    try {
+      await initProject(dir, baseUrl);
+      const result = await runAddIn(dir, ["aurora-text"], { noInstall: true });
+      expect(result.code).toBe(0);
+      expect(result.installs).toEqual([]);
+      expect(result.output.out.join("")).toContain("pnpm add clsx@^2.0.0 motion@^14.0.0 tailwind-merge@^3.0.0");
+      const css = await readFile(join(dir, "src", "app", "globals.css"), "utf8");
+      expect(css).not.toContain("algorithco-ui:begin");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 120000);
+
+  it("--no-styles skips patching and prints the snippet", async () => {
+    const dir = await makeProject(NEXT_APP_SRC);
+    try {
+      await initProject(dir, baseUrl);
+      const before = await readFile(join(dir, "src", "app", "globals.css"), "utf8");
+      const result = await runAddIn(dir, ["shimmer-button"], { noStyles: true });
+      expect(result.code).toBe(0);
+      expect(await readFile(join(dir, "src", "app", "globals.css"), "utf8")).toBe(before);
+      expect(result.output.out.join("")).toContain("algorithco-ui:begin shimmer-button");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 120000);
+
+  it("--dry-run prints the install command and CSS block, writes nothing", async () => {
+    const dir = await makeProject(NEXT_APP_SRC);
+    try {
+      await initProject(dir, baseUrl);
+      const before = await snapshotDir(dir);
+      const result = await runAddIn(dir, ["shimmer-button"], { dryRun: true });
+      expect(result.code).toBe(0);
+      const out = result.output.out.join("");
+      expect(out).toContain("patch-css");
+      expect(out).toContain("pnpm add clsx@^2.0.0 tailwind-merge@^3.0.0");
+      expect(out).toContain("algorithco-ui:begin shimmer-button");
+      expect(result.installs).toEqual([]);
+      expect(snapshotsEqual(before, await snapshotDir(dir))).toBe(true);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 120000);
+
+  it("non-interactive without --yes never runs the installer (exit 0)", async () => {
+    const dir = await makeProject(NEXT_APP_SRC);
+    try {
+      await initProject(dir, baseUrl);
+      const result = await runAddIn(dir, ["aurora-text"], { yes: false });
+      expect(result.code).toBe(0);
+      expect(result.installs).toEqual([]);
+      expect(result.output.out.join("")).toContain("pnpm add");
+      expect(await readFile(join(dir, "src", "lib", "cn.ts"), "utf8")).toContain("cn");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 120000);
+
+  it("unsatisfied declared ranges warn and are left untouched", async () => {
+    const dir = await makeProject({
+      ...NEXT_APP_SRC,
+      "package.json": JSON.stringify({
+        name: "fixture",
+        dependencies: { next: "^15.0.0", react: "^19.0.0", motion: "^13.0.0" },
+        devDependencies: { typescript: "^5.0.0" },
+      }),
+    });
+    try {
+      await initProject(dir, baseUrl);
+      const result = await runAddIn(dir, ["aurora-text"], {
+        nodeModules: { motion: "13.5.0" },
+      });
+      expect(result.code).toBe(0);
+      const out = `${result.output.out.join("")}${result.output.err.join("")}`;
+      expect(out).toContain("13.5.0");
+      expect(out).toContain("^14.0.0");
+      expect(result.installs).toEqual(["pnpm add clsx@^2.0.0 tailwind-merge@^3.0.0"]);
+      expect(result.installs.join(" ")).not.toContain("motion");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 120000);
+
+  it("installer failure rolls back files, CSS and package.json; config untouched", async () => {
+    const dir = await makeProject(NEXT_APP_SRC);
+    try {
+      await initProject(dir, baseUrl);
+      const configBefore = await readFile(join(dir, "algorithco-ui.json"), "utf8");
+      const cssBefore = await readFile(join(dir, "src", "app", "globals.css"), "utf8");
+      const state: FakeInstallerState = { calls: [], failNext: true };
+      const result = await runAddIn(dir, ["shimmer-button"], { installerState: state });
+      expect(result.code).toBe(1);
+      expect(result.error).toContain("fake install boom");
+      expect(await readFile(join(dir, "algorithco-ui.json"), "utf8")).toBe(configBefore);
+      expect(await readFile(join(dir, "src", "app", "globals.css"), "utf8")).toBe(cssBefore);
+      const pkg = JSON.parse(await readFile(join(dir, "package.json"), "utf8")) as Record<string, unknown>;
+      expect("clsx" in ((pkg["dependencies"] ?? {}) as Record<string, unknown>)).toBe(false);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 120000);
+
+  it("malicious style data exits 4 with the project byte-identical", async () => {
+    const dir = await makeProject(NEXT_APP_SRC);
+    try {
+      await initProject(dir, baseUrl);
+      const before = await snapshotDir(dir);
+      const itemFile = join(outDir, "r", "shimmer-button.json");
+      const original = await readFile(itemFile, "utf8");
+      const raw = JSON.parse(original) as Record<string, unknown>;
+      const tailwind = raw["tailwind"] as Record<string, unknown>;
+      const keyframes = tailwind["keyframes"] as Record<string, unknown>;
+      keyframes["evil"] = { from: { PWN: "x; } .pwned { color: red" } };
+      await writeFile(itemFile, JSON.stringify(raw), "utf8");
+      try {
+        const result = await runAddIn(dir, ["shimmer-button"]);
+        expect(result.code).toBe(4);
+      } finally {
+        await writeFile(itemFile, original, "utf8");
+      }
+      expect(snapshotsEqual(before, await snapshotDir(dir))).toBe(true);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 120000);
 });

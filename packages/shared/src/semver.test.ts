@@ -3,8 +3,10 @@ import {
   SemverRangeSchema,
   SemverVersionSchema,
   bumpSemverVersion,
+  doSemverRangesIntersect,
   isBoundedSemverRange,
   isGreaterSemverVersion,
+  isSemverSubset,
   isValidSemverRange,
   isValidSemverVersion,
   satisfiesSemverRange,
@@ -78,6 +80,20 @@ describe("bumpSemverVersion / isGreaterSemverVersion", () => {
     expect(isGreaterSemverVersion("1.0.0", "1.0.0")).toBe(false);
     expect(isGreaterSemverVersion("1.0.0", "2.0.0")).toBe(false);
     expect(isGreaterSemverVersion("nope", "1.0.0")).toBe(false);
+  });
+});
+
+describe("isSemverSubset / doSemverRangesIntersect", () => {
+  it("detects subsets", () => {
+    expect(isSemverSubset("1.2.3", "^1.0.0")).toBe(true);
+    expect(isSemverSubset("^2.0.0", "^1.0.0")).toBe(false);
+    expect(isSemverSubset("nope", "^1.0.0")).toBe(false);
+  });
+
+  it("detects intersections", () => {
+    expect(doSemverRangesIntersect("^14.0.0", "^14.5.0")).toBe(true);
+    expect(doSemverRangesIntersect("^13.0.0", "^14.0.0")).toBe(false);
+    expect(doSemverRangesIntersect("nope", "^1.0.0")).toBe(false);
   });
 });
 

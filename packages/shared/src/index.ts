@@ -97,7 +97,9 @@ export {
   SemverRangeSchema,
   SemverVersionSchema,
   bumpSemverVersion,
+  doSemverRangesIntersect,
   isGreaterSemverVersion,
+  isSemverSubset,
   satisfiesSemverRange,
 } from "./semver.js";
 export type { SemverBumpLevel, SemverRange, SemverVersion } from "./semver.js";

@@ -53,14 +53,22 @@ PR checklist:
 - Never delete a component: set `status: "deprecated"` instead (stats must survive).
 - [ ] Checks green: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
 
-## CLI (`algorithco-ui`, Task 5a)
+## CLI (`algorithco-ui`, Task 5a + 5b)
 
 - `apps/cli` bundles to a single `dist/cli.js` with tsup (ESM, Node 20, shebang,
-  no sourcemap). All deps are devDependencies (bundled). Never add a runtime
-  dependency without justification (approved 5a set: `commander`,
-  `@clack/prompts`, `picocolors`, `jsonc-parser`).
+  no sourcemap). All deps are devDependencies and bundled, except `cross-spawn`
+  (the single runtime dependency: its dynamic `require("child_process")` cannot
+  be bundled to ESM). Never add another runtime dependency without justification
+  (approved set: `commander`, `@clack/prompts`, `picocolors`, `jsonc-parser`,
+  `cross-spawn`).
 - All printing goes through `src/ui/output.ts` (no `console`). Respect
   `NO_COLOR`/non-TTY. `--debug` for stacks.
 - `init` never modifies `tsconfig` or any file besides `algorithco-ui.json`.
-- After `add`, print manual steps (npm install command + Tailwind snippet);
-  do NOT automate install/merge in 5a (Task 5b).
+- Component styles: declare `tailwind` keyframes/animation and `cssVars` in
+  `styles.json` (validated by `ComponentStylesSchema`). Allowed: kebab-case
+  names, `from`/`to`/percentage selectors, plain property/value declarations —
+  no `url()`, no at-rules, no inline comments tricks (see `docs/CLI.md` safety
+  rules; violations fail the build/CLI with exit 4).
+- `add` writes files, patches CSS markers, installs deps, updates config — in
+  that order, atomically with rollback. After `add`, manual output appears
+  only for skipped steps.

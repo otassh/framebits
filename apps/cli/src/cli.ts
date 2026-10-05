@@ -10,6 +10,7 @@ import { runAdd } from "./commands/add.js";
 import { runInit } from "./commands/init.js";
 import { nodeApplyFs, nodeConfigFs, readProjectSnapshot } from "./fs/node.js";
 import { exitCodeFor, formatError } from "./errors.js";
+import { createInstaller, nodeSpawn } from "./install/run.js";
 import { createNodeOutput, isInteractiveProcess, printError, printHint } from "./ui/output.js";
 import { nodePrompts } from "./ui/prompts.js";
 import { CLI_PACKAGE_NAME, CLI_VERSION } from "./version.js";
@@ -21,31 +22,27 @@ const EXAMPLES = [
   "  algorithco-ui add aurora-text",
   "  algorithco-ui add aurora-text shimmer-button --overwrite",
   "  algorithco-ui add cn@1.0.0 --dry-run",
+  "  algorithco-ui add shimmer-button --no-install --no-styles",
 ].join("\n");
+
+interface SnapshotPackageJson {
+  dependencies?: Record<string, string> | undefined;
+  devDependencies?: Record<string, string> | undefined;
+  peerDependencies?: Record<string, string> | undefined;
+  packageManager?: string | undefined;
+}
 
 async function readSnapshotFor(root: string): Promise<{
   files: ReadonlySet<string>;
   dirs: ReadonlySet<string>;
   contents: ReadonlyMap<string, string>;
-  packageJson:
-    | {
-      dependencies?: Record<string, string> | undefined;
-      devDependencies?: Record<string, string> | undefined;
-      packageManager?: string | undefined;
-    }
-    | undefined;
+  packageJson: SnapshotPackageJson | undefined;
   tsconfigText: string | undefined;
   jsconfigText: string | undefined;
   isVite: boolean;
 }> {
   const snapshot = await readProjectSnapshot(root);
-  let packageJson:
-    | {
-      dependencies?: Record<string, string> | undefined;
-      devDependencies?: Record<string, string> | undefined;
-      packageManager?: string | undefined;
-    }
-    | undefined;
+  let packageJson: SnapshotPackageJson | undefined;
   const pkgText = snapshot.contents.get("package.json");
   if (pkgText !== undefined) {
     try {
@@ -64,8 +61,9 @@ async function readSnapshotFor(root: string): Promise<{
         packageJson = {
           dependencies: pick("dependencies"),
           devDependencies: pick("devDependencies"),
+          peerDependencies: pick("peerDependencies"),
           packageManager: typeof record["packageManager"] === "string"
-            ? (record["packageManager"])
+            ? record["packageManager"]
             : undefined,
         };
       }
@@ -190,11 +188,13 @@ export async function main(argv: readonly string[]): Promise<number> {
     .option("--overwrite", "overwrite conflicting files")
     .option("--dry-run", "print the plan and manual steps; write nothing")
     .option("--yes", "non-interactive: accept defaults (does not imply --overwrite)")
+    .option("--no-install", "print the install command instead of running it")
+    .option("--no-styles", "skip Tailwind CSS patching (print the snippet instead)")
     .option("--cwd <dir>", "project directory")
     .option("--registry <url>", "registry base URL")
     .action(async (
       slugs: string[],
-      cmdOptions: { overwrite?: boolean; dryRun?: boolean; yes?: boolean; cwd?: string; registry?: string },
+      cmdOptions: { overwrite?: boolean; dryRun?: boolean; yes?: boolean; noInstall?: boolean; noStyles?: boolean; cwd?: string; registry?: string },
     ) => {
       const globalOptions = program.opts<{ debug?: boolean; cwd?: string; registry?: string; yes?: boolean }>();
       const debug = globalOptions.debug === true;
@@ -211,6 +211,8 @@ export async function main(argv: readonly string[]): Promise<number> {
             overwrite: cmdOptions.overwrite === true,
             dryRun: cmdOptions.dryRun === true,
             yes,
+            noInstall: cmdOptions.noInstall === true,
+            noStyles: cmdOptions.noStyles === true,
             registryFlag: cmdOptions.registry ?? globalOptions.registry,
             debug,
           },
@@ -222,6 +224,7 @@ export async function main(argv: readonly string[]): Promise<number> {
             interactive: isInteractiveProcess(yes) && cmdOptions.dryRun !== true,
             fetchFn: globalThis.fetch,
             sleep: (ms: number) => new Promise((resolveSleep) => setTimeout(resolveSleep, ms)),
+            installer: createInstaller(nodeSpawn),
             snapshot: {
               files: snapshot.files,
               dirs: snapshot.dirs,
@@ -234,6 +237,19 @@ export async function main(argv: readonly string[]): Promise<number> {
             readExistingFile: async (abs: string) => {
               try {
                 return await readFile(abs, "utf8");
+              } catch {
+                return undefined;
+              }
+            },
+            readNodeModuleVersion: async (name: string) => {
+              try {
+                const text = await readFile(join(cwd, "node_modules", ...name.split("/"), "package.json"), "utf8");
+                const raw: unknown = JSON.parse(text);
+                if (typeof raw === "object" && raw !== null && "version" in raw) {
+                  const version = raw.version;
+                  return typeof version === "string" ? version : undefined;
+                }
+                return undefined;
               } catch {
                 return undefined;
               }
