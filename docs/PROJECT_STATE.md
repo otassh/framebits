@@ -72,8 +72,10 @@ Branding values (searched via grep for `PROJECT_NAME|DOMAIN|REGISTRY_URL|PLACEHO
 | 3 | Component generator (`pnpm new-component`) | DONE (merged via PR #3) | `7ac5fcf`+`46f3484` on `main` | Core in `packages/builder/src/scaffold/` PASS; wrapper exit 0/1/2 PASS; determinism + LF-only PASS; live root run PASS; CI 22/24 green PASS. |
 | 4 | `packages/builder` (validate 4a + emit 4b) + 3 samples | DONE (merged via PR #5) | `165f2dd` | All Task 4 acceptance PASS (reported on PR #5). |
 | 5a | CLI core (packaging, detection, config, `init`, `add` file pipeline) | DONE (merged via PR #6) | `2031a0e` | All Task 5a acceptance PASS (reported on PR #6). |
-| 5b | CLI install + styles (npm install, Tailwind CSS blocks, real e2e) | IN PROGRESS (branch `task-5b-cli-install-styles`, draft PR #7) | — | Implementation + tests + docs + e2e workflow done; `turbo --force` 28/28 green locally; CI + e2e run pending. |
-| 6 | Docker, Caddy, deploy scripts | NOT STARTED | — | All FAIL (only placeholder README) |
+| 5b | CLI install + styles (npm install, Tailwind CSS blocks, real e2e) | DONE (merged via PRs #7, #9, #8) | `9b011c2` | All Task 5b acceptance PASS: 717 tests green, bundle 1.08 MB, CI 22/24 + Node 20 green, e2e-real green on Linux (run `37315359376`) and Windows locally. |
+| 6a | Static serving (Caddy + Compose + registry verifier + smoke tests) | IN PROGRESS (branch `task-6a-static-serving`, draft PR pending) | — | Work started. |
+| 6b | VPS deploy (deploy.sh, rollback, backup, SSH hardening, deploy workflow) | NOT STARTED | — | Explicitly out of scope for 6a. |
+| 6 | Docker, Caddy, deploy scripts (split: 6a static serving + smoke, 6b VPS deploy) | 6a IN PROGRESS (this branch); 6b NOT STARTED | — | Deploy placeholders only (`deploy.sh`/`rollback.sh`/`backup.sh`, deploy workflow, postgres/api services all land in 6b/7/8 — intentional). |
 | 7 | `packages/db` (schema, migrations, client, sync, seed) | NOT STARTED | — | All FAIL (`db:sync`/`db:migrate` absent — intentional per §16 decision 4) |
 | 8 | `apps/api` (env, health, events, stats, like, newsletter, RSS, limits, CORS, shutdown) | NOT STARTED | — | All FAIL (1-line stub) |
 | 9 | CLI: telemetry + `list`, `search`, `diff`, `update` | NOT STARTED | — | NOT VERIFIED |
@@ -498,13 +500,13 @@ include administrators). Awaiting owner go-ahead.
    `pnpm.cmd turbo run lint typecheck test build --force` (24 tasks, ~13s; build warns
    "no output files" — expected, noEmit until Task 5). Remote: `origin` =
    `github.com/otassh/algorithco-ui` (private); CI matrix [22, 24], green on run 37256803283.
-6. Current state: branch `task-4b-builder-emit`, draft PR open (CI pending at last edit),
-   NOT merged. Builder complete through emit (typecheck/env/versioning/archive/search);
-   3 samples + lock committed on the branch. Root `new-component` + `build:registry`
-   (all flags) work; `db:sync`/`db:migrate` still point at future Task 7 code —
-   intentional, do not stub. CLI `bin/dist` gap lands in Task 5.
-7. Exact next action: Task 5 (CLI init/add) — only after owner merges/reviews the 4b PR.
-   Do NOT start API/DB work first. STOP after reporting.
+6. Current state: branch `task-6a-static-serving`, Task 5b DONE (merged via PRs
+   #7, #9, #8 at `9b011c2`; 717 tests, bundle 1.08 MB, e2e-real green on Linux
+   run `37315359376` + Windows locally). `deploy/` still placeholder (6a builds
+   Caddy + Compose + verifier + smoke; `deploy.sh`/`rollback.sh`/`backup.sh`,
+   deploy workflow, postgres/api services land in 6b/7/8 — intentional).
+7. Exact next action: Task 6a (static serving) on this branch. Do NOT start 6b
+   (VPS deploy) or API/DB work first. STOP after reporting.
 8. Agent commit attribution (owner decision 2026-10-05): every agent-authored commit ends with
    trailer `Co-Authored-By: opencode <noreply@opencode.ai>` (upstream OpenCode TOOL convention —
    not a personal account; no GitHub user behind it). No bot footer line. Never rewrite pushed
