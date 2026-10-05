@@ -88,3 +88,12 @@ same implementation family npm ships; `@types/semver` is dev-only. No other new
 runtime dependency was added (`zod@4` covers validation + JSON Schema export via
 native `z.toJSONSchema`, so `zod-to-json-schema` was NOT added; hashing uses only
 `node:crypto`).
+
+## Generated component dependency (`motion`)
+
+Researched 2026-10-05 via the npm registry: `motion@14.0.0` is the current stable
+latest and its `exports` map contains `./react` (`./dist/es/react.mjs`, types
+`./dist/react.d.ts`). Generated components therefore declare
+`{ "motion": "^14.0.0" }` (constant `MOTION_RANGE` in
+`packages/builder/src/scaffold/request.ts`) and import from `motion/react`.
+Re-check at Task 4+ if a new major appears; the constant is the single place to change.

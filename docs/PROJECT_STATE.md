@@ -4,9 +4,9 @@
 > or by commands run on 2026-10-04/05. Anything not verifiable is marked UNKNOWN /
 > NOT BUILT / NOT VERIFIED.
 >
-> Update 2026-10-05 (Task 2): branch `task-2-shared`, commit `9bcd33a`,
-> PR otassh/algorithco-ui#1 (open, unmerged — awaiting owner review), CI run `37260444537`
-> GREEN on Node 22 (1m4s) and 24 (1m1s). Task 2 DONE per acceptance below.
+> Update 2026-10-05 (Task 2 DONE): branch `task-2-shared` merged via PR #1, review
+> follow-ups merged via PR #2. Task 3 (in progress): branch `task-3-generator`,
+> draft PR otassh/algorithco-ui#3 (unmerged — awaiting owner review).
 
 ## 1. Snapshot
 
@@ -69,7 +69,7 @@ Branding values (searched via grep for `PROJECT_NAME|DOMAIN|REGISTRY_URL|PLACEHO
 | 1 | Monorepo skeleton | DONE | `d06c7e8` (+ `a0ae742` follow-up) | Fresh-clone green checks PASS (verified §7, incl. uncached `--force` run 2026-10-05); CI workflow valid PASS (first CI run green 2026-10-05, run `37256803283`) |
 | 1b | Housekeeping (this report's session; not a master-prompt task) | DONE | `b4f2166`, `5c46663`, `c5e55a9`, `43222eb`, `3c0dd1c` | AGENTS.md rule added PASS; PROJECT_NAME added PASS; CI hardened PASS; esbuild warning resolved PASS; turbo opt-out verified PASS (tree stayed clean after run) |
 | 2 | `packages/shared` (schemas, hashing, JSON Schema export) | DONE | `9bcd33a` on `task-2-shared`, PR #1 | All Task 2 acceptance criteria PASS — see mapping: (1) unknown-key rejection: every schema `.strict()` + tests PASS; path traversal: RelativePathSchema matrix (24 fail/pass cases) PASS; (2) key-order independence: property tests PASS; goldens match on Node 22+24 CI PASS (run `37260444537`); simple vector triple-verified (impl + hand-built node hash + certutil) PASS; (3) committed `registry.lock.json` validates against `RegistryLockSchema` (`lock.test.ts`) PASS; (4) `turbo run lint typecheck test build --force` 24/24 green, 0 `any`, 0 ts-ignore (18 lint errors found and fixed in-branch) PASS; (5) `docs/CONTRACTS.md` written, code/doc in sync PASS; (6) PR #1 open, CI green both versions PASS. NOT merged (owner reviews). 290 tests in shared (293 repo-wide), 0 skipped. New runtime deps: `zod@4.6.5` (approved list), `semver@7.8.5` (justified in CONTRACTS.md); `zod-to-json-schema` NOT added (native `z.toJSONSchema` verified); `@types/semver` + `@types/node` dev-only. |
-| 3 | Component generator (`pnpm new-component`) | NOT STARTED (stub throws) | `d06c7e8` (stub) | Valid folder: FAIL; refuse overwrite: FAIL; passes builder validation: FAIL (builder is Task 4) |
+| 3 | Component generator (`pnpm new-component`) | IN PROGRESS (69 tests green locally; draft PR #3) | `7ac5fcf` on `task-3-generator` | Core in `packages/builder/src/scaffold/` (pure fns, explicit registryRoot+now), thin `scripts/new-component.ts` wrapper (parseArgs, exit 0/1/2). Per-type file sets + schema-valid meta PASS (tests); overwrite/dup/escape/bad-input → correct codes, no partial output PASS; determinism + LF-only PASS (Windows local; CI pending); full `--force` green + live root run + CI 22/24 → reported below at completion. |
 | 4 | `packages/builder` + 3 sample components | NOT STARTED | — | All FAIL (no pipeline code; `build:registry` script absent — intentional per §16 decision 4) |
 | 5 | CLI: `init` and `add` | NOT STARTED | — | All FAIL (stub; `bin`/`dist` gap known, real build lands in this task per §16 decision 3) |
 | 6 | Docker, Caddy, deploy scripts | NOT STARTED | — | All FAIL (only placeholder README) |
@@ -497,12 +497,13 @@ include administrators). Awaiting owner go-ahead.
    `pnpm.cmd turbo run lint typecheck test build --force` (24 tasks, ~13s; build warns
    "no output files" — expected, noEmit until Task 5). Remote: `origin` =
    `github.com/otassh/algorithco-ui` (private); CI matrix [22, 24], green on run 37256803283.
-6. Current state: branch `task-2-shared`, PR #1 open (CI green 22+24), NOT merged.
-   `packages/shared` complete per §4 (290 tests). Only `config`+`shared` complete; rest stubs.
-   Root scripts `build:registry`/`db:sync`/`db:migrate` point at future Task 3/4/7 code —
-   intentional, do not stub. CLI `bin/dist` gap lands in Task 5.
-7. Exact next action: Task 3 (`new-component` generator) — only after owner merges/reviews PR #1.
-   Do NOT start builder/CLI/API/DB work first. STOP after reporting.
+6. Current state: branch `task-3-generator`, draft PR #3 open (CI pending at last edit),
+   NOT merged. `packages/shared` + generator core complete; rest stubs.
+   Root `new-component` script works; `build:registry`/`db:sync`/`db:migrate` still point at
+   future Task 4/7 code — intentional, do not stub. CLI `bin/dist` gap lands in Task 5.
+   No generated components committed to `registry/` (Task 4 samples).
+7. Exact next action: Task 4 (`packages/builder` pipeline + 3 samples) — only after owner
+   merges/reviews PR #3. Do NOT start API/DB/CLI work first. STOP after reporting.
 8. Agent commit attribution (owner decision 2026-10-05): every agent-authored commit ends with
    trailer `Co-Authored-By: opencode <noreply@opencode.ai>` (upstream OpenCode TOOL convention —
    not a personal account; no GitHub user behind it). No bot footer line. Never rewrite pushed

@@ -1,4 +1,4 @@
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { MetaSchema } from "@algorithco-ui/shared";
 import { ScaffoldError } from "./types.js";
@@ -36,6 +36,16 @@ export async function listMetaFiles(registryRoot: string): Promise<string[]> {
  * hard error naming the path (never silently ignored).
  */
 export async function assertSlugUnique(registryRoot: string, slug: string): Promise<void> {
+  try {
+    await stat(registryRoot);
+  } catch (error) {
+    // A missing root contains no items: vacuously unique. Anything else is a real error.
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return;
+    throw new ScaffoldError(
+      "validation",
+      `cannot read the registry at ${registryRoot}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
   const files = await listMetaFiles(registryRoot);
   for (const file of files) {
     let raw: unknown;

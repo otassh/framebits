@@ -151,6 +151,14 @@ describe("scaffold", () => {
     expect(await readdir(join(root, "components"))).toEqual(["buttons"]);
   });
 
+  it("treats a missing root as empty (creates the chain)", async () => {
+    const base = await makeRoot();
+    const nested = join(base, "nested", "registry");
+    const result = await scaffold({ slug: "fresh-one", category: "buttons" }, nested, NOW);
+    expect(result.dir).toBe(join(nested, "components", "buttons", "fresh-one"));
+    expect(result.files).toEqual(["fresh-one.tsx", "demo.tsx", "meta.json"]);
+  });
+
   it("leaves no partial output when the filesystem fails", async () => {
     const root = await makeRoot();
     const blockingFile = join(root, "blocker");

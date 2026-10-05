@@ -99,19 +99,23 @@ describe("buildMeta + serializeMeta", () => {
     const text = serializeMeta(meta);
     expect(text.endsWith("\n")).toBe(true);
     expect(text.includes("\r")).toBe(false);
-    expect(Object.keys(JSON.parse(text))).toEqual([
-      "slug",
-      "title",
-      "type",
-      "category",
-      "tags",
-      "description",
-      "dependencies",
-      "registryDependencies",
-      "difficulty",
-      "performance",
-      "status",
-      "addedAt",
-    ]);
+    const parsed: unknown = JSON.parse(text);
+    expect(typeof parsed === "object" && parsed !== null).toBe(true);
+    if (typeof parsed === "object" && parsed !== null) {
+      expect(Object.keys(parsed)).toEqual([
+        "slug",
+        "title",
+        "type",
+        "category",
+        "tags",
+        "description",
+        "dependencies",
+        "registryDependencies",
+        "difficulty",
+        "performance",
+        "status",
+        "addedAt",
+      ]);
+    }
   });
 });

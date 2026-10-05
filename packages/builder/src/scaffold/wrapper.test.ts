@@ -41,38 +41,56 @@ function runWrapper(args: string[]): { status: number | null; stdout: string; st
 }
 
 describe("scripts/new-component.ts", () => {
-  it("scaffolds a component into the given root", async () => {
-    const root = await makeRoot();
-    const run = runWrapper(["aurora-text", "--category=text-animations", "--registry-root", root]);
-    expect(run.status).toBe(0);
-    expect(run.stdout).toContain("aurora-text.tsx");
-    expect((await readdir(join(root, "components", "text-animations", "aurora-text"))).sort()).toEqual([
-      "aurora-text.tsx",
-      "demo.tsx",
-      "meta.json",
-    ]);
-  });
+  // Each case spawns node+tsx subprocesses (~1s each, slower on cold/loaded CI).
+  it(
+    "scaffolds a component into the given root",
+    async () => {
+      const root = await makeRoot();
+      const run = runWrapper([
+        "aurora-text",
+        "--category=text-animations",
+        "--registry-root",
+        root,
+      ]);
+      expect(run.status).toBe(0);
+      expect(run.stdout).toContain("aurora-text.tsx");
+      expect(
+        (
+          await readdir(join(root, "components", "text-animations", "aurora-text"))
+        ).sort(),
+      ).toEqual(["aurora-text.tsx", "demo.tsx", "meta.json"]);
+    },
+    30000,
+  );
 
-  it("reports conflicts with exit 1 and usage errors with exit 2", async () => {
-    const root = await makeRoot();
-    expect(
-      runWrapper(["aurora-text", "--category=text-animations", "--registry-root", root]).status,
-    ).toBe(0);
-    expect(
-      runWrapper(["aurora-text", "--category=text-animations", "--registry-root", root]).status,
-    ).toBe(1);
-    expect(runWrapper(["Bad_Slug", "--category=text-animations", "--registry-root", root]).status).toBe(
-      1,
-    );
-    expect(runWrapper([]).status).toBe(2);
-    expect(runWrapper(["a", "b", "--registry-root", root]).status).toBe(2);
-  });
+  it(
+    "reports conflicts with exit 1 and usage errors with exit 2",
+    async () => {
+      const root = await makeRoot();
+      expect(
+        runWrapper(["aurora-text", "--category=text-animations", "--registry-root", root]).status,
+      ).toBe(0);
+      expect(
+        runWrapper(["aurora-text", "--category=text-animations", "--registry-root", root]).status,
+      ).toBe(1);
+      expect(
+        runWrapper(["Bad_Slug", "--category=text-animations", "--registry-root", root]).status,
+      ).toBe(1);
+      expect(runWrapper([]).status).toBe(2);
+      expect(runWrapper(["a", "b", "--registry-root", root]).status).toBe(2);
+    },
+    60000,
+  );
 
-  it("prints next steps on success", async () => {
-    const root = await makeRoot();
-    const run = runWrapper(["my-button", "--category=buttons", "--registry-root", root]);
-    expect(run.status).toBe(0);
-    expect(run.stdout).toContain("next steps");
-    expect(run.stdout).toContain("build:registry");
-  });
+  it(
+    "prints next steps on success",
+    async () => {
+      const root = await makeRoot();
+      const run = runWrapper(["my-button", "--category=buttons", "--registry-root", root]);
+      expect(run.status).toBe(0);
+      expect(run.stdout).toContain("next steps");
+      expect(run.stdout).toContain("build:registry");
+    },
+    30000,
+  );
 });
