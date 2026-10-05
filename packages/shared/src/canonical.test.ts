@@ -17,6 +17,14 @@ describe("canonicalize", () => {
     expect(canonicalize({ b: 1, A: 2 })).toBe('{"A":2,"b":1}');
   });
 
+  it("sorts astral-plane keys by UTF-16 code unit (RFC 8785)", () => {
+    // "\uFF5E" is U+FF5E (first code unit 0xFF5E); "\u{1F600}" is U+1F600
+    // (first code unit 0xD83D). 0xD83D < 0xFF5E, so the astral key sorts FIRST
+    // in UTF-16 order even though U+1F600 > U+FF5E as code points: RFC 8785, not locale.
+    const input: Record<string, number> = { ["\uFF5E"]: 1, ["\u{1F600}"]: 2 };
+    expect(canonicalize(input)).toBe('{"\u{1F600}":2,"\uFF5E":1}');
+  });
+
   it("keeps array order", () => {
     expect(canonicalize([2, 1])).toBe("[2,1]");
     expect(canonicalize({ files: [{ path: "b" }, { path: "a" }] })).toBe(
@@ -50,6 +58,18 @@ describe("canonicalize", () => {
     expect(() => canonicalize(1n)).toThrow(CanonicalizeError);
     expect(() => canonicalize(() => 0)).toThrow(CanonicalizeError);
     expect(() => canonicalize(Symbol("s"))).toThrow(CanonicalizeError);
+  });
+
+  it("throws for non-plain objects", () => {
+    expect(() => canonicalize(new Date("2026-10-04T00:00:00.000Z"))).toThrow(CanonicalizeError);
+    expect(() => canonicalize(new (class Box {
+      value = 1;
+    })())).toThrow(CanonicalizeError);
+  });
+
+  it("accepts null-prototype object literals", () => {
+    const obj = Object.assign(Object.create(null) as Record<string, number>, { b: 1, a: 2 });
+    expect(canonicalize(obj)).toBe('{"a":2,"b":1}');
   });
 
   it("throws for undefined nested inside containers", () => {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { canonicalize } from "./canonical.js";
 import {
   computeItemHash,
   normalizeFileContent,
@@ -173,10 +174,15 @@ describe("computeItemHash", () => {
 });
 
 /**
- * GOLDEN VECTORS — hardcoded input -> hash pairs that lock the algorithm.
- * The `simple` vector was hand-verified: canonical form reconstructed manually from the
- * spec, hashed with node:crypto AND Windows certutil (independent implementations agree).
- * Changing any of these hashes later must be a conscious schemaVersion bump.
+ * GOLDEN VECTORS — hardcoded input -> canonical form -> hash triples that lock the algorithm.
+ *
+ * Derivation (independent of the test assertions): each canonical string below was
+ * eyeball-verified field-by-field against the spec (sorted keys at every level,
+ * LF-normalized content, materialized variant, absent optionals omitted), written to
+ * exact bytes, and hashed with Windows certutil (independent SHA-256 implementation).
+ * The `simple` vector additionally matched a hand-built node:crypto hash. All three
+ * external hashes equal the hardcoded expectations. Changing any hash later must be
+ * a conscious schemaVersion bump (see docs/CONTRACTS.md "Hash algorithm versioning").
  */
 describe("golden vectors", () => {
   const simple: ItemHashInput = {
@@ -191,6 +197,8 @@ describe("golden vectors", () => {
       },
     ],
   };
+  const SIMPLE_CANONICAL =
+    '{"dependencies":{"motion":"^11.0.0"},"files":[{"content":"export function AuroraText() {\\n  return null;\\n}\\n","path":"components/ui/aurora-text.tsx","type":"component","variant":"ts-tw"}],"registryDependencies":["cn"],"type":"component"}';
 
   const unicode: ItemHashInput = {
     type: "component",
@@ -205,6 +213,8 @@ describe("golden vectors", () => {
       },
     ],
   };
+  const UNICODE_CANONICAL =
+    '{"dependencies":{},"files":[{"content":"export const greeting = \\"Grüße ☃ — café\\";\\n","path":"components/ui/grusse.tsx","type":"component","variant":"ts-tw"}],"registryDependencies":[],"type":"component"}';
 
   const styled: ItemHashInput = {
     type: "component",
@@ -223,27 +233,41 @@ describe("golden vectors", () => {
     },
     cssVars: { light: { "--fade": "red" }, dark: { "--fade": "blue" } },
   };
+  const STYLED_CANONICAL =
+    '{"cssVars":{"dark":{"--fade":"blue"},"light":{"--fade":"red"}},"dependencies":{"clsx":"^2.0.0","motion":"^11.0.0"},"files":[{"content":"export function FadeIn() {\\n  return null;\\n}\\n","path":"components/ui/fade-in.tsx","type":"component","variant":"ts-tw"}],"registryDependencies":["cn"],"tailwind":{"animation":{"fade":"fade 1s ease"},"keyframes":{"fade":{"from":{"opacity":"0"},"to":{"opacity":"1"}}}},"type":"component"}';
 
-  it("simple item", () => {
-    expect(computeItemHash(simple)).toBe(
-      "sha256:d0881be01768b5f4bed82053199810ede99cd512d25d52707e37ab9d76af45d7",
-    );
-  });
+  const grin = String.fromCodePoint(0x1f600);
+  const fullwidthTilde = String.fromCharCode(0xff5e);
+  const astral: ItemHashInput = {
+    type: "component",
+    dependencies: {},
+    registryDependencies: [],
+    files: [
+      {
+        path: "components/ui/emoji.tsx",
+        content: `export const smile = "${grin}";\n`,
+        type: "component",
+      },
+    ],
+    tailwind: { keyframes: { [fullwidthTilde]: { from: { opacity: "0" } } } },
+  };
+  const ASTRAL_CANONICAL =
+    '{"dependencies":{},"files":[{"content":"export const smile = \\"😀\\";\\n","path":"components/ui/emoji.tsx","type":"component","variant":"ts-tw"}],"registryDependencies":[],"tailwind":{"keyframes":{"～":{"from":{"opacity":"0"}}}},"type":"component"}';
 
-  it("item with unicode content", () => {
-    expect(computeItemHash(unicode)).toBe(
-      "sha256:257aa23878409971523312b58bf0ffb3061874893b17f36e50b3974a2e872322",
-    );
-  });
-
-  it("item with tailwind + cssVars", () => {
-    expect(computeItemHash(styled)).toBe(
-      "sha256:65c0b9606e0752d3313c981771da3aa38fef2d12e3f2110bf271d6e6354e8f12",
-    );
+  const goldenCases: Array<{ name: string; input: ItemHashInput; canonical: string; hash: string }> = [
+    { name: "simple", input: simple, canonical: SIMPLE_CANONICAL, hash: "sha256:d0881be01768b5f4bed82053199810ede99cd512d25d52707e37ab9d76af45d7" },
+    { name: "unicode", input: unicode, canonical: UNICODE_CANONICAL, hash: "sha256:257aa23878409971523312b58bf0ffb3061874893b17f36e50b3974a2e872322" },
+    { name: "styled", input: styled, canonical: STYLED_CANONICAL, hash: "sha256:65c0b9606e0752d3313c981771da3aa38fef2d12e3f2110bf271d6e6354e8f12" },
+    { name: "astral", input: astral, canonical: ASTRAL_CANONICAL, hash: "sha256:4d948857df1c7b61ff28924547c7427a2f4f7809ce861169d9a00b740d857424" },
+  ];
+  it.each(goldenCases)("$name vector: canonical form and hash", ({ input, canonical, hash }) => {
+    expect(canonicalize(normalizeItemForHash(input))).toBe(canonical);
+    expect(computeItemHash(input)).toBe(hash);
   });
 });
 
-describe("verifyItemHash", () => {  it("accepts the true hash", () => {
+describe("verifyItemHash", () => {
+  it("accepts the true hash", () => {
     expect(verifyItemHash(baseInput, computeItemHash(baseInput))).toBe(true);
   });
 

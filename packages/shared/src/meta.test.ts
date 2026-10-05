@@ -126,6 +126,8 @@ describe("MetaSchema", () => {
     ["short description", { description: "short" }],
     ["unknown dependency", { dependencies: { lodash: "^4.0.0" } }],
     ["bad semver range", { dependencies: { motion: "banana" } }],
+    ["unbounded dependency range", { dependencies: { motion: "*" } }],
+    ["open-ended dependency range", { dependencies: { motion: ">=0.0.0" } }],
     ["unknown registryDependency type", { registryDependencies: ["ok", 7] }],
     ["self reference", { registryDependencies: ["aurora-text"] }],
     ["duplicate registryDependencies", { registryDependencies: ["cn", "cn"] }],

@@ -36,6 +36,7 @@ export const WINDOWS_RESERVED_NAMES: ReadonlySet<string> = new Set([
 ]);
 
 const DRIVE_LETTER_PATTERN = /^[A-Za-z]:/;
+const FORBIDDEN_SEGMENT_CHARS_PATTERN = /[<>":|?*]/;
 
 function hasControlChar(value: string): boolean {
   for (let i = 0; i < value.length; i++) {
@@ -89,6 +90,14 @@ export const RelativePathSchema = z
       }
       if (segment !== segment.trim()) {
         fail("path segments must not have leading or trailing spaces");
+        break;
+      }
+      if (segment.endsWith(".")) {
+        fail('path segments must not end with "."');
+        break;
+      }
+      if (FORBIDDEN_SEGMENT_CHARS_PATTERN.test(segment)) {
+        fail('path segments must not contain < > " : | ? *');
         break;
       }
       if (WINDOWS_RESERVED_NAMES.has(baseName(segment))) {
