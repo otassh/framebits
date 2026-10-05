@@ -531,3 +531,64 @@ Each of Tasks 11-14 must have its own acceptance criteria written by you at the 
    B8. `minisearch` (builder dep, already approved) powers the search index.
    B9. Sample components: lib `cn`, `aurora-text` (motion + cn), `shimmer-button`
    (CSS keyframes via styles.json + cn); `motion@^14.0.0` researched 2026-10-05.
+9. Task 5a binding decisions (C1-C15; same precedence as D1-D9/B1-B9):
+   C1. tsup bundle: ESM, platform node, target node20, bundle everything into
+   `dist/cli.js` with shebang, no sourcemap; all deps in devDependencies;
+   `files: ["dist"]`, `bin`, `engines.node >= 20`, version injected at build
+   time via `__ALGORITHCO_UI_VERSION__`; `build` is tsup, `typecheck` stays
+   `tsc --noEmit`; `dist/` gitignored; bundle ~1.05 MB (budget < 1.5 MB).
+   Separate `cli-compat (node 20)` CI job builds/packs/smoke-tests on Node 20;
+   no Node 22-only APIs.
+   C2. Deps (each justified in the 5a report): `commander` (arg parsing),
+   `@clack/prompts` (interactive prompts), `picocolors` (NO_COLOR-aware
+   color), `jsonc-parser` (JSONC tsconfig). Global `fetch`; hand-written
+   Levenshtein (distance <= 2), no fuzzy dep.
+   C3. All printing via `ui/output.ts` (`stdout`/`stderr.write`); NO_COLOR +
+   non-TTY disable ANSI; `--debug` for stacks, else concise + `Hint:`;
+   interactive = `stdin.isTTY && stdout.isTTY && !CI && !--yes`.
+   C4. Exit codes 0/1/2/3/4 per Section 9 + go-ahead (2 = usage/config/
+   detection, 3 = network, 4 = integrity/security); typed `CliError`
+   hierarchy maps to codes.
+   C5. Detection is pure over an injected snapshot (packageManager field then
+   lockfiles; next app/pages via deps+files; TS = tsconfig present; src dir;
+   Tailwind major from installed package else range, v4 via CSS import, v3 via
+   config file; CSS from common locations + content scan). No package.json or
+   no TS → exit 2; missing Tailwind warns.
+   C6. Aliases via jsonc-parser: relative `extends` (depth ≤ 5), `baseUrl` +
+   wildcard `paths`, `references` fallback (Vite); `@/*` (or any single-
+   segment base like `~/*`) → defaults; absolute dirs asserted inside root; no
+   alias → exit 2 with tsconfig (+ Vite) snippets; init never touches tsconfig.
+   C7. `algorithco-ui.json` via `CliConfigSchema`; 2-space/LF/trailing-newline
+   atomic write; `--yes/--cwd/--registry`; idempotent (keeps `installed`,
+   interactive confirms changes, `--yes` keeps values); installs nothing.
+   C8. Registry URL flag > env > config > default; https-only except
+   localhost/127.0.0.1/[::1] (initial = exit 2, redirect = exit 4);
+   `AbortSignal.timeout(10s)`, 2 retries w/ backoff on net/5xx/429
+   (Retry-After ≤ 10s), `User-Agent: algorithco-ui/<version>`; JSON-ish
+   content-type; 2 MB cap (header + stream); `slug@x.y.z` pinned URLs, deps
+   latest; slugs validated first; 404 → exit 1 with index + Levenshtein
+   suggestion; net failures → exit 3 (offline/DNS/timeout/429 distinct).
+   C9. Verification before disk: schemaVersion future → update error;
+   `RegistryItemSchema`, slug/version match, `verifyItemHash` (exit 4, nothing
+   written), allowlist (exit 4; documented as the real anti-compromise
+   defense), ≤ 50 files/item.
+   C10. Recursive de-duped cycle-safe resolution (cycle path, exit 4),
+   topological (deps first), explicit slugs in argument order, ≤ 100 items,
+   one fetch per slug.
+   C11. Plan-then-apply: complete plan first; prefix mapping
+   (`components/ui`→components dir, `lib`→lib, `hooks`→hooks, else exit 4);
+   duplicate targets → exit 4; create/unchanged (LF-normalized)/conflict
+   (incl. case-collision); hash-matched + unchanged → already installed;
+   `--dry-run` prints plan + manual steps, writes nothing, exit 0.
+   C12. `--overwrite` replaces all; interactive per-file
+   (overwrite/skip/abort, skips warn incomplete); non-interactive conflicts
+   fail pre-write exit 1 with the flag; `--yes` ≠ overwrite.
+   C13. Rewriting only when configured alias differs, statement-anchored
+   (`import/export from`, side-effect, `import type`, dynamic `import()`,
+   multi-line), never global; leftovers warn with lines; LF output; tricky
+   cases tested.
+   C14. Temp-file + rename, dirs as needed, journal + reverse rollback (config
+   last, rolled back too); realpath containment + symlink refusal pre-write.
+   C15. `init` + `add <slug...>` (+ `--overwrite/--dry-run/--yes/--cwd/
+   --registry/--debug`, global `--version/--help` with examples); `add`
+   before `init` → exit 2; one fetch per item.

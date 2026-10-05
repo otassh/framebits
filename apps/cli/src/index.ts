@@ -1,1 +1,1 @@
-export const CLI_PACKAGE_NAME = "algorithco-ui";
+export { CLI_PACKAGE_NAME, CLI_VERSION } from "./version.js";

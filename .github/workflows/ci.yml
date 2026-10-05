@@ -31,3 +31,18 @@ jobs:
       - run: pnpm test
       - run: pnpm build:registry --check
       - run: pnpm build
+
+  cli-compat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter algorithco-ui build
+      - run: pnpm --filter algorithco-ui exec tsup --version
+      - run: node apps/cli/scripts/pack-smoke.mjs
+      - run: pnpm --filter algorithco-ui test
