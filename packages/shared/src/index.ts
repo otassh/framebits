@@ -39,7 +39,7 @@ export type { CliConfig, InstalledEntry } from "./cli-config.js";
 
 export {
   computeItemHash,
-  normalizeFileContent,
+  normalizeContent,
   normalizeItemForHash,
   verifyItemHash,
 } from "./hash.js";
@@ -77,6 +77,7 @@ export {
 export type { RelativePath } from "./paths.js";
 
 export {
+  ComponentStylesSchema,
   CssVarsSchema,
   DEFAULT_VARIANT,
   RegistryFileSchema,
@@ -84,7 +85,7 @@ export {
   SCHEMA_VERSION,
   TailwindFragmentSchema,
 } from "./registry-item.js";
-export type { CssVars, RegistryFile, RegistryItem, TailwindFragment } from "./registry-item.js";
+export type { ComponentStyles, CssVars, RegistryFile, RegistryItem, TailwindFragment } from "./registry-item.js";
 
 export { RegistryIndexItemSchema, RegistryIndexSchema } from "./registry-index.js";
 export type { RegistryIndex, RegistryIndexItem } from "./registry-index.js";

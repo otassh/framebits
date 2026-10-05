@@ -15,6 +15,7 @@
 | Registry index (`/r/index.json`) | `RegistryIndexSchema` (+ `RegistryIndex`) | `registry-index.ts` | literal `1`; `generatedAt` ISO datetime; items reuse meta field schemas |
 | CLI config (`algorithco-ui.json`) | `CliConfigSchema` (+ `CliConfig`) | `cli-config.ts` | registry must be `https://` (or `http://localhost`/`127.0.0.1`); framework enum; tailwind 3\|4; aliases required; `installed` defaults `{}` |
 | Lock file (`registry.lock.json`) | `RegistryLockSchema` (+ `RegistryLock`) | `lock.ts` | `version` literal `1`; keys valid slugs; entries `{version, hash}` |
+| Per-component styles (`styles.json`) | `ComponentStylesSchema` (+ `ComponentStyles`) | `registry-item.ts` | optional `{ tailwind?, cssVars? }`, reusing the exact RegistryItem sub-schemas |
 | Events | `EventsRequestSchema` | `api.ts` | ≤50 events; `type: install\|view`; slug regex; optional `source: cli\|copy` |
 | Like | `LikeResponseSchema`, `LikesCountSchema` | `api.ts` | `{liked, count≥0}` / `{count≥0}` |
 | Newsletter | `NewsletterRequestSchema` | `api.ts` | email trimmed + lowercased, ≤254 chars |
@@ -41,7 +42,7 @@ Zod 4 `z.toJSONSchema` (`json-schemas.ts`, script `build:schemas`).
   by UTF-16 code unit order (recursive), arrays keep order.
 - `canonicalize()` (`canonical.ts`) throws `CanonicalizeError` on `undefined`,
   non-integer numbers (incl. NaN/Infinity), bigints, functions, symbols.
-- Normalization (`normalizeItemForHash`, `hash.ts`): dependency keys sorted,
+- Normalization (exported `normalizeItemForHash` and `normalizeContent`, `hash.ts`): dependency keys sorted,
   `registryDependencies` sorted, files sorted by path; file content → strip BOM,
   CRLF/CR→LF, trailing newline ensured (empty stays empty); `variant` materialized
   (`?? "ts-tw"`) so explicit-default ≡ absent; absent optionals omitted (never null).

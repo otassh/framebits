@@ -1,13 +1,12 @@
+import { normalizeContent } from "@algorithco-ui/shared";
 import { toCamelCase, toPascalCase } from "./names.js";
 import { serializeMeta, type ResolvedScaffold } from "./request.js";
 import type { GeneratedFile } from "./types.js";
 import type { Meta } from "@algorithco-ui/shared";
 
-/** LF, no BOM, trailing newline — enforced by construction in every template below. */
+/** Every template is LF, BOM-free, newline-terminated (shared normalization). */
 function finalize(content: string): string {
-  const lf = content.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-  const stripped = lf.startsWith("\uFEFF") ? lf.slice(1) : lf;
-  return stripped.endsWith("\n") ? stripped : `${stripped}\n`;
+  return normalizeContent(content);
 }
 
 export function renderComponentTsx(slug: string): string {

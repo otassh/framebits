@@ -50,7 +50,7 @@ interface NormalizedPayload {
 }
 
 /** Strip BOM, normalize CRLF/CR to LF, ensure a trailing newline (unless empty). */
-export function normalizeFileContent(content: string): string {
+export function normalizeContent(content: string): string {
   const withoutBom = content.startsWith("\uFEFF") ? content.slice(1) : content;
   const lf = withoutBom.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
   if (lf !== "" && !lf.endsWith("\n")) return `${lf}\n`;
@@ -67,7 +67,7 @@ function sortedRecord(record: Record<string, string>): Record<string, string> {
 export function normalizeItemForHash(item: ItemHashInput): NormalizedPayload {
   const files: NormalizedFile[] = item.files.map((file) => ({
     path: file.path,
-    content: normalizeFileContent(file.content),
+    content: normalizeContent(file.content),
     type: file.type,
     variant: file.variant ?? "ts-tw",
   }));
