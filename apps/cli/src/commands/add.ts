@@ -4,7 +4,7 @@
  * installation, atomic apply with rollback, and a short success summary.
  * Manual output appears only for skipped/impossible steps.
  */
-import type { CliConfig, RegistryItem } from "@algorithco-ui/shared";
+import type { CliConfig, RegistryItem } from "@framebits/shared";
 import { resolveAliasesFromConfig } from "../aliases/index.js";
 import { loadConfig, writeConfigAtomic, type ConfigFs } from "../config/index.js";
 import { detectPackageManager, type PackageManager } from "../detect/index.js";
@@ -108,13 +108,13 @@ function joinAbs(dir: string, rel: string): string {
 export async function runAdd(options: AddOptions, deps: AddDeps): Promise<AddResult> {
   const projectRoot = options.cwd;
   if (options.slugs.length === 0) {
-    throw configError("no slugs given", "usage: algorithco-ui add <slug...> (e.g. add aurora-text)");
+    throw configError("no slugs given", "usage: framebits add <slug...> (e.g. add aurora-text)");
   }
   const loaded = await loadConfig(projectRoot, deps.configFs);
   if (loaded === undefined) {
     throw configError(
-      "no algorithco-ui.json found (run init first)",
-      "run `algorithco-ui init` inside the app directory, then retry add",
+      "no framebits.json found (run init first)",
+      "run `framebits init` inside the app directory, then retry add",
     );
   }
   const config = loaded.config;
@@ -122,7 +122,7 @@ export async function runAdd(options: AddOptions, deps: AddDeps): Promise<AddRes
   const explicit = options.slugs.map((arg) => parseSlugArg(arg));
   const registry = resolveRegistryUrl({
     flag: options.registryFlag,
-    env: process.env["ALGORITHCO_UI_REGISTRY_URL"],
+    env: process.env["FRAMEBITS_REGISTRY_URL"],
     config: config.registry,
   });
 
@@ -431,7 +431,7 @@ export function splitBlockInner(block: string, slug: string): string {
   const lines = block.split("\n");
   const first = lines[0] ?? "";
   const last = lines[lines.length - 1] ?? "";
-  if (first !== `/* algorithco-ui:begin ${slug} */` || last !== `/* algorithco-ui:end ${slug} */`) {
+  if (first !== `/* framebits:begin ${slug} */` || last !== `/* framebits:end ${slug} */`) {
     throw integrityError(
       `internal error: malformed generated block for "${slug}"`,
       "report this as a CLI bug",

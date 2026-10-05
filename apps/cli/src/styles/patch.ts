@@ -27,7 +27,7 @@ export function detectEol(text: string): Eol {
   return crlf > lf ? "\r\n" : "\n";
 }
 
-const MARKER_PATTERN = /\/\*\s*algorithco-ui:(begin|end)\s+([A-Za-z0-9-]+)\s*\*\//g;
+const MARKER_PATTERN = /\/\*\s*framebits:(begin|end)\s+([A-Za-z0-9-]+)\s*\*\//g;
 
 export interface FoundBlock {
   slug: string;

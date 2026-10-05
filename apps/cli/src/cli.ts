@@ -1,5 +1,5 @@
 /**
- * algorithco-ui CLI entry (C15). Thin: parses args with commander,
+ * framebits CLI entry (C15). Thin: parses args with commander,
  * delegates to commands/init and commands/add.
  */
 import { Command } from "commander";
@@ -17,12 +17,12 @@ import { CLI_PACKAGE_NAME, CLI_VERSION } from "./version.js";
 
 const EXAMPLES = [
   "examples:",
-  "  algorithco-ui init",
-  "  algorithco-ui init --yes --cwd ./my-app",
-  "  algorithco-ui add aurora-text",
-  "  algorithco-ui add aurora-text shimmer-button --overwrite",
-  "  algorithco-ui add cn@1.0.0 --dry-run",
-  "  algorithco-ui add shimmer-button --no-install --no-styles",
+  "  framebits init",
+  "  framebits init --yes --cwd ./my-app",
+  "  framebits add aurora-text",
+  "  framebits add aurora-text shimmer-button --overwrite",
+  "  framebits add cn@1.0.0 --dry-run",
+  "  framebits add shimmer-button --no-install --no-styles",
 ].join("\n");
 
 interface SnapshotPackageJson {
@@ -133,7 +133,7 @@ export async function main(argv: readonly string[]): Promise<number> {
 
   program
     .command("init")
-    .description("detect the project and write algorithco-ui.json")
+    .description("detect the project and write framebits.json")
     .option("--yes", "non-interactive: keep existing values, fill missing ones")
     .option("--cwd <dir>", "project directory")
     .option("--registry <url>", "registry base URL")

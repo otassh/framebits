@@ -3,7 +3,7 @@ import type {
   ItemType,
   Meta,
   TailwindFragment,
-} from "@algorithco-ui/shared";
+} from "@framebits/shared";
 
 export type DiagnosticSeverity = "error" | "warning";
 

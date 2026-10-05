@@ -8,7 +8,7 @@
 import {
   ALLOWED_DEPENDENCIES,
   SemverRangeSchema,
-} from "@algorithco-ui/shared";
+} from "@framebits/shared";
 import { integrityError } from "../errors.js";
 import type { PackageManager } from "../detect/index.js";
 

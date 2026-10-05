@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildPlan } from "./index.js";
-import type { RegistryItem } from "@algorithco-ui/shared";
-import { computeItemHash } from "@algorithco-ui/shared";
+import type { RegistryItem } from "@framebits/shared";
+import { computeItemHash } from "@framebits/shared";
 
 function makeItem(slug: string, content: string, registryPath: string): RegistryItem {
   const type = registryPath.startsWith("lib/") ? "lib" as const : "component" as const;
@@ -167,7 +167,7 @@ describe("buildPlan styles", () => {
   it("plans patch-css create for styled items", () => {
     const plan = planWith(makeStyledItem("shimmer-button"));
     expect(plan.css.map((entry) => [entry.slug, entry.action])).toEqual([["shimmer-button", "create"]]);
-    expect(plan.css[0]?.block).toContain("algorithco-ui:begin shimmer-button");
+    expect(plan.css[0]?.block).toContain("framebits:begin shimmer-button");
     expect(plan.malformedCss).toEqual([]);
   });
 
@@ -182,7 +182,7 @@ describe("buildPlan styles", () => {
   });
 
   it("flags changed blocks as conflict", () => {
-    const cssContent = "@tailwind base;\n\n/* algorithco-ui:begin shimmer-button */\nold\n/* algorithco-ui:end shimmer-button */\n";
+    const cssContent = "@tailwind base;\n\n/* framebits:begin shimmer-button */\nold\n/* framebits:end shimmer-button */\n";
     const plan = planWith(makeStyledItem("shimmer-button"), { styles: { cssContent } });
     expect(plan.css.map((entry) => entry.action)).toEqual(["conflict"]);
     expect(plan.cssConflicts.map((entry) => entry.slug)).toEqual(["shimmer-button"]);
@@ -211,10 +211,10 @@ describe("buildPlan styles", () => {
 
   it("collects malformed markers (caller exits 1)", () => {
     const plan = planWith(makeStyledItem("shimmer-button"), {
-      styles: { cssContent: "/* algorithco-ui:begin shimmer-button */\nno end\n" },
+      styles: { cssContent: "/* framebits:begin shimmer-button */\nno end\n" },
     });
     expect(plan.malformedCss.length).toBe(1);
-    expect(plan.malformedCss[0]?.manualSnippet).toContain("algorithco-ui:begin shimmer-button");
+    expect(plan.malformedCss[0]?.manualSnippet).toContain("framebits:begin shimmer-button");
   });
 
   it("skips on outside collisions with warnings", () => {

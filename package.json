@@ -1,5 +1,5 @@
 {
-  "name": "algorithco-ui-monorepo",
+  "name": "framebits-monorepo",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.29.3",
@@ -11,10 +11,10 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "build:registry": "pnpm --filter @algorithco-ui/builder build:registry",
+    "build:registry": "pnpm --filter @framebits/builder build:registry",
     "new-component": "tsx scripts/new-component.ts",
-    "db:sync": "pnpm --filter @algorithco-ui/db db:sync",
-    "db:migrate": "pnpm --filter @algorithco-ui/db db:migrate",
+    "db:sync": "pnpm --filter @framebits/db db:sync",
+    "db:migrate": "pnpm --filter @framebits/db db:migrate",
     "format": "prettier --write ."
   },
   "devDependencies": {

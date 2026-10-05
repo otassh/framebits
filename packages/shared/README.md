@@ -1,1 +1,1 @@
-# @algorithco-ui/shared
+# @framebits/shared

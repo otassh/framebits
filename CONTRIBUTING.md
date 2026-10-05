@@ -53,7 +53,7 @@ PR checklist:
 - Never delete a component: set `status: "deprecated"` instead (stats must survive).
 - [ ] Checks green: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
 
-## CLI (`algorithco-ui`, Task 5a + 5b)
+## CLI (`framebits`, Task 5a + 5b)
 
 - `apps/cli` bundles to a single `dist/cli.js` with tsup (ESM, Node 20, shebang,
   no sourcemap). All deps are devDependencies and bundled, except `cross-spawn`
@@ -63,7 +63,7 @@ PR checklist:
   `cross-spawn`).
 - All printing goes through `src/ui/output.ts` (no `console`). Respect
   `NO_COLOR`/non-TTY. `--debug` for stacks.
-- `init` never modifies `tsconfig` or any file besides `algorithco-ui.json`.
+- `init` never modifies `tsconfig` or any file besides `framebits.json`.
 - Component styles: declare `tailwind` keyframes/animation and `cssVars` in
   `styles.json` (validated by `ComponentStylesSchema`). Allowed: kebab-case
   names, `from`/`to`/percentage selectors, plain property/value declarations —

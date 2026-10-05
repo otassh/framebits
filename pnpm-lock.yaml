@@ -35,7 +35,7 @@ importers:
 
   apps/api:
     devDependencies:
-      '@algorithco-ui/config':
+      '@framebits/config':
         specifier: workspace:*
         version: link:../../packages/config
       eslint:
@@ -54,13 +54,13 @@ importers:
         specifier: 7.0.6
         version: 7.0.6
     devDependencies:
-      '@algorithco-ui/builder':
+      '@framebits/builder':
         specifier: workspace:*
         version: link:../../packages/builder
-      '@algorithco-ui/config':
+      '@framebits/config':
         specifier: workspace:*
         version: link:../../packages/config
-      '@algorithco-ui/shared':
+      '@framebits/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       '@clack/prompts':
@@ -96,7 +96,7 @@ importers:
 
   packages/builder:
     dependencies:
-      '@algorithco-ui/shared':
+      '@framebits/shared':
         specifier: workspace:*
         version: link:../shared
       minisearch:
@@ -106,7 +106,7 @@ importers:
         specifier: ^5.6.3
         version: 5.9.3
     devDependencies:
-      '@algorithco-ui/config':
+      '@framebits/config':
         specifier: workspace:*
         version: link:../config
       eslint:
@@ -127,7 +127,7 @@ importers:
 
   packages/db:
     devDependencies:
-      '@algorithco-ui/config':
+      '@framebits/config':
         specifier: workspace:*
         version: link:../config
       eslint:
@@ -200,7 +200,7 @@ importers:
         specifier: ^4.6.5
         version: 4.6.5
     devDependencies:
-      '@algorithco-ui/config':
+      '@framebits/config':
         specifier: workspace:*
         version: link:../config
       '@types/node':

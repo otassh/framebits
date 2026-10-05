@@ -1,4 +1,4 @@
-export const BUILDER_PACKAGE_NAME = "@algorithco-ui/builder";
+export const BUILDER_PACKAGE_NAME = "@framebits/builder";
 
 export { compareDiagnostics, hasDefaultExport, loadRegistry } from "./registry/index.js";
 export type {

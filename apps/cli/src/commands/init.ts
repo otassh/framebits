@@ -1,8 +1,8 @@
 /**
  * `init` command (C5-C7). Detects the project, resolves aliases, writes
- * algorithco-ui.json idempotently. Never modifies tsconfig or other files.
+ * framebits.json idempotently. Never modifies tsconfig or other files.
  */
-import type { CliConfig } from "@algorithco-ui/shared";
+import type { CliConfig } from "@framebits/shared";
 import { resolveAliasesFromConfig } from "../aliases/index.js";
 import { loadConfig, mergeInitConfig, writeConfigAtomic, type ConfigFs } from "../config/index.js";
 import { detectProject, type PackageJson } from "../detect/index.js";
@@ -91,11 +91,11 @@ export async function runInit(
   }
 
   const existing = await loadConfig(projectRoot, deps.fs);
-  const registryEnv = process.env["ALGORITHCO_UI_REGISTRY_URL"];
+  const registryEnv = process.env["FRAMEBITS_REGISTRY_URL"];
   const detectedRegistry = options.registryFlag ??
     registryEnv ??
     existing?.config.registry ??
-    "https://algorithco.dev/r";
+    "https://framebits.dev/r";
 
   const tailwind = detection.tailwind.version === undefined
     ? { version: 3 as const, config: undefined as string | undefined, css: undefined as string | undefined }
@@ -158,7 +158,7 @@ export async function runInit(
 
   const path = await writeConfigAtomic(projectRoot, next, deps.fs);
   if (existing === undefined) {
-    printSuccess(deps.output, `initialized algorithco-ui in ${path}`);
+    printSuccess(deps.output, `initialized framebits in ${path}`);
   } else {
     printSuccess(deps.output, `updated ${path} (installed entries preserved)`);
   }

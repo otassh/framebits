@@ -22,7 +22,7 @@ export default defineConfig({
   shims: false,
   banner: { js: "#!/usr/bin/env node" },
   define: {
-    __ALGORITHCO_UI_VERSION__: JSON.stringify(pkg.version),
+    __FRAMEBITS_VERSION__: JSON.stringify(pkg.version),
   },
   outExtension: () => ({ js: ".js" }),
 });

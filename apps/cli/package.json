@@ -1,10 +1,10 @@
 {
-  "name": "algorithco-ui",
+  "name": "framebits",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "bin": {
-    "algorithco-ui": "./dist/cli.js"
+    "framebits": "./dist/cli.js"
   },
   "engines": {
     "node": ">=20"
@@ -21,9 +21,9 @@
     "smoke": "node scripts/pack-smoke.mjs"
   },
   "devDependencies": {
-    "@algorithco-ui/builder": "workspace:*",
-    "@algorithco-ui/config": "workspace:*",
-    "@algorithco-ui/shared": "workspace:*",
+    "@framebits/builder": "workspace:*",
+    "@framebits/config": "workspace:*",
+    "@framebits/shared": "workspace:*",
     "@clack/prompts": "^1.8.1",
     "@types/cross-spawn": "^6.0.6",
     "@types/node": "^22.20.5",

@@ -2,12 +2,12 @@
  * Version injected at build time (C1).
  * tsup defines `process.env.CLI_VERSION` from package.json; dev/test falls back.
  */
-declare const __ALGORITHCO_UI_VERSION__: string | undefined;
+declare const __FRAMEBITS_VERSION__: string | undefined;
 
 function readInjected(): string | undefined {
   try {
     const value =
-      typeof __ALGORITHCO_UI_VERSION__ !== "undefined" ? __ALGORITHCO_UI_VERSION__ : undefined;
+      typeof __FRAMEBITS_VERSION__ !== "undefined" ? __FRAMEBITS_VERSION__ : undefined;
     if (typeof value === "string" && value !== "") return value;
   } catch {
     // Ignore: the define is absent in dev/test.
@@ -19,4 +19,4 @@ function readInjected(): string | undefined {
 
 export const CLI_VERSION: string = readInjected() ?? "0.0.0-dev";
 
-export const CLI_PACKAGE_NAME = "algorithco-ui";
+export const CLI_PACKAGE_NAME = "framebits";

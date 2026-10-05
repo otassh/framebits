@@ -5,7 +5,7 @@ import {
   MetaSchema,
   SlugSchema,
   type Meta,
-} from "@algorithco-ui/shared";
+} from "@framebits/shared";
 import { toTitleCase } from "./names.js";
 import { ScaffoldError, type ScaffoldItemType, type ScaffoldRequest } from "./types.js";
 

@@ -1,12 +1,12 @@
 {
-  "name": "@algorithco-ui/registry-env",
+  "name": "@framebits/registry-env",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "echo \"@algorithco-ui/registry-env: nothing to build\"",
+    "build": "echo \"@framebits/registry-env: nothing to build\"",
     "lint": "prettier --check .",
-    "typecheck": "echo \"@algorithco-ui/registry-env: nothing to typecheck\"",
+    "typecheck": "echo \"@framebits/registry-env: nothing to typecheck\"",
     "test": "vitest run --passWithNoTests"
   },
   "devDependencies": {

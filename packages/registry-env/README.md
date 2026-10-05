@@ -1,4 +1,4 @@
-# @algorithco-ui/registry-env
+# @framebits/registry-env
 
 Private type-check environment for registry sources. Dev dependencies only, EXACT
 pinned versions (no ranges): react, react-dom, their @types, every package in

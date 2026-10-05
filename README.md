@@ -1,13 +1,13 @@
-# Algorithco UI
+# Framebits
 
-Curated platform distributing animated React components, installable with our own CLI: `npx algorithco-ui add <slug>`.
+Curated platform distributing animated React components, installable with our own CLI: `npx framebits add <slug>`.
 
 > Git is the source of truth. The database is only an index and a stats store. Static files on disk are the delivery mechanism.
 
 ## Monorepo layout
 
 - `apps/api` — Hono server
-- `apps/cli` — the `algorithco-ui` npm package
+- `apps/cli` — the `framebits` npm package
 - `apps/web` — placeholder (out of scope)
 - `packages/shared` — Zod schemas + inferred types
 - `packages/db` — Drizzle schema, migrations, db client, seed/sync
@@ -51,5 +51,5 @@ Reading components (CLI/website) never hits the API or DB — served as static f
 - `CONTRIBUTING.md` — how to add a component (see Task 6+; generator: `pnpm new-component <slug> --category=<cat>`)
 - `deploy/README.md` — VPS setup, hardening, backup/restore
 
-<!-- TODO(question): confirm production DOMAIN (currently algorithco.dev placeholder, defined once in packages/shared/src/site.ts) and CLI default registry URL. -->
+<!-- TODO(question): confirm production DOMAIN (currently framebits.dev placeholder, defined once in packages/shared/src/site.ts) and CLI default registry URL. -->
 <!-- TODO(question): choose a license before public launch (repo is private until then; no LICENSE file yet). -->

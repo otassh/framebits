@@ -1,8 +1,8 @@
-import { normalizeContent } from "@algorithco-ui/shared";
+import { normalizeContent } from "@framebits/shared";
 import { toCamelCase, toPascalCase } from "./names.js";
 import { serializeMeta, type ResolvedScaffold } from "./request.js";
 import type { GeneratedFile } from "./types.js";
-import type { Meta } from "@algorithco-ui/shared";
+import type { Meta } from "@framebits/shared";
 
 /** Every template is LF, BOM-free, newline-terminated (shared normalization). */
 function finalize(content: string): string {

@@ -9,7 +9,7 @@ import {
   type RegistryIndex,
   type RegistryItem,
   type RegistryLock,
-} from "@algorithco-ui/shared";
+} from "@framebits/shared";
 import MiniSearch from "minisearch";
 import { plannedLock, planVersions, serializeLock, type VersionPlan } from "./versions.js";
 import type { Diagnostic, RegistryItemModel } from "./types.js";

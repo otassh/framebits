@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MetaSchema } from "@algorithco-ui/shared";
+import { MetaSchema } from "@framebits/shared";
 import {
   MOTION_RANGE,
   buildMeta,

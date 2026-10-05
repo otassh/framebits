@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { ALLOWED_DEPENDENCIES } from "@algorithco-ui/shared";
+import { ALLOWED_DEPENDENCIES } from "@framebits/shared";
 
 /**
  * The type-check env must pin every allowlisted package (exact versions, no ranges).

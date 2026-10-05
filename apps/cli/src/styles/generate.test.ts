@@ -17,7 +17,7 @@ describe("generateBlock shimmer-button goldens", () => {
     const validated = validateStyles("shimmer-button", SHIMMER_TAILWIND, undefined);
     expect(generateBlock("shimmer-button", validated, 3)).toBe(
       [
-        "/* algorithco-ui:begin shimmer-button */",
+        "/* framebits:begin shimmer-button */",
         "@keyframes shimmer {",
         "  from {",
         "    background-position: 200% 0;",
@@ -31,7 +31,7 @@ describe("generateBlock shimmer-button goldens", () => {
         "    animation: shimmer 2s linear infinite;",
         "  }",
         "}",
-        "/* algorithco-ui:end shimmer-button */",
+        "/* framebits:end shimmer-button */",
       ].join("\n"),
     );
   });
@@ -40,7 +40,7 @@ describe("generateBlock shimmer-button goldens", () => {
     const validated = validateStyles("shimmer-button", SHIMMER_TAILWIND, undefined);
     expect(generateBlock("shimmer-button", validated, 4)).toBe(
       [
-        "/* algorithco-ui:begin shimmer-button */",
+        "/* framebits:begin shimmer-button */",
         "@theme {",
         "  --animate-shimmer: shimmer 2s linear infinite;",
         "  @keyframes shimmer {",
@@ -52,7 +52,7 @@ describe("generateBlock shimmer-button goldens", () => {
         "    }",
         "  }",
         "}",
-        "/* algorithco-ui:end shimmer-button */",
+        "/* framebits:end shimmer-button */",
       ].join("\n"),
     );
   });
@@ -75,7 +75,7 @@ describe("generateBlock synthetic multi-keyframe + vars", () => {
     const block = generateBlock("multi", validated, 3);
     expect(block).toBe(
       [
-        "/* algorithco-ui:begin multi */",
+        "/* framebits:begin multi */",
         "@keyframes alpha {",
         "  from {",
         "    opacity: 0;",
@@ -110,7 +110,7 @@ describe("generateBlock synthetic multi-keyframe + vars", () => {
         "    --brand: #000;",
         "  }",
         "}",
-        "/* algorithco-ui:end multi */",
+        "/* framebits:end multi */",
       ].join("\n"),
     );
   });
@@ -119,7 +119,7 @@ describe("generateBlock synthetic multi-keyframe + vars", () => {
     const block = generateBlock("multi", validated, 4);
     expect(block).toBe(
       [
-        "/* algorithco-ui:begin multi */",
+        "/* framebits:begin multi */",
         "@theme {",
         "  --animate-alpha: alpha 2s linear infinite;",
         "  --animate-zebra: zebra 1s ease infinite;",
@@ -146,7 +146,7 @@ describe("generateBlock synthetic multi-keyframe + vars", () => {
         ".dark {",
         "  --brand: #000;",
         "}",
-        "/* algorithco-ui:end multi */",
+        "/* framebits:end multi */",
       ].join("\n"),
     );
   });

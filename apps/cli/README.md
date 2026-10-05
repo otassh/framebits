@@ -1,29 +1,29 @@
-# algorithco-ui
+# framebits
 
-The Algorithco UI CLI. Adds curated animated React components to your project.
+The Framebits CLI. Adds curated animated React components to your project.
 
 ## Install
 
 ```sh
-npx algorithco-ui init
-npx algorithco-ui add aurora-text
+npx framebits init
+npx framebits add aurora-text
 ```
 
-Or install globally (`npm i -g algorithco-ui`) and run `algorithco-ui`.
+Or install globally (`npm i -g framebits`) and run `framebits`.
 
 Requires Node >= 20. The bundle is a single ESM file (`dist/cli.js`, ~1 MB, no runtime dependencies to install).
 
 ## Usage
 
 ```sh
-algorithco-ui init [--yes] [--cwd <dir>] [--registry <url>]
-algorithco-ui add <slug...> [--overwrite] [--dry-run] [--yes] [--no-install] [--no-styles] [--cwd <dir>] [--registry <url>] [--debug]
-algorithco-ui --version
-algorithco-ui --help
+framebits init [--yes] [--cwd <dir>] [--registry <url>]
+framebits add <slug...> [--overwrite] [--dry-run] [--yes] [--no-install] [--no-styles] [--cwd <dir>] [--registry <url>] [--debug]
+framebits --version
+framebits --help
 ```
 
 `init` detects the project (package manager, framework, TypeScript, Tailwind,
-import aliases) and writes `algorithco-ui.json`. It never modifies `tsconfig`
+import aliases) and writes `framebits.json`. It never modifies `tsconfig`
 or any other project file.
 
 `add` fetches items from the registry, verifies hashes, resolves
@@ -46,7 +46,7 @@ Flags:
 - `--no-styles`: skip Tailwind CSS patching (print the snippet instead).
 - `--cwd <dir>`: run inside another app directory.
 - `--registry <url>`: override the registry (flag > env
-  `ALGORITHCO_UI_REGISTRY_URL` > config > default `https://algorithco.dev/r`).
+  `FRAMEBITS_REGISTRY_URL` > config > default `https://framebits.dev/r`).
 - `--debug`: show stack traces (otherwise concise messages with `Hint:`).
 
 Exit codes: `0` success, `1` failure/conflict, `2` usage/config/detection,

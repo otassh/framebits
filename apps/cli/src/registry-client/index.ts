@@ -2,7 +2,7 @@
  * Registry HTTP client (C8). URL precedence, https/localhost rule, timeout,
  * retries with backoff, size cap, slug@version URLs, 404 suggestions.
  */
-import { DEFAULT_REGISTRY_URL, SlugSchema } from "@algorithco-ui/shared";
+import { DEFAULT_REGISTRY_URL, SlugSchema } from "@framebits/shared";
 import {
   conflictError,
   integrityError,
@@ -46,7 +46,7 @@ export function assertAllowedRegistryUrl(url: string, what: string): void {
   if (!isAllowedRegistryUrl(url)) {
     throw usageError(
       `${what} must be https:// (http://localhost, 127.0.0.1 and [::1] are allowed for development)`,
-      "pass --registry https://... or set ALGORITHCO_UI_REGISTRY_URL",
+      "pass --registry https://... or set FRAMEBITS_REGISTRY_URL",
     );
   }
 }
@@ -143,7 +143,7 @@ export function fetchJsonText(
       .fetchFn(url, {
         headers: {
           Accept: "application/json",
-          "User-Agent": `algorithco-ui/${CLI_VERSION}`,
+          "User-Agent": `framebits/${CLI_VERSION}`,
         },
         signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
         redirect: "follow",

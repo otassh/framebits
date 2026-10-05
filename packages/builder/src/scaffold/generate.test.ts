@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import prettier from "prettier";
 import { afterEach, describe, expect, it } from "vitest";
-import { MetaSchema } from "@algorithco-ui/shared";
+import { MetaSchema } from "@framebits/shared";
 import prettierConfig from "../../../config/prettier.base.js";
 import { resolveTargetDir, ScaffoldError, scaffold } from "./index.js";
 

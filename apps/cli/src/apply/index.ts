@@ -8,7 +8,7 @@
  * installer runs after files+CSS so a failed install rolls everything back
  * while leaving the config untouched.
  */
-import type { CliConfig } from "@algorithco-ui/shared";
+import type { CliConfig } from "@framebits/shared";
 import type { PlannedFile } from "../plan/index.js";
 import { computePatched } from "../styles/patch.js";
 import { tailLines, INSTALL_TAIL_LINES, type InstallOutcome } from "../install/run.js";

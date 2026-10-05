@@ -42,7 +42,7 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter algorithco-ui build
-      - run: pnpm --filter algorithco-ui exec tsup --version
+      - run: pnpm --filter framebits build
+      - run: pnpm --filter framebits exec tsup --version
       - run: node apps/cli/scripts/pack-smoke.mjs
-      - run: pnpm --filter algorithco-ui test
+      - run: pnpm --filter framebits test

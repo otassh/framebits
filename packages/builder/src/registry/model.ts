@@ -1,5 +1,5 @@
-import { computeItemHash, normalizeContent } from "@algorithco-ui/shared";
-import type { ComponentStyles, Meta } from "@algorithco-ui/shared";
+import { computeItemHash, normalizeContent } from "@framebits/shared";
+import type { ComponentStyles, Meta } from "@framebits/shared";
 import type { ModelFile, RegistryItemModel } from "./types.js";
 
 export interface ModelInputs {

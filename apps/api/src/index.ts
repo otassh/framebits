@@ -1,1 +1,1 @@
-export const API_PACKAGE_NAME = "@algorithco-ui/api";
+export const API_PACKAGE_NAME = "@framebits/api";

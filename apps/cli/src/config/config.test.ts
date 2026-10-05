@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { mergeInitConfig, parseConfig, serializeConfig } from "./index.js";
 
 const validConfig = {
-  $schema: "https://algorithco.dev/schema/config.json",
+  $schema: "https://framebits.dev/schema/config.json",
   schemaVersion: 1,
-  registry: "https://algorithco.dev/r",
+  registry: "https://framebits.dev/r",
   framework: "next",
   typescript: true,
   tailwind: { version: 3, config: "tailwind.config.ts", css: "src/app/globals.css" },
@@ -51,7 +51,7 @@ describe("config", () => {
     const fresh = mergeInitConfig(
       undefined,
       {
-        registry: "https://algorithco.dev/r",
+        registry: "https://framebits.dev/r",
         framework: "next",
         typescript: true,
         tailwind: { version: 3, config: "tailwind.config.ts", css: "src/app/globals.css" },

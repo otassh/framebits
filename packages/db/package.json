@@ -1,5 +1,5 @@
 {
-  "name": "@algorithco-ui/db",
+  "name": "@framebits/db",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -12,7 +12,7 @@
     "test": "vitest run"
   },
   "devDependencies": {
-    "@algorithco-ui/config": "workspace:*",
+    "@framebits/config": "workspace:*",
     "eslint": "^9.14.0",
     "typescript": "^5.6.3",
     "vitest": "^3.2.4"

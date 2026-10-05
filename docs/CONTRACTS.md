@@ -14,7 +14,7 @@
 | Registry item (`/r/<slug>.json`) | `RegistryItemSchema` (+ `RegistryItem`) | `registry-item.ts` | `schemaVersion` literal `1`; semver version; `sha256:<hex>` hash; ≥1 file, unique paths; `files[].variant` default `"ts-tw"`; `tailwind`/`cssVars` optional; `files[].type` always equals the item type (css belongs to a component item) |
 | Registry index (`/r/index.json`) | `RegistryIndexSchema` (+ `RegistryIndex`) | `registry-index.ts` | literal `1`; `generatedAt` ISO datetime; items reuse meta field schemas; optional `deprecated: true` flag |
 | Search index (`/search-index.json`) | `SearchIndexSchema` (+ `SearchIndex`) | `search-index.ts` | literal `1`; opaque MiniSearch `index` blob; `docs` slug → {title, category, description} |
-| CLI config (`algorithco-ui.json`) | `CliConfigSchema` (+ `CliConfig`) | `cli-config.ts` | registry must be `https://` (or `http://localhost`/`127.0.0.1`); framework enum; tailwind 3\|4; aliases required; `installed` defaults `{}` |
+| CLI config (`framebits.json`) | `CliConfigSchema` (+ `CliConfig`) | `cli-config.ts` | registry must be `https://` (or `http://localhost`/`127.0.0.1`); framework enum; tailwind 3\|4; aliases required; `installed` defaults `{}` |
 | Lock file (`registry.lock.json`) | `RegistryLockSchema` (+ `RegistryLock`) | `lock.ts` | `version` literal `1`; keys valid slugs; entries `{version, hash}` |
 | Per-component styles (`styles.json`) | `ComponentStylesSchema` (+ `ComponentStyles`) | `registry-item.ts` | optional `{ tailwind?, cssVars? }`, reusing the exact RegistryItem sub-schemas |
 | Events | `EventsRequestSchema` | `api.ts` | ≤50 events; `type: install\|view`; slug regex; optional `source: cli\|copy` |
@@ -83,7 +83,7 @@ is accepted.
 
 ## Dependency justification (`semver`)
 
-`semver@7` (runtime dep of `@algorithco-ui/shared`): implements the reference
+`semver@7` (runtime dep of `@framebits/shared`): implements the reference
 "valid semver range" grammar (carets, tildes, hyphen ranges, comparators,
 prereleases, `*`, `||`) that MASTER_PROMPT Section 4.1 requires. Hand-rolling it
 would be incomplete and would drift from npm semantics. Tiny, dependency-free,

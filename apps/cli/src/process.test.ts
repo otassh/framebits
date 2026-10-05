@@ -31,7 +31,7 @@ describe("built cli.js", () => {
   it("--help prints usage with examples", () => {
     const result = run(["--help"]);
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain("algorithco-ui");
+    expect(result.stdout).toContain("framebits");
     expect(result.stdout).toContain("examples:");
   });
 

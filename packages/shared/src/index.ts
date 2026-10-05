@@ -1,4 +1,4 @@
-export const SHARED_PACKAGE_NAME = "@algorithco-ui/shared";
+export const SHARED_PACKAGE_NAME = "@framebits/shared";
 
 export { DEFAULT_REGISTRY_URL, PLACEHOLDER_DOMAIN, PROJECT_NAME } from "./site.js";
 

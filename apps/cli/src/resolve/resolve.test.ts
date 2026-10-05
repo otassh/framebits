@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeItemHash } from "@algorithco-ui/shared";
+import { computeItemHash } from "@framebits/shared";
 import { resolveClosure } from "./index.js";
 import type { FetchFn } from "../registry-client/index.js";
 

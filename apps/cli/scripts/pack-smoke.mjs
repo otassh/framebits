@@ -2,7 +2,7 @@
 /* global process */
 /**
  * Packaging smoke test (C1): pnpm pack -> install the tarball into a clean
- * temp dir with npm -> run `algorithco-ui --version` and `--help`.
+ * temp dir with npm -> run `framebits --version` and `--help`.
  * Also tests via npx-style invocation of the tarball.
  */
 import { execFileSync, spawnSync } from "node:child_process";
@@ -37,13 +37,13 @@ try {
     installDir,
     "node_modules",
     ".bin",
-    process.platform === "win32" ? "algorithco-ui.cmd" : "algorithco-ui",
+    process.platform === "win32" ? "framebits.cmd" : "framebits",
   );
-  const direct = join(installDir, "node_modules", "algorithco-ui", "dist", "cli.js");
+  const direct = join(installDir, "node_modules", "framebits", "dist", "cli.js");
   const target = existsSync(bin) ? bin : direct;
   run(process.execPath, [target, "--version"]);
   run(process.execPath, [target, "--help"]);
-  run("npm", ["exec", "--yes", "--package", tarball, "--", "algorithco-ui", "--version"], {
+  run("npm", ["exec", "--yes", "--package", tarball, "--", "framebits", "--version"], {
     cwd: installDir,
   });
   process.stdout.write("cli pack smoke: OK\n");

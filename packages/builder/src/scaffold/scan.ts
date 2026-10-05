@@ -1,6 +1,6 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { MetaSchema } from "@algorithco-ui/shared";
+import { MetaSchema } from "@framebits/shared";
 import { ScaffoldError } from "./types.js";
 
 /** Recursively list every `meta.json` path under the registry root. */

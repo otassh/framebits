@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeItemHash } from "@algorithco-ui/shared";
+import { computeItemHash } from "@framebits/shared";
 import { verifyItem } from "./verify.js";
 
 function validItem(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -112,7 +112,7 @@ describe("verifyItem", () => {
     } catch (error) {
       expect(messageOf(error)).toContain("schemaVersion");
       if (typeof error === "object" && error !== null && "hint" in error) {
-        expect(String(error.hint)).toContain("update algorithco-ui");
+        expect(String(error.hint)).toContain("update framebits");
       } else {
         expect.unreachable();
       }
