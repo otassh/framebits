@@ -28,4 +28,4 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: node scripts/e2e-real.mjs ${{ matrix.scenario }}
+      - run: node apps/cli/scripts/e2e-real.mjs ${{ matrix.scenario }}

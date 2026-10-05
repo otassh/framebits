@@ -2,6 +2,7 @@ node_modules/
 dist/
 dist-schemas/
 packages/registry-env/.tmp/
+apps/cli/.journal-tmp/
 .turbo/
 *.local
 .env

@@ -592,3 +592,49 @@ Each of Tasks 11-14 must have its own acceptance criteria written by you at the 
    C15. `init` + `add <slug...>` (+ `--overwrite/--dry-run/--yes/--cwd/
    --registry/--debug`, global `--version/--help` with examples); `add`
    before `init` → exit 2; one fetch per item.
+10. Task 5b binding decisions (E1-E12; same precedence as C1-C15; E1
+   explicitly REPLACES MASTER_PROMPT Section 9 step 8 — no AST patching of
+   tailwind config, ever):
+   E1. Styles without AST: blocks in the CSS entry between
+   `/* algorithco-ui:begin <slug> */` markers; v3 = top-level @keyframes +
+   `@layer utilities` animation classes + `@layer base` vars; v4 = `@theme`
+   with `--animate-*` + nested keyframes (per v4 docs) + plain var blocks;
+   verbatim property names (sample is kebab-case); deterministic (sorted,
+   2-space, LF). Safety (exit 4): kebab names, from/to/0-100% selectors,
+   constrained properties, value denylist + 200-char/50-declaration caps.
+   E2. Append with one blank line; file EOL reused, rest byte-identical;
+   identical → unchanged, different → conflict (C12, overwrite replaces only
+   between markers); malformed markers → exit 1 + manual snippet; collisions
+   (outside markers or different definitions, comments stripped) → skip +
+   warn + snippet; `patch-css` in dry-run with the exact block.
+   E3. No Tailwind / missing CSS / `--no-styles` → no patch, labeled manual
+   snippet (v3+v4 forms as appropriate), exit 0; v3 `content` globs
+   documented, never parsed.
+   E4. `cross-spawn` (+ types) for Windows .cmd shims without shell:true
+   (argv-only, never -D, `name@range`); allowlist + bounded-range checked
+   immediately before running (exit 4); declared+satisfied (installed or
+   subset) → skip, declared-unsatisfied → warn + manual, undeclared →
+   install (first range wins, non-intersection warns); `--no-install`
+   prints; interactive asks (default yes); `--yes` runs; non-interactive
+   without `--yes` prints manual + warns (exit 0); `--dry-run` prints;
+   cwd = project root, stdio inherit only interactive/debug else tail on
+   failure, 10-minute timeout.
+   E5. Journal order files → CSS → install → config (last); CSS/package.json/
+   lockfile snapshots; installer failure restores snapshots, rolls back
+   files+CSS, leaves config untouched, exit 1 with tail; rollback failures
+   reported loudly; installer injected (fake in tests).
+   E6. Codes per C4; installer failure = 1; invalid styles = 4.
+   E7. Success summary: files created/unchanged, CSS blocks written,
+   packages installed, warnings/manuals.
+   E8. cross-spawn stays an external runtime dependency (single exception to
+   bundling): its dynamic require("child_process") crashes the ESM bundle at
+   startup (verified); everything else bundled; budget < 1.3 MB.
+   E9. The 5a "Manual steps (automated in a later release)" output is removed;
+   manual commands/snippets print only for skipped or impossible steps.
+   E10. Default suite stays hermetic (node:http registry + fake installer, no
+   external network); real network projects only in the e2e-real workflow.
+   E11. e2e-real runs weekly + manually, never as a required check (keeps main
+   CI fast and hermetic); failures there are reported honestly with run URLs.
+   E12. Shared owns npm range algebra for install decisions
+   (`isSemverSubset`, `doSemverRangesIntersect` on top of semver); schemas
+   still live only in `packages/shared`.
