@@ -78,7 +78,10 @@ async function readEnvVersions(): Promise<Record<string, string>> {
   return out;
 }
 
-export async function runTypecheck(items: TypecheckItem[]): Promise<TypecheckResult> {
+export async function runTypecheck(
+  items: TypecheckItem[],
+  options: { tmpBase?: string | undefined } = {},
+): Promise<TypecheckResult> {
   const diagnostics: Diagnostic[] = [];
   if (items.length === 0) return { diagnostics };
 
@@ -101,7 +104,7 @@ export async function runTypecheck(items: TypecheckItem[]): Promise<TypecheckRes
     }
   }
 
-  const tmpBase = join(envDir(), ".tmp");
+  const tmpBase = options.tmpBase ?? join(envDir(), ".tmp");
   await mkdir(tmpBase, { recursive: true });
   const tmp = await mkdtemp(join(tmpBase, "typecheck-"));
   try {
@@ -131,7 +134,9 @@ export async function runTypecheck(items: TypecheckItem[]): Promise<TypecheckRes
 
     const configFile = ts.readConfigFile(join(tmp, "tsconfig.json"), (name) => ts.sys.readFile(name));
     const parsed = ts.parseJsonConfigFileContent(configFile.config, ts.sys, tmp);
-    const program = ts.createProgram({ rootNames: materialized, options: parsed.options });
+    // CSS files are materialized for completeness but are not compilation roots.
+    const rootNames = materialized.filter((file) => !file.endsWith(".css"));
+    const program = ts.createProgram({ rootNames, options: parsed.options });
     for (const diagnostic of ts.getPreEmitDiagnostics(program)) {
       const text = ts.flattenDiagnosticMessageText(diagnostic.messageText, " ");
       const code = `TS${String(diagnostic.code)}`;

@@ -1,6 +1,6 @@
-import { readdir } from "node:fs/promises";
-import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { MetaSchema, type Meta } from "@algorithco-ui/shared";
 import { loadRegistry } from "./index.js";
@@ -18,10 +18,6 @@ function item(
   demoText?: string,
 ): TypecheckItem {
   return { meta: meta(slug, overrides), files, demoText };
-}
-
-function envTmp(): string {
-  return resolve(fileURLToPath(new URL("../../../registry-env/.tmp", import.meta.url)));
 }
 
 describe("runTypecheck", () => {
@@ -89,16 +85,16 @@ describe("runTypecheck", () => {
   });
 
   it("always cleans up its temp directory", async () => {
-    await runTypecheck([
-      item("ok", { "components/ui/ok.tsx": "export const x = 1;\n" }),
-    ]);
-    let entries: string[] = [];
+    const base = await mkdtemp(join(tmpdir(), "tc-cleanup-"));
     try {
-      entries = await readdir(envTmp());
-    } catch {
-      entries = [];
+      await runTypecheck(
+        [item("ok", { "components/ui/ok.tsx": "export const x = 1;\n" })],
+        { tmpBase: base },
+      );
+      expect(await readdir(base)).toEqual([]);
+    } finally {
+      await rm(base, { recursive: true, force: true });
     }
-    expect(entries).toEqual([]);
   });
 });
 

@@ -49,11 +49,15 @@ function validComponent(): Record<string, string> {
   };
 }
 
+let dirCounter = 0;
+
 function dirs(root: string): { out: string; archive: string } {
   // Sibling temp dirs: out/archive must NEVER live inside the registry root
   // (emitted schema/meta.json files would be discovered as items).
+  dirCounter += 1;
   const parent = join(root, "..");
-  return { out: join(parent, `out-${Date.now()}`), archive: join(parent, `arc-${Date.now()}`) };
+  const tag = String(dirCounter);
+  return { out: join(parent, `out-${tag}`), archive: join(parent, `arc-${tag}`) };
 }
 
 describe("packages/builder/src/cli.ts", () => {
