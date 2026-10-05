@@ -17,7 +17,7 @@ Requires Node >= 20. The bundle is a single ESM file (`dist/cli.js`, ~1 MB, no r
 
 ```sh
 algorithco-ui init [--yes] [--cwd <dir>] [--registry <url>]
-algorithco-ui add <slug...> [--overwrite] [--dry-run] [--yes] [--cwd <dir>] [--registry <url>] [--debug]
+algorithco-ui add <slug...> [--overwrite] [--dry-run] [--yes] [--no-install] [--no-styles] [--cwd <dir>] [--registry <url>] [--debug]
 algorithco-ui --version
 algorithco-ui --help
 ```
@@ -28,14 +28,13 @@ or any other project file.
 
 `add` fetches items from the registry, verifies hashes, resolves
 `registryDependencies` (e.g. `aurora-text` pulls in `cn`), rewrites import
-aliases to yours, writes files atomically (with rollback), and updates
+aliases to yours, writes files atomically (with rollback), patches Tailwind
+styles into the CSS entry, installs missing npm dependencies, and updates
 `installed` in the config.
 
-After `add`, the CLI prints clearly labeled **Manual steps (automated in a
-later release)**: the package-manager install command for missing npm deps,
-and the Tailwind keyframes/animation/cssVars snippet to merge. Tailwind
-merging and npm install are automated in Task 5b; in 5a they are printed, not
-applied.
+After `add`, the CLI prints a short summary (files created/unchanged, CSS
+blocks written, packages installed). Manual output appears only for skipped
+or impossible steps (exact command or CSS snippet).
 
 Flags:
 
@@ -43,6 +42,8 @@ Flags:
   or prompt per file when interactive).
 - `--dry-run`: print the plan and manual steps; write nothing (exit 0).
 - `--yes`: non-interactive defaults (does NOT imply `--overwrite`).
+- `--no-install`: print the exact install command instead of running it.
+- `--no-styles`: skip Tailwind CSS patching (print the snippet instead).
 - `--cwd <dir>`: run inside another app directory.
 - `--registry <url>`: override the registry (flag > env
   `ALGORITHCO_UI_REGISTRY_URL` > config > default `https://algorithco.dev/r`).

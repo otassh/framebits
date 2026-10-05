@@ -12,7 +12,10 @@ export default defineConfig({
   platform: "node",
   target: "node20",
   bundle: true,
-  noExternal: [/./],
+  external: ["cross-spawn"],
+  // cross-spawn is the single runtime (external) dependency: its dynamic
+  // require("child_process") cannot be bundled into an ESM file (the build
+  // succeeds but the CLI crashes at startup). Everything else is bundled.
   splitting: false,
   sourcemap: false,
   minify: false,

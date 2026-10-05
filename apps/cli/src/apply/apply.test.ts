@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyPlan, assertSafeTarget, type ApplyFs } from "./index.js";
+import { applyPlan, assertSafeTarget, type ApplyFs, type ApplyInput } from "./index.js";
 import type { CliConfig } from "@algorithco-ui/shared";
 
 function baseConfig(): CliConfig {
@@ -18,6 +18,24 @@ function baseConfig(): CliConfig {
 interface MemoryApi extends ApplyFs {
   files: Map<string, string>;
   writes: number;
+}
+
+function inputBase(
+  files: ApplyInput["files"],
+  writeConfig: (next: CliConfig) => Promise<void>,
+): ApplyInput {
+  return {
+    projectRoot: "/proj",
+    files,
+    css: [],
+    snapshotFiles: [],
+    installer: undefined,
+    config: baseConfig(),
+    versions: new Map(),
+    writeConfig,
+    overwrite: false,
+    skipSlugs: new Set(),
+  };
 }
 
 function memoryFs(options?: {
@@ -99,7 +117,10 @@ describe("apply", () => {
     const result = await applyPlan(
       fs,
       {
-        projectRoot: "/proj",
+        ...inputBase([], (next) => {
+          saved = next;
+          return Promise.resolve();
+        }),
         files: [
           {
             itemSlug: "cn",
@@ -112,14 +133,7 @@ describe("apply", () => {
             caseCollisionWith: undefined,
           },
         ],
-        config: baseConfig(),
         versions: new Map([["cn", { version: "1.0.0", hash: `sha256:${"a".repeat(64)}` }]]),
-        writeConfig: (next) => {
-          saved = next;
-          return Promise.resolve();
-        },
-        overwrite: false,
-        skipSlugs: new Set(),
       },
       "/tmp/journal",
     );
@@ -128,7 +142,7 @@ describe("apply", () => {
     expect(installed?.version).toBe("1.0.0");
   });
 
-  it("rolls back on injected mid-write failure, including config", async () => {
+  it("rolls back on injected mid-write failure, leaving config untouched", async () => {
     const fs = memoryFs({ failOnWrite: 2 });
     fs.files.set("/proj/src/lib/keep.ts", "keep\n");
     let saved: CliConfig = baseConfig();
@@ -136,7 +150,10 @@ describe("apply", () => {
       await applyPlan(
         fs,
         {
-          projectRoot: "/proj",
+          ...inputBase([], (next) => {
+            saved = next;
+            return Promise.resolve();
+          }),
           files: [
             {
               itemSlug: "a",
@@ -159,17 +176,10 @@ describe("apply", () => {
               caseCollisionWith: undefined,
             },
           ],
-          config: baseConfig(),
           versions: new Map([
             ["a", { version: "1.0.0", hash: `sha256:${"a".repeat(64)}` }],
             ["b", { version: "1.0.0", hash: `sha256:${"b".repeat(64)}` }],
           ]),
-          writeConfig: (next) => {
-            saved = next;
-            return Promise.resolve();
-          },
-          overwrite: false,
-          skipSlugs: new Set(),
         },
         "/tmp/journal",
       );
@@ -200,5 +210,128 @@ describe("apply", () => {
     } catch (error) {
       expect(messageOf(error)).toContain("outside");
     }
+  });
+
+  it("patches CSS blocks through the journal", async () => {
+    const fs = memoryFs();
+    fs.files.set("/proj/src/app/globals.css", "@tailwind base;\n");
+    let saved: CliConfig = baseConfig();
+    const result = await applyPlan(
+      fs,
+      {
+        ...inputBase([], (next) => {
+          saved = next;
+          return Promise.resolve();
+        }),
+        css: [
+          {
+            absPath: "/proj/src/app/globals.css",
+            rel: "src/app/globals.css",
+            slug: "shimmer-button",
+            blockInner: "@keyframes shimmer {\n  from {\n    opacity: 0;\n  }\n}",
+            overwrite: false,
+          },
+        ],
+      },
+      "/tmp/journal",
+    );
+    expect(result.cssPatched).toEqual(["/proj/src/app/globals.css"]);
+    expect(fs.files.get("/proj/src/app/globals.css")).toContain("algorithco-ui:begin shimmer-button");
+    expect(saved.installed).toEqual({});
+  });
+
+  it("rolls back files, CSS and package.json on installer failure; config untouched", async () => {
+    const fs = memoryFs();
+    fs.files.set("/proj/package.json", '{"name":"p"}\n');
+    fs.files.set("/proj/pnpm-lock.yaml", "before\n");
+    fs.files.set("/proj/src/app/globals.css", "@tailwind base;\n");
+    let configWrites = 0;
+    try {
+      await applyPlan(
+        fs,
+        {
+          ...inputBase([], () => {
+            configWrites += 1;
+            return Promise.resolve();
+          }),
+          files: [
+            {
+              itemSlug: "cn",
+              itemVersion: "1.0.0",
+              registryPath: "lib/cn.ts",
+              targetAbs: "/proj/src/lib/cn.ts",
+              targetRel: "src/lib/cn.ts",
+              action: "create",
+              content: "export {};\n",
+              caseCollisionWith: undefined,
+            },
+          ],
+          css: [
+            {
+              absPath: "/proj/src/app/globals.css",
+              rel: "src/app/globals.css",
+              slug: "shimmer-button",
+              blockInner: "@keyframes shimmer {\n  from {\n    opacity: 0;\n  }\n}",
+              overwrite: false,
+            },
+          ],
+          snapshotFiles: ["/proj/package.json", "/proj/pnpm-lock.yaml"],
+          installer: {
+            command: {
+              program: "pnpm",
+              args: ["add", "motion@^14.0.0"],
+              cwd: "/proj",
+              display: "pnpm add motion@^14.0.0",
+              packages: ["motion"],
+            },
+            run: () => {
+              // Fake installer: partially mutates, then fails.
+              fs.files.set("/proj/package.json", '{"name":"p","dependencies":{"motion":"^14.0.0"}}\n');
+              fs.files.set("/proj/pnpm-lock.yaml", "after\n");
+              return Promise.resolve({ exitCode: 1, timedOut: false, stdout: "out", stderr: "boom" });
+            },
+          },
+          versions: new Map([["cn", { version: "1.0.0", hash: `sha256:${"a".repeat(64)}` }]]),
+        },
+        "/tmp/journal",
+      );
+      expect.unreachable();
+    } catch (error) {
+      expect(messageOf(error)).toContain("boom");
+    }
+    expect(fs.files.has("/proj/src/lib/cn.ts")).toBe(false);
+    expect(fs.files.get("/proj/src/app/globals.css")).toBe("@tailwind base;\n");
+    expect(fs.files.get("/proj/package.json")).toBe('{"name":"p"}\n');
+    expect(fs.files.get("/proj/pnpm-lock.yaml")).toBe("before\n");
+    expect(configWrites).toBe(0);
+  });
+
+  it("rolls back on a failing config step", async () => {
+    const fs = memoryFs();
+    try {
+      await applyPlan(
+        fs,
+        {
+          ...inputBase([], () => Promise.reject(new Error("config disk full"))),
+          files: [
+            {
+              itemSlug: "cn",
+              itemVersion: "1.0.0",
+              registryPath: "lib/cn.ts",
+              targetAbs: "/proj/src/lib/cn.ts",
+              targetRel: "src/lib/cn.ts",
+              action: "create",
+              content: "export {};\n",
+              caseCollisionWith: undefined,
+            },
+          ],
+        },
+        "/tmp/journal",
+      );
+      expect.unreachable();
+    } catch (error) {
+      expect(messageOf(error)).toContain("config disk full");
+    }
+    expect(fs.files.has("/proj/src/lib/cn.ts")).toBe(false);
   });
 });

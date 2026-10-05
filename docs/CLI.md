@@ -1,8 +1,9 @@
 # CLI (`algorithco-ui`)
 
-Task 5a: packaging, detection, config, `init`, `add` file pipeline. Out of
-scope for 5a: npm dependency installation, Tailwind keyframes/cssVars merging
-(Task 5b), telemetry, `list`/`search`/`diff`/`update` (Task 9).
+Task 5a: packaging, detection, config, `init`, `add` file pipeline. Task 5b:
+Tailwind styles are written into the CSS entry as marker blocks and missing
+npm dependencies are installed (see below). Out of scope: telemetry,
+`list`/`search`/`diff`/`update` (Task 9).
 
 ## Commands
 
@@ -77,6 +78,76 @@ Per file: `create` (absent), `unchanged` (bytes equal after LF
 normalization), `conflict` (exists and differs, or case-collision). Items
 recorded in `installed` with the same hash and all files unchanged report
 `already installed`.
+
+## Styles model (Task 5b)
+
+The CLI NEVER parses or edits `tailwind.config.*` or any JS/TS config (this
+replaces MASTER_PROMPT Section 9 step 8). Styles from `item.tailwind` and
+`item.cssVars` are written into the CSS entry (`config.tailwind.css`) as
+marker-delimited blocks, one per item slug:
+
+```css
+/* algorithco-ui:begin shimmer-button */
+...
+/* algorithco-ui:end shimmer-button */
+```
+
+Mapping (property names are emitted verbatim — the `shimmer-button` sample
+uses kebab-case already, so no camelCase conversion is performed):
+
+- v3 block: each `tailwind.keyframes` entry as a top-level
+  `@keyframes <name> { ... }`; each `tailwind.animation` entry
+  `<name>: <value>` as `@layer utilities { .animate-<name> { animation: <value>; } }`;
+  `cssVars` as `@layer base { :root { --k: v; } .dark { --k: v; } }`
+  (light → `:root`, dark → `.dark`).
+- v4 block: `@theme { --animate-<name>: <value>; @keyframes <name> { ... } }`
+  (nested keyframes per the Tailwind v4 `@theme` docs); `cssVars` as plain
+  `:root { }` / `.dark { }` blocks.
+
+Generation is deterministic (sorted names, 2-space indent, LF inside the
+block). The block is appended at the end of the CSS entry preceded by one
+blank line; the file's dominant EOL (CRLF vs LF) is used for inserted text
+and everything else is preserved byte-for-byte. Identical content →
+`unchanged`; different content → `conflict` (C12; `--overwrite` replaces only
+the text between that slug's markers). Patching appears as `patch-css` in
+`--dry-run` output with the exact block. For Tailwind v3 the user's `content`
+globs must include the components directory (v4 detects sources
+automatically); the CLI documents this but never parses the config.
+
+Safety (registry data is semi-trusted; exit 4, nothing written on violation):
+names `/^[a-z][a-z0-9-]*$/` (css vars may carry one leading `--`, normalized
+to always have it); keyframe selectors `from`/`to`/0–100% (decimals ok,
+comma lists ok); properties `/^-{0,2}[a-z][a-zA-Z0-9-]*$/`; values reject
+`{ } ; \ /* */ @ <`, `url(`, `expression(`, `image-set(`, `javascript:`,
+newlines/controls, > 200 chars; max 50 declarations per item. Malformed
+markers (begin without end, duplicates, nesting) → exit 1, file untouched,
+manual snippet printed. Name collisions (a keyframe/`--animate-*`/`.animate-*`
+outside our markers, or a different definition inside another slug's block;
+comments stripped first) → the block is skipped with a warning plus the
+manual snippet, no failure. No Tailwind detected, CSS entry missing, or
+`--no-styles` → no patching; a labeled manual snippet (v3/v4 forms as
+appropriate), exit 0.
+
+## Dependency install (Task 5b)
+
+Missing npm dependencies are installed with the detected package manager
+(`cross-spawn`, argv-only, never `shell: true`, never `-D`, always
+`name@range`): pnpm `add`, yarn `add`, npm `install`, bun `add`. Defense in
+depth: every name must be allowlisted and every range bounded immediately
+before the command runs (exit 4 otherwise — this also rejects injection).
+Computation: declared (deps/devDeps/peerDeps) and installed (or declared
+range, via subset) satisfying the item's range → skip; declared but not
+satisfied → warn, never touch, print the manual command; undeclared →
+install the item's range. First range wins per package; non-intersecting
+later ranges warn. Flags: `--no-install` prints the exact command instead;
+interactive shows the command and asks (default yes); `--yes` runs it;
+non-interactive without `--yes` prints the command as a manual step with a
+warning (exit 0); `--dry-run` prints and runs nothing. cwd is the project
+root; stdio is inherited only in interactive/`--debug`, otherwise the tail is
+captured and printed on failure; 10-minute timeout. Journal order: files →
+CSS → install → config (last). Installer failure/non-zero/timeout restores
+CSS/package.json/lockfile snapshots, rolls back files+CSS, leaves config
+untouched, exit 1 with the output tail.
 
 ## Exit codes
 

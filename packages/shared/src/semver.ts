@@ -53,6 +53,24 @@ export function isGreaterSemverVersion(a: string, b: string): boolean {
   }
 }
 
+/** True when every version satisfying `sub` also satisfies `dom` (false on any failure). */
+export function isSemverSubset(sub: string, dom: string): boolean {
+  try {
+    return semver.subset(sub, dom);
+  } catch {
+    return false;
+  }
+}
+
+/** True when at least one version satisfies both ranges (false on any failure). */
+export function doSemverRangesIntersect(a: string, b: string): boolean {
+  try {
+    return semver.intersects(a, b);
+  } catch {
+    return false;
+  }
+}
+
 /** True when every `||` branch of the range has an upper bound. Assumes validity. */
 export function isBoundedSemverRange(range: string): boolean {
   let parsed: semver.Range;

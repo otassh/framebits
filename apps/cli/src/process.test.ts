@@ -39,4 +39,13 @@ describe("built cli.js", () => {
     const result = run(["add", "aurora-text", "--cwd", join(dirname(distCli), "..")]);
     expect([1, 2]).toContain(result.status);
   });
+
+  it("add --help documents the 5b flags", () => {
+    const result = run(["add", "--help"]);
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("--no-install");
+    expect(result.stdout).toContain("--no-styles");
+    expect(result.stdout).toContain("--dry-run");
+    expect(result.stdout).toContain("--overwrite");
+  });
 });
