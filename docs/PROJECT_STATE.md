@@ -379,10 +379,14 @@ Questions needing the owner:
 5. (1b: RESOLVED — CLI `engines >= 20` is intentional per MASTER_PROMPT §16 decision 2, not a bug.)
 6. (1b: RESOLVED — esbuild allowed via `onlyBuiltDependencies` in `pnpm-workspace.yaml`, commit `43222eb`.)
 7. (1b: RESOLVED — owner chose trailer-only) Agent commits carry
-   `Co-Authored-By: opencode <noreply@opencode.ai>` (official upstream convention, verified in
-   `sst/opencode` repo `packages/opencode/src/tool/bash.txt`). No bot footer line. Applies to
-   agent-authored commits going forward; past pushed commits NOT rewritten. Git identity itself
-   untouched (global `C:/Users/user/.gitconfig`, no local overrides).
+   `Co-Authored-By: opencode <noreply@opencode.ai>` (upstream OpenCode tool convention, verified in
+   `sst/opencode` repo `packages/opencode/src/tool/bash.txt`). No bot footer line. NOTE (corrected
+   2026-10-05): this is TOOL-level attribution, not a personal account — there is no GitHub user
+   behind `noreply@opencode.ai` (it is not a registered GitHub noreply address, so no avatar,
+   profile link, or contribution graph; the agent itself is the OpenCode harness running
+   Muse Spark 1.3 via the OpenCode provider, with no login of its own — pushes/auth use the
+   owner's credentials). Applies going forward; past pushed commits NOT rewritten. Git identity
+   itself untouched (global `C:/Users/user/.gitconfig`, no local overrides).
 
 ## 10. Known issues and risks
 
@@ -499,8 +503,9 @@ include administrators). Awaiting owner go-ahead.
    future Task 3/4/7 code — intentional, do not stub. CLI `bin/dist` gap lands in Task 5.
 7. Exact next action: Task 2 (`packages/shared` schemas+hashing) — AWAITING owner go-ahead. STOP.
 8. Agent commit attribution (owner decision 2026-10-05): every agent-authored commit ends with
-   trailer `Co-Authored-By: opencode <noreply@opencode.ai>` (upstream OpenCode convention).
-   No bot footer line. Never rewrite pushed history to add it. Never touch git identity config.
+   trailer `Co-Authored-By: opencode <noreply@opencode.ai>` (upstream OpenCode TOOL convention —
+   not a personal account; no GitHub user behind it). No bot footer line. Never rewrite pushed
+   history to add it. Never touch git identity config.
 8. Non-negotiable AGENTS.md rules (13 now; #1 = master prompt first): 1 task=1 commit; criteria
    verified before done; strict TS + ESM + Node22 + pnpm; Zod-only validation w/ schemas in
    `shared`; approved-deps only; smoke tests everywhere; secrets in `.env` only (+ keep
