@@ -1,27 +1,32 @@
 # PROJECT STATE — verified read-only report
 
 > This report contains facts only. Every statement is backed by the repo contents
-> or by commands run on 2026-10-05 (UTC+5, machine local time). Anything not
-> verifiable is marked UNKNOWN / NOT BUILT / NOT VERIFIED. No source code was
-> changed to produce this report.
+> or by commands run on 2026-10-04/05. Anything not verifiable is marked UNKNOWN /
+> NOT BUILT / NOT VERIFIED.
+>
+> Update 2026-10-05 (Task 1b housekeeping): `docs/MASTER_PROMPT.md` is now the source
+> of truth (committed). Task names/criteria below now come from its Section 14.
+> Detail deltas vs the original report are noted inline with "(1b: …)".
 
 ## 1. Snapshot
 
 - Date/time: 2026-10-05 (commands run this session; repo timestamps are +0500).
-- Current branch: `main` (`git rev-parse --abbrev-ref HEAD` → `main`).
-- HEAD commit: `a0ae7423af867d8e2e5b36e2cb395a75b6cacb3a` —
-  `chore(monorepo): single-place domain constant, turbo outputs, windows dev note`
-  (2026-10-04 14:47:42 +0500, author hamroqulovotabek).
-- Number of commits: 2 (`git rev-list --count HEAD` → `2`).
-  1. `d06c7e8` feat(monorepo): initial workspace skeleton with turbo pipeline and package stubs
-  2. `a0ae742` chore(monorepo): single-place domain constant, turbo outputs, windows dev note
-- Working tree: CLEAN at report time (`git status --short` → empty output, `git diff HEAD --stat` → empty).
-  Note: at the start of this session the tree was dirty (modified `.gitattributes`, `README.md`,
-  `packages/shared/src/*`, `turbo.json`, untracked `.gitmessage`, `packages/shared/src/site.ts`);
-  that dirty state is exactly what HEAD commit `a0ae742` contains, i.e. the session began
-  before that commit existed and the commit landed during this session.
-- Remote: NONE configured (`git remote -v` → empty). Nothing is pushed anywhere; CI has never run.
-- Local path: `C:\Users\user\Desktop\design`.
+- Current branch: `main`, tracking `origin/main`
+  (1b: remote `origin` → `https://github.com/otassh/algorithco-ui.git`, private repo,
+  created via `gh repo create otassh/algorithco-ui --private --source=. --remote=origin --push`).
+- HEAD commit: `3c0dd1c` `chore: opt out of turbo AGENTS.md guidance rewrites`
+  (1b: 8 commits at Task-1b push time; see below. This report update will be #9.)
+- Number of commits: 8 (`d06c7e8` skeleton, `a0ae742` domain const, `65419b5` this report,
+  `b4f2166` master prompt + AGENTS rule, `5c46663` PROJECT_NAME, `c5e55a9` CI hardening,
+  `43222eb` esbuild approval, `3c0dd1c` turbo opt-out).
+- Working tree: CLEAN.
+- Remote: CONFIGURED (`origin`, GitHub `otassh/algorithco-ui`, private). Everything pushed.
+  First CI run `37256803283` on push: GREEN — both matrix jobs (`ci (22)` 32s, `ci (24)` 44s),
+  all steps pass (install, lint, typecheck, test, build). Only annotations (warnings, non-failing):
+  Node.js-20-based actions deprecation notice; `ubuntu-latest` → Ubuntu 26 migration notice.
+- Local path: `C:\Users\user\Desktop\design`. (1b: repo moved paths before this session;
+  grepped all tracked files for `C:\` / `C:/` — the only hit is this report's own path line.
+  Lockfile has no absolute paths; `.turbo` cache is gitignored. Nothing depends on an old path.)
 - OS/shell: Windows (`win32`), PowerShell. `pnpm.ps1` is blocked by the machine's
   PowerShell execution policy (`PSSecurityException: UnauthorizedAccess`); all pnpm
   commands in this report were run via `pnpm.cmd`.
@@ -33,8 +38,11 @@
 
 Branding values (searched via grep for `PROJECT_NAME|DOMAIN|REGISTRY_URL|PLACEHOLDER_DOMAIN|DEFAULT_REGISTRY|algorithco`):
 
-- `PROJECT_NAME`: NOT FOUND anywhere in code. There is no `PROJECT_NAME` constant. UNKNOWN where
-  it should live.
+- `PROJECT_NAME`: (1b: RESOLVED) `"Algorithco UI"` — defined ONCE in
+  `packages/shared/src/site.ts`, re-exported via `packages/shared/src/index.ts`,
+  asserted in `packages/shared/src/index.test.ts`. Grep confirms no other source file
+  duplicates the string (hits only: `site.ts`, the test assertion, `README.md` title
+  heading, `MASTER_PROMPT.md`).
 - CLI name: `algorithco-ui` — defined in `apps/cli/package.json` (`"name": "algorithco-ui"`,
   `"bin": { "algorithco-ui": "./dist/cli.js" }`) and mirrored as `CLI_PACKAGE_NAME` in
   `apps/cli/src/index.ts`. Two declarations of the same string (package.json + const) — minor duplication.
@@ -52,33 +60,33 @@ Branding values (searched via grep for `PROJECT_NAME|DOMAIN|REGISTRY_URL|PLACEHO
 
 ## 2. Task progress table
 
-> LIMITATION: the "master prompt" document is NOT present anywhere in the repo
-> (grepped for `master prompt|Task [0-9]+|Phase [123]` — only passing references found:
-> `scripts/new-component.ts` → "Task 3", `deploy/README.md` → "Task 6",
-> `packages/shared/src/site.ts` comment → "Task 8", `README.md` → "Task 6+",
-> `apps/web/README.md` → "master prompt Section 13"). Task names and acceptance criteria
-> below for Tasks 2–14 are therefore UNKNOWN. Only what exists on disk is reported.
-> Per the strict rule, no task is marked DONE on criteria grounds except where the only
-> observable criterion (stub committed + checks green) holds — and even those are flagged
-> NOT VERIFIED against the unseen master prompt.
+> (1b update): the master prompt is now committed at `docs/MASTER_PROMPT.md` and is the
+> source of truth. Task names and acceptance criteria below are quoted/paraphrased from
+> its Section 14. Phase mapping is now known.
 
-| Task # | Name (from repo evidence, else UNKNOWN) | Status | Commit hash | Acceptance criteria met |
+| Task # | Name (MASTER_PROMPT §14) | Status | Commit hash | Acceptance criteria met |
 |---|---|---|---|---|
-| 1 | Monorepo skeleton (turbo pipeline + package stubs) — inferred from commit message | DONE (skeleton only) | `d06c7e8` | Criteria UNKNOWN (no master prompt in repo): NOT VERIFIED. Observable: workspace layout exists PASS; `pnpm lint/typecheck/test/build` green PASS (see §7) |
-| 2 | UNKNOWN (no reference in repo) | NOT STARTED | — | NOT VERIFIED |
-| 3 | new-component generator — inferred from `scripts/new-component.ts` TODO | IN PROGRESS (stub) | `d06c7e8` (stub committed in skeleton) | Generator implemented: FAIL (file throws `not implemented (Task 3)`); scaffold output: FAIL; `registry.lock.json` still placeholder PASS-as-placeholder |
-| 4 | UNKNOWN | NOT STARTED | — | NOT VERIFIED |
-| 5 | UNKNOWN | NOT STARTED | — | NOT VERIFIED |
-| 6 | Deploy docs / VPS (`deploy/README.md` = "VPS deploy docs land in Task 6"); component guide references "Task 6+" | NOT STARTED | — | Deploy docs: FAIL (one-line placeholder); docker-compose/Caddyfile/scripts: FAIL (absent) |
-| 7 | UNKNOWN | NOT STARTED | — | NOT VERIFIED |
-| 8 | API env parsing / runtime config — inferred from `site.ts` comment "Runtime config (apps/api env parsing, Task 8)" | NOT STARTED | — | Env parsing: FAIL (`apps/api/src/index.ts` is a 1-line stub, no env code) |
-| 9 | UNKNOWN | NOT STARTED | — | NOT VERIFIED |
-| 10 | UNKNOWN | NOT STARTED | — | NOT VERIFIED |
-| 11 | UNKNOWN | NOT STARTED | — | NOT VERIFIED |
-| 12 | UNKNOWN | NOT STARTED | — | NOT VERIFIED |
-| 13 | UNKNOWN (possibly the "out of scope" list — `apps/web/README.md` cites "master prompt Section 13") | NOT STARTED | — | NOT VERIFIED |
-| 14 | UNKNOWN | NOT STARTED | — | NOT VERIFIED |
-| — | Follow-up commit: single-place domain constant, turbo outputs, windows dev note | DONE | `a0ae742` | `site.ts` single-source constant PASS; `turbo.json` outputs PASS (by inspection); README windows note PASS |
+| 1 | Monorepo skeleton | DONE | `d06c7e8` (+ `a0ae742` follow-up) | Fresh-clone green checks PASS (verified §7, incl. uncached `--force` run 2026-10-05); CI workflow valid PASS (first CI run green 2026-10-05, run `37256803283`) |
+| 1b | Housekeeping (this report's session; not a master-prompt task) | DONE | `b4f2166`, `5c46663`, `c5e55a9`, `43222eb`, `3c0dd1c` | AGENTS.md rule added PASS; PROJECT_NAME added PASS; CI hardened PASS; esbuild warning resolved PASS; turbo opt-out verified PASS (tree stayed clean after run) |
+| 2 | `packages/shared` (schemas, hashing, JSON Schema export) | NOT STARTED | — | NOT VERIFIED (nothing implemented; no Zod in repo) |
+| 3 | Component generator (`pnpm new-component`) | NOT STARTED (stub throws) | `d06c7e8` (stub) | Valid folder: FAIL; refuse overwrite: FAIL; passes builder validation: FAIL (builder is Task 4) |
+| 4 | `packages/builder` + 3 sample components | NOT STARTED | — | All FAIL (no pipeline code; `build:registry` script absent — intentional per §16 decision 4) |
+| 5 | CLI: `init` and `add` | NOT STARTED | — | All FAIL (stub; `bin`/`dist` gap known, real build lands in this task per §16 decision 3) |
+| 6 | Docker, Caddy, deploy scripts | NOT STARTED | — | All FAIL (only placeholder README) |
+| 7 | `packages/db` (schema, migrations, client, sync, seed) | NOT STARTED | — | All FAIL (`db:sync`/`db:migrate` absent — intentional per §16 decision 4) |
+| 8 | `apps/api` (env, health, events, stats, like, newsletter, RSS, limits, CORS, shutdown) | NOT STARTED | — | All FAIL (1-line stub) |
+| 9 | CLI: telemetry + `list`, `search`, `diff`, `update` | NOT STARTED | — | NOT VERIFIED |
+| 10 | Admin endpoints | NOT STARTED | — | NOT VERIFIED |
+| 11 | Builder quality gates | NOT STARTED | — | NOT VERIFIED (criteria to be written at task start) |
+| 12 | Props documentation | NOT STARTED | — | NOT VERIFIED (criteria to be written at task start) |
+| 13 | Playwright previews | NOT STARTED | — | NOT VERIFIED (criteria to be written at task start) |
+| 14 | RSS polish, OG images, monitoring, k6, docs pass | NOT STARTED | — | NOT VERIFIED (criteria to be written at task start) |
+
+(1b corrections to the original report, per MASTER_PROMPT §16 recorded decisions:
+`apps/cli` `engines >= 20` is INTENTIONAL (end users may run Node 20) — not a bug;
+root scripts `build:registry`/`db:sync`/`db:migrate`/`new-component` INTENTIONALLY point
+at scripts landing in Tasks 3/4/7; `tsc --noEmit` builds + unbuildable `bin` are a KNOWN
+GAP until Task 5's tsup build.)
 
 ## 3. Repository tree
 
@@ -311,6 +319,20 @@ stale-dated 2026-10-04, re-run with `--force` after any source change; (c) no `t
 coverage thresholds configured; (d) `vitest 3.2.7` and `turbo 2.11.7` resolved above their
 declared `^3.2.4`/`^2.5.4` floors (ranges allow it; lockfile is the truth).
 
+> (1b update, 2026-10-05, NO CACHE) Ran `pnpm.cmd install --frozen-lockfile` (exit 0, 1.6s;
+> esbuild postinstall executed — the "Ignored build scripts" warning is GONE after the
+> `onlyBuiltDependencies: [esbuild]` change) then
+> `pnpm.cmd turbo run lint typecheck test build --force` — exit 0,
+> `Tasks: 24 successful, 24 total / Cached: 0 cached, 24 total / Time: 13.082s`.
+> Real per-package test durations: cli 1.23s, db 1.69s, api 1.10s, shared 0.90s, builder 0.85s.
+> Test counts now: shared 3 passed (new PROJECT_NAME test green), api/cli/db/builder 1 each,
+> config 0 → TOTAL 7 passed, 0 failed, 0 skipped/todo. Turbo printed `WARNING no output
+> files found for task …#build` × 6 — expected (all builds are `tsc --noEmit`; known gap
+> until Task 5). `git status --short` after the run: clean (turbo `agentGuidance: false`
+> opt-out confirmed working — AGENTS.md untouched).
+> CI run `37256803283` (first ever): GREEN, `ci (22)` 32s + `ci (24)` 44s, all 5 steps pass
+> in both; annotations only (Node-20-actions deprecation + ubuntu-26 migration notices).
+
 ## 8. Decisions and deviations log
 
 Decisions NOT dictated by the master prompt (inferred from commits/diffs; author = repo owner,
@@ -352,110 +374,137 @@ Questions needing the owner:
 
 1. What is the real production DOMAIN (replace `algorithco.dev`)? Also confirm the default registry URL.
 2. Which license? (Needed before public launch; currently no LICENSE file.)
-3. Where is the master prompt / task plan? It is not in the repo — provide it or point to it,
-   otherwise acceptance criteria for Tasks 2–14 cannot be verified.
-4. `PROJECT_NAME` — is a central project-name constant wanted, and where should it live?
-5. Should `apps/cli` engines stay `>=20` or align to repo `>=22`?
-6. Approve or remove the `esbuild` build script (`pnpm approve-builds`)?
+3. (1b: RESOLVED — master prompt committed at `docs/MASTER_PROMPT.md`; task names/criteria known.)
+4. (1b: RESOLVED — `PROJECT_NAME = "Algorithco UI"` added to `packages/shared/src/site.ts`, commit `5c46663`.)
+5. (1b: RESOLVED — CLI `engines >= 20` is intentional per MASTER_PROMPT §16 decision 2, not a bug.)
+6. (1b: RESOLVED — esbuild allowed via `onlyBuiltDependencies` in `pnpm-workspace.yaml`, commit `43222eb`.)
+7. (NEW 1b) Co-authorship: owner asked the agent to co-author. What `Co-authored-by:` name/email
+   should the agent put on its commits? (Git identity itself left untouched per instruction:
+   `user.name`/`user.email` come from global `C:/Users/user/.gitconfig`, no local overrides.)
 
 ## 10. Known issues and risks
 
-- HIGH — No git remote / nothing pushed / CI never run. Single-machine risk: all history
-  (2 commits) lives only on this disk. Fix: `git remote add origin … && git push -u origin main`.
+- (1b: RESOLVED) Remote/push/CI — repo created as private `otassh/algorithco-ui`, all pushed,
+  first CI run green (see §1). Remaining: branch protection NOT enabled yet (deliberate;
+  recommendation for owner in §12 below).
 - HIGH — `apps/cli` `bin` (`./dist/cli.js`) is unbuildable: `build` = `tsc --noEmit`, so the
-  shippable CLI artifact does not and cannot exist. Blocks any CLI testing/distribution.
+  shippable CLI artifact does not and cannot exist. (1b: known gap, real build lands in Task 5
+  per §16 decision 3.) Blocks any CLI testing/distribution.
 - MEDIUM — 3 root scripts reference missing package scripts (`build:registry`, `db:sync`,
-  `db:migrate`). They fail if invoked. Either add the package scripts or remove the root entries.
+  `db:migrate`). (1b: INTENTIONAL per §16 decision 4 — targets land in Tasks 3/4/7. They still
+  fail if invoked today; do not "fix" by stubbing.)
 - MEDIUM — Zero contract code: no Zod, no schemas, no hashing, no allowlists. Per AGENTS.md §4
   schemas must live only in `packages/shared` — the home exists, the content doesn't. Everything
-  downstream (builder, API, CLI, DB) is blocked on this.
+  downstream (builder, API, CLI, DB) is blocked on this. (This is Task 2, next.)
 - MEDIUM — Database: no driver, no schema, no migrations, no client; `.env.example` documents
   `DATABASE_URL` but nothing reads it. `ADMIN_TOKEN`/`LIKE_PEPPER` placeholders must be replaced
   before any deploy.
-- LOW — `apps/cli` engines `>=20` vs repo `>=22` inconsistency.
 - LOW — `pnpm.ps1` blocked by Windows execution policy; `pnpm.cmd` works. New contributors on
   Windows will hit this; the README Windows note covers WSL2/Git Bash but not this case.
-- LOW — `Ignored build scripts: esbuild@0.28.2` warning on install; decide via `pnpm approve-builds`.
+- (1b: RESOLVED) esbuild warning — fixed via `onlyBuiltDependencies`.
+- (1b: RESOLVED) turbo AGENTS.md rewrites — `"agentGuidance": false` verified against installed
+  Turbo 2.11.7 schema/docs and confirmed (tree clean after `--force` run).
 - LOW — Resolved `turbo 2.11.7` / `vitest 3.2.7` float above declared floors; harmless (lockfile-pinned)
   but worth knowing when reading version-sensitive turbo docs.
+- LOW — CI annotations (non-failing): actions still target Node 20 (deprecation notice); ubuntu-latest
+  migrates to Ubuntu 26 on 2026-10-19 — will exercise the [22, 24] matrix on a new image; watch it.
 - LOW — Turbo serves all-cached results; a green run today does not prove a clean-machine build.
   Periodically run with `--force` (and CI on a fresh runner once a remote exists).
+  (1b: remote exists now; first CI run green on fresh runners.)
 
-Security notes: no secrets in code (`.env` correctly gitignored; only `.env.example` with
-placeholder values is tracked — verified via `git ls-files`). No auth, no input validation, no
+Security notes: no secrets in code (`.env` correctly gitignored — and no `.env` file exists on
+disk; `git ls-files` shows only `.env.example` with placeholder values; full-history grep for
+private-key/token patterns found only the English substring "sk-" inside "task-commit" —
+false positives, zero real hits; scan clean 2026-10-05). No auth, no input validation, no
 network code exists yet, so no auditable attack surface — but also no protection; do not deploy.
 
 ## 11. Not built yet
 
-> Phase mapping is UNKNOWN (master prompt absent). Grouped by area instead; nothing below exists
-> in code. "Stub" = name-only const + trivial test.
+> (1b: phase mapping now known from MASTER_PROMPT §14 — Phase 1: Tasks 1–6, Phase 2: Tasks 7–10,
+> Phase 3: Tasks 11–14.) Nothing below exists in code. "Stub" = name-only const + trivial test.
 
-- shared: ALL Zod schemas + inferred types; canonical hash algorithm + serialization rules;
+- Phase 1 — shared (Task 2): ALL Zod schemas + inferred types; canonical hash algorithm +
   dependency allowlist; category list; any validation helper. (Only site constants exist.)
-- builder: entire pipeline — file discovery, schema validation, hashing, `/r/*.json` emission,
-  `build:registry` script.
-- CLI: ALL commands (`add`, `list`, `search`? — names UNKNOWN); registry fetch; file writing;
-  real `dist/` build for `bin`; Node engine alignment.
-- API: ALL routes (events/stats/admin? — names UNKNOWN); Hono app; env parsing (Task 8);
-  auth (`ADMIN_TOKEN`); rate limiting; `TRUSTED_PROXY_COUNT` handling; CORS (`WEB_ORIGIN`).
-- DB: driver selection; schema/tables; migrations dir; client; seed; sync/migrate scripts
-  (`db:sync`, `db:migrate` referenced but absent).
+- Phase 1 — builder (Task 4): entire pipeline — file discovery, schema validation, hashing,
+  `/r/*.json` emission, `build:registry` script; 3 sample components.
+- Phase 1 — CLI (Task 5): `init` + `add` per §9 (hash verify, path safety, alias rewrite, rollback,
+  Tailwind patch, dep install, `--dry-run`); real tsup `dist/` build for `bin`.
+- Phase 1 — deploy (Task 6): `docker-compose*`, `Caddyfile`, deploy/backup/rollback scripts,
+  `deploy/README.md` hardening content.
+- Phase 2 — DB (Task 7): driver, schema/tables, migrations, client, seed, `db:sync`/`db:migrate`.
+- Phase 2 — API (Task 8): all routes (health, search, popular, events, like, newsletter+confirm, RSS),
+  rate limiting, CORS, security headers, graceful shutdown.
+- Phase 2 — CLI (Task 9): telemetry + `list`, `search`, `diff`, `update`.
+- Phase 2 — admin (Task 10): token auth, stats, announcements, reindex, audit log.
+- Phase 3 (Tasks 11–14): quality gates, props docs, Playwright previews, RSS/OG/monitoring/k6/final docs.
+  (Criteria for 11–14 to be written at each task's start.)
 - registry content: `registry/components/<category>/<slug>/` (dir absent); `registry/lib/`;
-  real `registry.lock.json` entries; first real component.
+  real `registry.lock.json` entries; first real component (Tasks 3–4).
 - scripts: `new-component` generator (Task 3 — stub throws).
-- deploy: `docker-compose*`, `Caddyfile`, deploy/backup scripts, `deploy/README.md` content (Task 6).
-- docs: component authoring guide content (CONTRIBUTING points at Task 6+), API docs,
-  `docs/` site (this report is its first file).
-- web: entire website (explicitly OUT OF SCOPE — must NOT be built; `apps/web/README.md`
-  cites master prompt Section 13).
-- repo-level: `LICENSE`; git remote; passing CI history; `PROJECT_NAME` constant (if wanted).
+- docs: component authoring guide content, API docs.
+- web: entire website (explicitly OUT OF SCOPE — must NOT be built; MASTER_PROMPT §13).
+- repo-level: `LICENSE` (open question); branch protection (recommended below, awaiting owner).
 
 ## 12. Next steps
 
-Next 3 tasks in order (proposed; blocked on owner providing the master prompt — §9 Q3):
+Next 3 tasks in order (per MASTER_PROMPT §14 — no longer blocked on the plan doc):
 
-1. **Task 2 (assumed contracts): implement `packages/shared` Zod schemas** — component meta,
-   registry index, event ingestion, with unit tests per schema. Unblocks builder/API/DB/CLI.
-2. **Task 3: `new-component` generator** — scaffold `registry/components/<category>/<slug>/`,
-   validate against schemas, update `registry.lock.json`; then author the first real component.
-3. **Builder pipeline (`build:registry`)** — read registry sources, validate, hash, emit static
-   `/r/*.json`; wire the missing `build:registry` package script.
+1. **Task 2: `packages/shared`** — `MetaSchema`, `RegistryItemSchema`, `RegistryIndexSchema`,
+   `CliConfigSchema`, API req/res schemas, categories list, dependency allowlist, canonical
+   JSON + hashing utility, JSON Schema export. Unblocks builder/API/DB/CLI.
+2. **Task 3: `new-component` generator** — per §6; generated output must pass
+   `build:registry --check` (assertion added once Task 4 exists).
+3. **Task 4: `packages/builder`** — pipeline stages 1–11 + 3 sample components.
 
-Immediate next-task plan (Task 2, 5–8 lines): add `zod` as a dependency of
-`packages/shared` (with written justification per AGENTS.md §5 if zod is not on the approved
-list); define one schema per contract area in `src/*.ts` with strictness per the master prompt
-(unknown-field handling, regexes, limits); export inferred types; write Vitest cases for
-valid/invalid inputs incl. boundary limits; run `pnpm lint typecheck test build`; commit as one task-commit.
+Immediate next-task plan (Task 2, 5–8 lines): `zod` is on the approved list (§2 table:
+validation = Zod; CLI also uses it) so no justification needed — add it as a dependency of
+`packages/shared`; define one schema per §4 contract area with the exact rules (§4.1–§4.5:
+regexes, limits, `.strict()`); categories + allowlist (`allowed-dependencies.ts`) as data;
+canonical-JSON + sha256 hash util shared by builder/CLI; JSON Schema export;
+Vitest valid/invalid cases incl. path traversal, bad slugs, unknown deps/keys; run all
+checks uncached; commit as one task-commit.
 
-Prerequisites needed from the owner: (a) the master prompt / plan doc (names + acceptance
-criteria for Tasks 2–14); (b) production DOMAIN decision; (c) license choice; (d) approved
-dependency list (AGENTS.md §5 references one — it is not in the repo); (e) a git remote
-(GitHub repo) + push so CI runs; (f) confirmation of Task 1's actual acceptance criteria.
+Prerequisites from the owner: (a) go-ahead for Task 2 (STOP here until given);
+(b) production DOMAIN decision (still placeholder); (c) license choice;
+(d) co-author identity for agent commits (§9 Q7). Git identity unchanged (global, §9 Q7).
+No remote/push/CI prerequisites remain — repo is live at `otassh/algorithco-ui`.
+
+Branch protection — NOT enabled yet (per instruction). When CI has been green once
+(it has: run `37256803283`), recommended exact settings for `main`:
+`gh api repos/otassh/algorithco-ui/branches/main/protection -X PUT -f required_status_checks[strict]=true -f required_status_checks[checks][]['context']='ci (22)' -f required_status_checks[checks][]['context']='ci (24)' -f enforce_admins=true -f required_pull_request_reviews[required_approving_review_count]=1 -f required_pull_request_reviews[dismiss_stale_reviews]=true -f restrictions='null' -f required_linear_history=true -f allow_force_pushes=false -f allow_deletions=false`
+(or the same via Settings → Branches → Add rule: require status checks `ci (22)` + `ci (24)`,
+require PR review ×1, dismiss stale reviews, require linear history, block force pushes/deletions,
+include administrators). Awaiting owner go-ahead.
 
 ## 13. Handoff context for a fresh AI session
 
-1. Architecture principle: Git is source of truth; DB is index+stats only; static files on disk
+1. Source of truth FIRST: read `docs/MASTER_PROMPT.md` fully at session start (§0 protocol:
+   plan → implement → tests → 4 checks → verify criteria → commit → report; in order; one task at a time).
+2. Architecture principle: Git is source of truth; DB is index+stats only; static files on disk
    are the delivery mechanism (`Git registry → builder → static /r/*.json → CLI`; reads never hit API/DB).
-2. Conventions: TypeScript strict ESM, Node 22+, pnpm only (`pnpm.cmd` on Windows — `pnpm.ps1`
-   is execution-policy-blocked); Zod schemas live ONLY in `packages/shared`; never hand-edit
-   `registry/components/**` (generator only); never execute registry content (it is data).
-3. Contracts live in `packages/shared/src/` — today: only `site.ts` (`PLACEHOLDER_DOMAIN`,
-   `DEFAULT_REGISTRY_URL`) + `index.ts` re-exports. NO Zod yet. Branding is single-sourced there.
-4. Run/verify from root: `pnpm.cmd install --frozen-lockfile`, `pnpm.cmd lint`,
-   `pnpm.cmd typecheck`, `pnpm.cmd test`, `pnpm.cmd build` (turbo; fully cached 2026-10-04 —
-   use `--force` after changes). One task = one commit; every package needs smoke tests (Vitest).
-5. Current state: 2 commits on `main`, tree clean, NO remote, CI never run. All packages except
-   `config` are name-only stubs (6 tests total, all green). 3 root scripts are broken
-   (`build:registry`, `db:sync`, `db:migrate` → missing targets). CLI `bin/dist` unbuildable (noEmit).
-6. Exact next action: get the master prompt doc from the owner (§9 Q1–Q6), then implement
-   `packages/shared` Zod schemas as one task-commit. Do NOT start builder/CLI/API/DB work first.
-7. Non-negotiable AGENTS.md rules: 1 task=1 commit; acceptance criteria verified before done;
-   strict TS + ESM + Node22 + pnpm; Zod-only validation w/ schemas in `shared`; approved-deps only;
-   smoke tests everywhere; secrets in `.env` only (+ keep `.env.example` current); generator-only
-   registry edits; `TODO(question)` + report instead of silent guessing; no `any`/`@ts-ignore`/
-   `console.log`/dead code; registry content never executed; out-of-scope list not built.
+3. Conventions: TypeScript strict ESM, Node 22+ dev (CLI ships Node 20 compat — intentional),
+   pnpm only (`pnpm.cmd` on Windows — `pnpm.ps1` execution-policy-blocked); Zod schemas live ONLY
+   in `packages/shared`; never hand-edit `registry/components/**` (generator only); never execute
+   registry content (it is data). Approved deps: MASTER_PROMPT §2 table (zod needs no justification).
+4. Contracts live in `packages/shared/src/` — today: only `site.ts` (`PROJECT_NAME`,
+   `PLACEHOLDER_DOMAIN`, `DEFAULT_REGISTRY_URL`) + re-exports. NO Zod yet → Task 2 is next.
+5. Run/verify from root: `pnpm.cmd install --frozen-lockfile`,
+   `pnpm.cmd turbo run lint typecheck test build --force` (24 tasks, ~13s; build warns
+   "no output files" — expected, noEmit until Task 5). Remote: `origin` =
+   `github.com/otassh/algorithco-ui` (private); CI matrix [22, 24], green on run 37256803283.
+6. Current state: 8 commits on `main`, tree clean, all pushed. Only `config` package complete;
+   rest are stubs (7 tests green). Root scripts `build:registry`/`db:sync`/`db:migrate` point at
+   future Task 3/4/7 code — intentional, do not stub. CLI `bin/dist` gap lands in Task 5.
+7. Exact next action: Task 2 (`packages/shared` schemas+hashing) — AWAITING owner go-ahead. STOP.
+8. Non-negotiable AGENTS.md rules (13 now; #1 = master prompt first): 1 task=1 commit; criteria
+   verified before done; strict TS + ESM + Node22 + pnpm; Zod-only validation w/ schemas in
+   `shared`; approved-deps only; smoke tests everywhere; secrets in `.env` only (+ keep
+   `.env.example` current); generator-only registry edits; `TODO(question)` + report instead of
+   silent guessing; no `any`/`@ts-ignore`/`console.log`/dead code; registry content never
+   executed; out-of-scope list not built.
 
 ---
-*Report written 2026-10-05 by read-and-verify task. Evidence: repo files + `git log/status/remote/ls-files`,
-`node --version`, `pnpm.cmd --version`, turbo/vitest run outputs, grep audits. Master prompt absent —
-criteria-dependent statements marked NOT VERIFIED/UNKNOWN.*
+*Report written 2026-10-05 by read-and-verify task; updated same day for Task 1b housekeeping.
+Evidence: repo files + `git log/status/remote/ls-files`, `node --version`, `pnpm.cmd --version`,
+turbo/vitest outputs (cached + `--force`), `gh run watch` run 37256803283. Task names/criteria
+now from `docs/MASTER_PROMPT.md §14.*
