@@ -1,0 +1,65 @@
+import { describe, expect, it } from "vitest";
+import { RegistryIndexItemSchema, RegistryIndexSchema } from "./registry-index.js";
+export const validIndexItem = {
+  slug: "aurora-text",
+  type: "component",
+  title: "Aurora Text",
+  category: "text-animations",
+  tags: ["gradient"],
+  description: "Animated aurora gradient text.",
+  version: "1.0.0",
+  hash: `sha256:${"b".repeat(64)}`,
+  performance: "light",
+  difficulty: "easy",
+  addedAt: "2026-10-04",
+} as const;
+
+describe("RegistryIndexItemSchema", () => {
+  it("accepts a valid item", () => {
+    expect(RegistryIndexItemSchema.safeParse({ ...validIndexItem }).success).toBe(true);
+  });
+
+  it("rejects bad items", () => {
+    expect(
+      RegistryIndexItemSchema.safeParse({ ...validIndexItem, performance: "ultra" }).success,
+    ).toBe(false);
+  });
+});
+
+describe("RegistryIndexSchema", () => {
+  it("accepts a valid index", () => {
+    expect(
+      RegistryIndexSchema.safeParse({
+        schemaVersion: 1,
+        generatedAt: "2026-10-05T02:00:00.000Z",
+        items: [{ ...validIndexItem }],
+      }).success,
+    ).toBe(true);
+  });
+
+  it("accepts an empty index", () => {
+    expect(
+      RegistryIndexSchema.safeParse({
+        schemaVersion: 1,
+        generatedAt: "2026-10-05T02:00:00.000Z",
+        items: [],
+      }).success,
+    ).toBe(true);
+  });
+
+  it.each([
+    ["bad schemaVersion", { schemaVersion: 2 }],
+    ["bad generatedAt", { generatedAt: "yesterday" }],
+    ["bad item", { items: [{ ...validIndexItem, hash: "nope" }] }],
+    ["unknown key", { extra: 1 }],
+  ])("rejects %s", (_rule, override) => {
+    expect(
+      RegistryIndexSchema.safeParse({
+        schemaVersion: 1,
+        generatedAt: "2026-10-05T02:00:00.000Z",
+        items: [],
+        ...override,
+      }).success,
+    ).toBe(false);
+  });
+});
