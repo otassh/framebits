@@ -11,7 +11,7 @@
 | Area | Schema | File | Key rules |
 |---|---|---|---|
 | Component meta (`meta.json`) | `MetaSchema` (+ `Meta`) | `meta.ts` | slug `/^[a-z0-9]+(-[a-z0-9]+)*$/` 2–64; `type` default `"component"`; category from `CATEGORIES`; tags 0–8, kebab, unique, ≤48 chars; description 10–200; `dependencies` keys must be in `ALLOWED_DEPENDENCIES`, values valid semver ranges; `registryDependencies` valid slugs, no self-reference, unique; difficulty/performance/status enums; `addedAt` ISO date; optional `bump: minor\|major` |
-| Registry item (`/r/<slug>.json`) | `RegistryItemSchema` (+ `RegistryItem`) | `registry-item.ts` | `schemaVersion` literal `1`; semver version; `sha256:<hex>` hash; ≥1 file, unique paths; `files[].variant` default `"ts-tw"`; `tailwind`/`cssVars` optional |
+| Registry item (`/r/<slug>.json`) | `RegistryItemSchema` (+ `RegistryItem`) | `registry-item.ts` | `schemaVersion` literal `1`; semver version; `sha256:<hex>` hash; ≥1 file, unique paths; `files[].variant` default `"ts-tw"`; `tailwind`/`cssVars` optional; `files[].type` always equals the item type (css belongs to a component item) |
 | Registry index (`/r/index.json`) | `RegistryIndexSchema` (+ `RegistryIndex`) | `registry-index.ts` | literal `1`; `generatedAt` ISO datetime; items reuse meta field schemas |
 | CLI config (`algorithco-ui.json`) | `CliConfigSchema` (+ `CliConfig`) | `cli-config.ts` | registry must be `https://` (or `http://localhost`/`127.0.0.1`); framework enum; tailwind 3\|4; aliases required; `installed` defaults `{}` |
 | Lock file (`registry.lock.json`) | `RegistryLockSchema` (+ `RegistryLock`) | `lock.ts` | `version` literal `1`; keys valid slugs; entries `{version, hash}` |

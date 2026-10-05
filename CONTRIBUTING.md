@@ -40,5 +40,5 @@ PR checklist:
 
 - [ ] Scaffold created only via `pnpm new-component` (no hand-made folders).
 - [ ] Placeholder description replaced; tags added where useful.
-- [ ] `pnpm build:registry --check` passes once the builder lands (Task 4).
+- [ ] `pnpm build:registry --check` passes (registry validation).
 - [ ] Checks green: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
