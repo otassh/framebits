@@ -24,6 +24,14 @@ describe("RegistryIndexItemSchema", () => {
       RegistryIndexItemSchema.safeParse({ ...validIndexItem, performance: "ultra" }).success,
     ).toBe(false);
   });
+
+  it("accepts the deprecated flag and omits it otherwise", () => {
+    expect(
+      RegistryIndexItemSchema.safeParse({ ...validIndexItem, deprecated: true }).success,
+    ).toBe(true);
+    const parsed = RegistryIndexItemSchema.parse({ ...validIndexItem });
+    expect("deprecated" in parsed).toBe(false);
+  });
 });
 
 describe("RegistryIndexSchema", () => {

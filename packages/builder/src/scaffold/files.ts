@@ -21,18 +21,39 @@ export interface ${name}Props extends HTMLAttributes<HTMLSpanElement> {
   text: string;
 }
 
-export function ${name}({ text, className, ...rest }: ${name}Props) {
+export function ${name}({
+  text,
+  className,
+  onDrag,
+  onDragStart,
+  onDragEnd,
+  onAnimationStart,
+  onAnimationEnd,
+  onAnimationIteration,
+  ...rest
+}: ${name}Props) {
   const reduceMotion = useReducedMotion();
   const joined = ["${slug}", className]
     .filter((part): part is string => part !== undefined)
     .join(" ");
   if (reduceMotion) {
     return (
-      <span className={joined} {...rest}>
+      <span
+        className={joined}
+        onDrag={onDrag}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        onAnimationStart={onAnimationStart}
+        onAnimationEnd={onAnimationEnd}
+        onAnimationIteration={onAnimationIteration}
+        {...rest}
+      >
         {text}
       </span>
     );
   }
+  // motion.span retypes drag/animation handlers, so the DOM handlers stay on the
+  // static branch only; everything else passes through.
   return (
     <motion.span className={joined} initial={{ opacity: 0 }} animate={{ opacity: 1 }} {...rest}>
       {text}

@@ -1,6 +1,7 @@
 node_modules/
 dist/
 dist-schemas/
+packages/registry-env/.tmp/
 .turbo/
 *.local
 .env

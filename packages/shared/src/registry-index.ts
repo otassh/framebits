@@ -30,6 +30,7 @@ export const RegistryIndexItemSchema = z
     performance: PerformanceSchema,
     difficulty: DifficultySchema,
     addedAt: z.iso.date(),
+    deprecated: z.boolean().optional(),
   })
   .strict();
 

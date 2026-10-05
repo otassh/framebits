@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { describe, expect, it } from "vitest";
-import { JSON_SCHEMA_NAMES, JSON_SCHEMA_SOURCES } from "./json-schemas.js";
+import { JSON_SCHEMA_NAMES, JSON_SCHEMA_SOURCES, jsonSchemaFor } from "./json-schemas.js";
 
 describe("JSON_SCHEMA_SOURCES", () => {
   it("covers every contract area", () => {
@@ -17,6 +17,7 @@ describe("JSON_SCHEMA_SOURCES", () => {
         "registry-index",
         "registry-item",
         "registry-lock",
+        "search-index",
         "search-query",
       ].sort(),
     );
@@ -38,5 +39,10 @@ describe("JSON_SCHEMA_SOURCES", () => {
       unknown
     >;
     expect(meta["additionalProperties"]).toBe(false);
+  });
+
+  it("jsonSchemaFor resolves names and throws on unknown ones", () => {
+    expect(typeof jsonSchemaFor("meta")).toBe("object");
+    expect(() => jsonSchemaFor("nope")).toThrow(/unknown JSON schema/);
   });
 });

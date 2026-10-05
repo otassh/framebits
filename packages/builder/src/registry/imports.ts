@@ -42,7 +42,8 @@ export function analyzeSource(text: string, fileName = "file.tsx"): {
   const source = ts.createSourceFile(fileName, text, ts.ScriptTarget.Latest, false);
   const imports: ImportRef[] = [];
   const syntaxErrors: SourceSyntaxError[] = [];
-  const transpiled = ts.transpileModule(text, { reportDiagnostics: true });
+  // fileName matters: .tsx enables JSX parsing, without it every component fails.
+  const transpiled = ts.transpileModule(text, { reportDiagnostics: true, fileName });
   const reported = transpiled.diagnostics ?? [];
   for (const diagnostic of reported) {
     const start = typeof diagnostic.start === "number" ? diagnostic.start : 0;

@@ -1,0 +1,14 @@
+{
+  "slug": "shimmer-button",
+  "title": "Shimmer Button",
+  "type": "component",
+  "category": "buttons",
+  "tags": ["button", "shimmer", "css"],
+  "description": "Button with a CSS keyframe shimmer sweep; static under reduced motion.",
+  "dependencies": {},
+  "registryDependencies": ["cn"],
+  "difficulty": "easy",
+  "performance": "light",
+  "status": "published",
+  "addedAt": "2026-10-05"
+}

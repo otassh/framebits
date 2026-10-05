@@ -1,4 +1,17 @@
 {
   "version": 1,
-  "components": {}
+  "components": {
+    "aurora-text": {
+      "version": "1.0.0",
+      "hash": "sha256:f24fa65c7142b4bd53cd66b89de5ac970f5098639707b529acf0cdee8b5b729d"
+    },
+    "cn": {
+      "version": "1.0.0",
+      "hash": "sha256:c0cacc16e7e2e57e4e554a7dddfc714f9084c9ba4b53b24cfa9030c870920485"
+    },
+    "shimmer-button": {
+      "version": "1.0.0",
+      "hash": "sha256:3b3b15d92a76ff7155c2a983bbde9c238b42625855c9ee887edf48f2546fcce3"
+    }
+  }
 }

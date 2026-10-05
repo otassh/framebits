@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,8 +8,9 @@ import { afterEach, describe, expect, it } from "vitest";
 import { makeRegistry, metaJson, rmRegistry, demoTsx, SIMPLE_TSX } from "./test-helpers.js";
 
 /**
- * End-to-end tests of `pnpm build:registry --check` (packages/builder/src/cli.ts)
- * in a real subprocess against temp registry roots.
+ * End-to-end tests of `pnpm build:registry` (packages/builder/src/cli.ts) in real
+ * subprocesses. Every run points --registry-root/--out/--archive-dir at temp dirs;
+ * the real repo is never touched.
  */
 const repoRoot = fileURLToPath(new URL("../../../..", import.meta.url));
 const tsxCli = join(repoRoot, "node_modules", "tsx", "dist", "cli.mjs");
@@ -48,34 +49,63 @@ function validComponent(): Record<string, string> {
   };
 }
 
-describe("packages/builder/src/cli.ts", () => {
-  it(
-    "checks a valid registry with exit 0 and reports counts",
-    async () => {
-      const root = await makeRegistry(validComponent());
-      roots.push(root);
-      const run = runCli(["--check", "--registry-root", root]);
-      expect(run.status).toBe(0);
-      expect(run.stdout).toContain("items: 1 (component: 1");
-      expect(run.stdout).toContain("errors: 0, warnings: 0");
-      await rmRegistry(root);
-      roots = roots.filter((r) => r !== root);
-    },
-    30000,
-  );
+function dirs(root: string): { out: string; archive: string } {
+  // Sibling temp dirs: out/archive must NEVER live inside the registry root
+  // (emitted schema/meta.json files would be discovered as items).
+  const parent = join(root, "..");
+  return { out: join(parent, `out-${Date.now()}`), archive: join(parent, `arc-${Date.now()}`) };
+}
 
-  it(
-    "exits 1 on errors and supports --json",
-    async () => {
-      const root = await makeRegistry({
-        "components/buttons/ok/meta.json": metaJson("ok"),
-        "components/buttons/ok/ok.tsx": `import { gsap } from "gsap";\n`,
-        "components/buttons/ok/demo.tsx": demoTsx("ok"),
-      });
-      roots.push(root);
+describe("packages/builder/src/cli.ts", () => {
+  it("emits with --write-lock, then checks clean, then re-emits idempotently", async () => {
+    const root = await makeRegistry(validComponent());
+    roots.push(root);
+    const { out, archive } = dirs(root);
+    try {
+      const emit = runCli([
+        "--write-lock",
+        "--registry-root",
+        root,
+        "--out",
+        out,
+        "--archive-dir",
+        archive,
+      ]);
+      expect(emit.status).toBe(0);
+      expect(existsSync(join(root, "registry.lock.json"))).toBe(true);
+      expect(existsSync(join(out, "r", "index.json"))).toBe(true);
+      expect(await readdir(archive)).toEqual(["ok@1.0.0.json"]);
+
+      const check = runCli(["--check", "--registry-root", root]);
+      expect(check.status).toBe(0);
+      expect(check.stdout).toContain("lock: up-to-date");
+
+      const again = runCli([
+        "--write-lock",
+        "--registry-root",
+        root,
+        "--out",
+        out,
+        "--archive-dir",
+        archive,
+      ]);
+      expect(again.status).toBe(0);
+      expect(again.stdout).toContain("unchanged 1");
+      expect(await readdir(archive)).toEqual(["ok@1.0.0.json"]);
+    } finally {
+      roots = roots.filter((r) => r !== root);
+      await rmRegistry(root);
+    }
+  });
+
+  it("check fails on an out-of-date lock and reports machine-readable json", async () => {
+    const root = await makeRegistry(validComponent());
+    roots.push(root);
+    try {
       const human = runCli(["--check", "--registry-root", root]);
       expect(human.status).toBe(1);
-      expect(human.stderr).toContain("IMPORT_UNDECLARED_PACKAGE");
+      expect(human.stderr).toContain("LOCK_OUT_OF_DATE");
+
       const machine = runCli(["--check", "--registry-root", root, "--json"]);
       expect(machine.status).toBe(1);
       const report = JSON.parse(machine.stdout) as {
@@ -83,22 +113,27 @@ describe("packages/builder/src/cli.ts", () => {
         diagnostics: Array<{ code: string }>;
       };
       expect(report.counts.errors).toBeGreaterThan(0);
-      expect(report.diagnostics.map((d) => d.code)).toContain("IMPORT_UNDECLARED_PACKAGE");
-      await rmRegistry(root);
+      expect(report.diagnostics.map((d) => d.code)).toContain("LOCK_OUT_OF_DATE");
+    } finally {
       roots = roots.filter((r) => r !== root);
-    },
-    60000,
-  );
+      await rmRegistry(root);
+    }
+  });
 
-  it(
-    "exits 0 on an empty registry and 2 without --check",
-    async () => {
-      const root = await makeRoot();
-      expect(runCli(["--check", "--registry-root", root]).status).toBe(0);
-      expect(runCli(["--check", "--registry-root", root]).stdout).toContain("items: 0");
-      expect(runCli([]).status).toBe(2);
-      expect(runCli(["--bogus"]).status).toBe(2);
-    },
-    60000,
-  );
+  it("usage errors exit 2; empty registries check clean", async () => {
+    const root = await makeRoot();
+    const { out, archive } = dirs(root);
+    // NOTE: bare `runCli([])` would emit into the real repo defaults — never run it.
+    expect(runCli(["--bogus"]).status).toBe(2);
+    expect(runCli(["--check", "--write-lock", "--registry-root", root]).status).toBe(2);
+    expect(
+      runCli(["--skip-typecheck", "--registry-root", root, "--out", out, "--archive-dir", archive])
+        .status,
+    ).toBe(2);
+    // Out/archive inside the registry root would poison discovery: refused.
+    expect(runCli(["--registry-root", root, "--out", join(root, "out")]).status).toBe(2);
+    const empty = runCli(["--check", "--registry-root", root]);
+    expect(empty.status).toBe(0);
+    expect(empty.stdout).toContain("items: 0");
+  });
 });

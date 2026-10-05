@@ -41,4 +41,14 @@ PR checklist:
 - [ ] Scaffold created only via `pnpm new-component` (no hand-made folders).
 - [ ] Placeholder description replaced; tags added where useful.
 - [ ] `pnpm build:registry --check` passes (registry validation).
+- [ ] Reviewer read the full source of every new/changed component file (the security
+  scan is a mistake-guard, not a boundary).
+
+## Versions and the lock
+
+- `registry/registry.lock.json` maps slug → `{ version, hash }`. Never edit it by hand.
+- After changing a component, run `pnpm build:registry --write-lock` and commit the
+  lock with your PR. New slugs start at `1.0.0`; changed content bumps patch unless
+  you pass `--bump <slug>=minor|major`.
+- Never delete a component: set `status: "deprecated"` instead (stats must survive).
 - [ ] Checks green: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.

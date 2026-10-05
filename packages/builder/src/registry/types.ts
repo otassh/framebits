@@ -40,6 +40,8 @@ export interface RegistryItemModel {
 
 export interface LoadRegistryOptions {
   registryRoot: string;
+  /** Skip the type-check stage (local speed only; CI must never use it). */
+  skipTypecheck?: boolean | undefined;
 }
 
 export interface LoadRegistryResult {
@@ -60,6 +62,8 @@ export interface RegistrySummary {
   modeled: number;
   byType: Record<"component" | "lib" | "hook", number>;
   byStatus: Record<"draft" | "published" | "deprecated", number>;
+  /** Slugs with status draft (sorted). Needed for lock planning. */
+  draftSlugs: string[];
 }
 
 export function compareDiagnostics(a: Diagnostic, b: Diagnostic): number {

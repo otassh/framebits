@@ -1,0 +1,16 @@
+{
+  "slug": "aurora-text",
+  "title": "Aurora Text",
+  "type": "component",
+  "category": "text-animations",
+  "tags": ["gradient", "text", "animated"],
+  "description": "Animated aurora gradient text with reduced-motion support.",
+  "dependencies": {
+    "motion": "^14.0.0"
+  },
+  "registryDependencies": ["cn"],
+  "difficulty": "easy",
+  "performance": "light",
+  "status": "published",
+  "addedAt": "2026-10-05"
+}

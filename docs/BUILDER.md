@@ -41,10 +41,16 @@
    syntax errors (`PARSE_ERROR`), demo without default export
    (`DEMO_NO_DEFAULT_EXPORT`). Unused registry deps warn
    (`REGISTRY_DEP_UNUSED`). Peers (`react`, `react-dom` + subpaths) are implicit.
-6. **Security** (`registry/security.ts`, decision D7): AST scan, errors, no escape
-   hatch — `eval`/`new Function` (`SECURITY_EVAL`), `document.cookie`
-   (`SECURITY_COOKIE`), `fetch`/`XMLHttpRequest`/`sendBeacon`/`WebSocket`/
-   `EventSource`/`importScripts` (`SECURITY_NETWORK`).
+6. **Security** (`registry/security.ts`, decision D7): AST scan — `eval`/`new Function`/
+   bare `Function()` calls, `window.eval`/`globalThis.eval`, string-arg `setTimeout`/
+   `setInterval` (`SECURITY_EVAL`); `document.cookie` (`SECURITY_COOKIE`); `fetch`
+   (incl. `window.`/`globalThis.`/`self.` prefixes and `const f = fetch` aliases),
+   `XMLHttpRequest`, `sendBeacon`, `WebSocket`, `EventSource`, `importScripts`,
+   `new Worker` (`SECURITY_NETWORK`); `dangerouslySetInnerHTML`
+   (`SECURITY_INNER_HTML`, warning); `localStorage`/`sessionStorage`/`indexedDB`
+   (`SECURITY_STORAGE`, warning). Errors have no escape hatch. This scan is a guard
+   against mistakes, NOT a security boundary — human review of every component PR
+   is the control.
 7. **Model** (`registry/model.ts`, decisions D8/D9): per non-draft, error-free item —
    `{ meta, files[] (POSIX target path, normalized content, type, variant "ts-tw"),
    dependencies, registryDependencies, tailwind?, cssVars?, hash }`.
@@ -93,6 +99,21 @@ root. Shipped target paths: component tsx → `components/ui/<slug>.tsx`, css �
 | REGISTRY_DEP_MISSING | error | registryDependency slug does not exist |
 | REGISTRY_DEP_DRAFT | error | published/deprecated item depends on a draft |
 | REGISTRY_DEP_CYCLE | error | dependency cycle (`a -> b -> c -> a`) |
+| TYPECHECK_ERROR | error | TypeScript error mapped to the registry file:line |
+| TYPECHECK_ENV_RANGE_MISMATCH | error | declared range not satisfied by the pinned env version |
+| LOCK_ENTRY_REMOVED | error | lock entry without a registry item (use `deprecated`, or `--prune`) |
+| PUBLISHED_TO_DRAFT | error | locked slug is now a draft |
+| BUMP_NOT_APPLICABLE | error | `--bump` for unchanged/unknown/draft slug, or bad level |
+| LOCK_INVALID | error | lock unreadable, off-schema, or non-increasing version |
+| LOCK_OUT_OF_DATE | error | lock would change; re-run with `--write-lock` |
+| IMMUTABILITY_VIOLATION | error | archived `<slug>@<version>.json` differs |
+| EMIT_VERIFY_FAILED | error | emitted file missing/different/invalid after write |
+| ARCHIVE_MISSING_VERSION | warning | previous lock version absent from the archive |
+| SECURITY_EVAL | error | `eval`, `new Function`, string-arg timers |
+| SECURITY_COOKIE | error | `document.cookie` access |
+| SECURITY_NETWORK | error | network primitives (`fetch`, XHR, Beacon, WebSocket, EventSource, importScripts, Worker) |
+| SECURITY_INNER_HTML | warning | `dangerouslySetInnerHTML` (needs reviewer approval) |
+| SECURITY_STORAGE | warning | browser storage should be avoided |
 | DEP_UNUSED | warning | declared dependency never imported |
 | REGISTRY_DEP_UNUSED | warning | listed registryDependency never imported |
 
@@ -104,12 +125,65 @@ error[IMPORT_UNDECLARED_PACKAGE] components/text-animations/foo/foo.tsx:3:20 imp
 
 ## CLI
 
-`pnpm build:registry --check [--registry-root <dir>] [--json] [--strict]`
-(root script forwards args to `packages/builder`). Without `--check`: exit 2
-("emit is implemented in Task 4b"). Exit 0 = ok (warnings allowed),
-1 = errors (or warnings with `--strict`), 2 = usage error. Empty registry is
-valid (exit 0, `items: 0`). `--json` prints the machine-readable report
-(counts, item summaries, full diagnostics) on stdout.
+`pnpm build:registry --check [--registry-root <dir>] [--json] [--strict]
+[--skip-typecheck] [--bump slug=level] [--prune slug]` validates everything in
+memory/temp and writes nothing. Emit mode (no `--check`) additionally takes
+`[--out <dir>] [--archive-dir <dir>] [--write-lock] [--git-sha <sha>]`: it builds
+the tree, syncs the archive, swaps output atomically, and writes the lock file
+when asked. `--out`/`--archive-dir`/`--write-lock` cannot be combined with
+`--check`; emitting with `--skip-typecheck` is refused. `--out` and
+`--archive-dir` must live outside `--registry-root` (refused otherwise): emitted
+`schema/meta.json` files would be discovered as registry items.
+
+Exit 0 = ok (warnings allowed), 1 = errors (or warnings with `--strict`),
+2 = usage error. Empty registry is valid (exit 0, `items: 0`). `--json` prints
+the machine-readable report (counts, item summaries, full diagnostics) on stdout.
+`--skip-typecheck` prints a loud `TYPECHECK SKIPPED` line and sets
+`typecheckSkipped` in JSON; CI never uses it.
+
+## Versioning (`registry.lock.json`)
+
+Lock = `{ version: 1, components: { slug: { version, hash } } }`, written only
+with `--write-lock`, atomically (temp file + rename), keys sorted, 2 spaces, LF,
+trailing newline. Decision table (each row tested in `versions.test.ts`):
+
+1. slug published/deprecated, not in lock → `1.0.0`, record hash.
+2. In lock, hash equal → keep version.
+3. In lock, hash differs → `--bump <slug>=minor|major`, else patch.
+4. In lock, item missing from registry → `LOCK_ENTRY_REMOVED` (deprecate instead);
+   `--prune <slug>` drops the entry and is reported loudly.
+5. Locked slug now draft → `PUBLISHED_TO_DRAFT`.
+6. Drafts never enter the lock and are never emitted.
+7. `--bump` for unchanged/unknown/draft slugs or bad levels → `BUMP_NOT_APPLICABLE`.
+8. Invalid lock, non-semver or non-increasing versions → `LOCK_INVALID`.
+9. `--check` with an out-of-date lock → `LOCK_OUT_OF_DATE` (slugs + fix command).
+10. Emit without `--write-lock` on an out-of-date lock → same error (never emit
+    unreleased state).
+
+`--bump` for a slug whose hash is unchanged, unknown, draft, or new is never
+applicable (bumps only redirect the automatic patch of a *changed* locked item).
+The emitted item `version` comes from the lock; the version is NOT part of the
+hash. A change to a lib (e.g. `cn`) does not change dependents' hashes; users
+pick it up via `update`.
+
+## Emit and archive
+
+Output tree under `<out>/` (`r/index.json` published+deprecated sorted
+`addedAt` desc then slug, `r/<slug>.json`, `r/<slug>@<version>.json`,
+`search-index.json`, `build-manifest.json`, `schema/*.json`): canonical
+serialization (sorted keys, compact, LF, trailing newline). Every emitted item is
+parsed and hash-verified before writing and re-read and re-verified after the
+final rename; any failure aborts leaving the previous output untouched. Output is
+built in a sibling temp dir and swapped in (old aside, new in, old deleted).
+Two runs on the same input (same `SOURCE_DATE_EPOCH`, git sha) produce a
+byte-identical tree (tested via tree hash).
+
+Archive (`--archive-dir`, persistent): `<slug>@<version>.json` per item version.
+Existing bytes that differ → `IMMUTABILITY_VIOLATION`; missing current versions
+are written (temp+rename) after the tree verifies, before the swap; previous
+lock versions absent from the archive warn (`ARCHIVE_MISSING_VERSION`, cannot be
+regenerated). Archive files are never deleted. `--check` compares read-only and
+writes nothing to `<out>`, the archive, or the lock.
 
 ## Versioning note
 

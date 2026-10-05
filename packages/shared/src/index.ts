@@ -48,7 +48,7 @@ export type { ItemHashInput, ItemHashInputFile } from "./hash.js";
 export { HashableJsonValueSchema, Sha256HashSchema } from "./hashable-json.js";
 export type { HashableJsonValue, Sha256Hash } from "./hashable-json.js";
 
-export { JSON_SCHEMA_NAMES, JSON_SCHEMA_SOURCES } from "./json-schemas.js";
+export { JSON_SCHEMA_NAMES, JSON_SCHEMA_SOURCES, jsonSchemaFor } from "./json-schemas.js";
 
 export { LockEntrySchema, RegistryLockSchema } from "./lock.js";
 export type { LockEntry, RegistryLock } from "./lock.js";
@@ -90,5 +90,14 @@ export type { ComponentStyles, CssVars, RegistryFile, RegistryItem, TailwindFrag
 export { RegistryIndexItemSchema, RegistryIndexSchema } from "./registry-index.js";
 export type { RegistryIndex, RegistryIndexItem } from "./registry-index.js";
 
-export { SemverRangeSchema, SemverVersionSchema } from "./semver.js";
-export type { SemverRange, SemverVersion } from "./semver.js";
+export { SearchIndexDocSchema, SearchIndexSchema } from "./search-index.js";
+export type { SearchIndex, SearchIndexDoc } from "./search-index.js";
+
+export {
+  SemverRangeSchema,
+  SemverVersionSchema,
+  bumpSemverVersion,
+  isGreaterSemverVersion,
+  satisfiesSemverRange,
+} from "./semver.js";
+export type { SemverBumpLevel, SemverRange, SemverVersion } from "./semver.js";
