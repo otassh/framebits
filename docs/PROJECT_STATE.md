@@ -72,7 +72,7 @@ Branding values (searched via grep for `PROJECT_NAME|DOMAIN|REGISTRY_URL|PLACEHO
 | 3 | Component generator (`pnpm new-component`) | DONE (merged via PR #3) | `7ac5fcf`+`46f3484` on `main` | Core in `packages/builder/src/scaffold/` PASS; wrapper exit 0/1/2 PASS; determinism + LF-only PASS; live root run PASS; CI 22/24 green PASS. |
 | 4 | `packages/builder` (validate 4a + emit 4b) + 3 samples | DONE (merged via PR #5) | `165f2dd` | All Task 4 acceptance PASS (reported on PR #5). |
 | 5a | CLI core (packaging, detection, config, `init`, `add` file pipeline) | DONE (merged via PR #6) | `2031a0e` | All Task 5a acceptance PASS (reported on PR #6). |
-| 5b | CLI install + styles (npm install, Tailwind CSS blocks, real e2e) | IN PROGRESS (branch `task-5b-cli-install-styles`, draft PR pending) | — | Work started. |
+| 5b | CLI install + styles (npm install, Tailwind CSS blocks, real e2e) | IN PROGRESS (branch `task-5b-cli-install-styles`, draft PR #7) | — | Implementation + tests + docs + e2e workflow done; `turbo --force` 28/28 green locally; CI + e2e run pending. |
 | 6 | Docker, Caddy, deploy scripts | NOT STARTED | — | All FAIL (only placeholder README) |
 | 7 | `packages/db` (schema, migrations, client, sync, seed) | NOT STARTED | — | All FAIL (`db:sync`/`db:migrate` absent — intentional per §16 decision 4) |
 | 8 | `apps/api` (env, health, events, stats, like, newsletter, RSS, limits, CORS, shutdown) | NOT STARTED | — | All FAIL (1-line stub) |
