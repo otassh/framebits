@@ -52,3 +52,15 @@ PR checklist:
   you pass `--bump <slug>=minor|major`.
 - Never delete a component: set `status: "deprecated"` instead (stats must survive).
 - [ ] Checks green: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
+
+## CLI (`algorithco-ui`, Task 5a)
+
+- `apps/cli` bundles to a single `dist/cli.js` with tsup (ESM, Node 20, shebang,
+  no sourcemap). All deps are devDependencies (bundled). Never add a runtime
+  dependency without justification (approved 5a set: `commander`,
+  `@clack/prompts`, `picocolors`, `jsonc-parser`).
+- All printing goes through `src/ui/output.ts` (no `console`). Respect
+  `NO_COLOR`/non-TTY. `--debug` for stacks.
+- `init` never modifies `tsconfig` or any file besides `algorithco-ui.json`.
+- After `add`, print manual steps (npm install command + Tailwind snippet);
+  do NOT automate install/merge in 5a (Task 5b).
