@@ -24,6 +24,35 @@ export function isValidSemverVersion(version: string): boolean {
   return semver.valid(version) !== null;
 }
 
+/** True when an exact version satisfies a range (both assumed syntactically valid). */
+export function satisfiesSemverRange(version: string, range: string): boolean {
+  try {
+    return semver.satisfies(version, range);
+  } catch {
+    return false;
+  }
+}
+
+export type SemverBumpLevel = "patch" | "minor" | "major";
+
+/** Next version after a bump level, or null when it cannot be computed. */
+export function bumpSemverVersion(version: string, level: SemverBumpLevel): string | null {
+  try {
+    return semver.inc(version, level);
+  } catch {
+    return null;
+  }
+}
+
+/** True when `a` is a strictly greater version than `b` (false on any failure). */
+export function isGreaterSemverVersion(a: string, b: string): boolean {
+  try {
+    return semver.gt(a, b);
+  } catch {
+    return false;
+  }
+}
+
 /** True when every `||` branch of the range has an upper bound. Assumes validity. */
 export function isBoundedSemverRange(range: string): boolean {
   let parsed: semver.Range;

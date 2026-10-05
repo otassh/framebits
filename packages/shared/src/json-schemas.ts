@@ -1,4 +1,4 @@
-import type { z } from "zod";
+import { z } from "zod";
 import {
   ErrorResponseSchema,
   EventsRequestSchema,
@@ -13,6 +13,7 @@ import { RegistryLockSchema } from "./lock.js";
 import { MetaSchema } from "./meta.js";
 import { RegistryIndexSchema } from "./registry-index.js";
 import { RegistryItemSchema } from "./registry-item.js";
+import { SearchIndexSchema } from "./search-index.js";
 
 /**
  * Schemas published as JSON Schema (MASTER_PROMPT Section 4: `/schema/*.json`).
@@ -31,6 +32,16 @@ export const JSON_SCHEMA_SOURCES: Record<string, z.ZodType> = {
   "popular-query": PopularQuerySchema,
   "search-query": SearchQuerySchema,
   "error-response": ErrorResponseSchema,
+  "search-index": SearchIndexSchema,
 };
 
 export const JSON_SCHEMA_NAMES = Object.keys(JSON_SCHEMA_SOURCES);
+
+/** JSON Schema object for one named source (throws on unknown names). */
+export function jsonSchemaFor(name: string): unknown {
+  const source = JSON_SCHEMA_SOURCES[name];
+  if (source === undefined) {
+    throw new Error(`unknown JSON schema: ${name} (known: ${JSON_SCHEMA_NAMES.join(", ")})`);
+  }
+  return z.toJSONSchema(source, { unrepresentable: "throw" });
+}

@@ -120,8 +120,8 @@ describe("scaffold", () => {
     expect(tsx).toContain("export interface AuroraTextProps");
     expect(/(^|[^A-Za-z_.])window([^A-Za-z_]|$)/.test(tsx)).toBe(false);
     expect(/(^|[^A-Za-z_.])document([^A-Za-z_]|$)/.test(tsx)).toBe(false);
-    // Full type-check of generated components is deferred to the builder (Task 4):
-    // TODO: picks this up — assert `pnpm build:registry --check` passes on samples.
+    // Generator->pipeline integration lives in registry/integration.test.ts:
+    // scaffolded output must pass the full pipeline including type-check.
   });
 
   it("refuses an existing folder and leaves it untouched", async () => {

@@ -1,0 +1,17 @@
+{
+  "tailwind": {
+    "keyframes": {
+      "shimmer": {
+        "from": {
+          "background-position": "200% 0"
+        },
+        "to": {
+          "background-position": "-200% 0"
+        }
+      }
+    },
+    "animation": {
+      "shimmer": "shimmer 2s linear infinite"
+    }
+  }
+}

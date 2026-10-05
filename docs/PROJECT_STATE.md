@@ -4,9 +4,9 @@
 > or by commands run on 2026-10-04/05. Anything not verifiable is marked UNKNOWN /
 > NOT BUILT / NOT VERIFIED.
 >
-> Update 2026-10-05: Tasks 1–3 DONE (merged). Task 4a (in progress): branch
-> `task-4a-builder-validate`, draft PR otassh/algorithco-ui#4 (unmerged — awaiting
-> owner review).
+> Update 2026-10-05: Tasks 1–4a DONE (merged through PR #4). Task 4b (in progress):
+> branch `task-4b-builder-emit`, draft PR otassh/algorithco-ui#5 (unmerged —
+> awaiting owner review).
 
 ## 1. Snapshot
 
@@ -70,7 +70,7 @@ Branding values (searched via grep for `PROJECT_NAME|DOMAIN|REGISTRY_URL|PLACEHO
 | 1b | Housekeeping (this report's session; not a master-prompt task) | DONE | `b4f2166`, `5c46663`, `c5e55a9`, `43222eb`, `3c0dd1c` | AGENTS.md rule added PASS; PROJECT_NAME added PASS; CI hardened PASS; esbuild warning resolved PASS; turbo opt-out verified PASS (tree stayed clean after run) |
 | 2 | `packages/shared` (schemas, hashing, JSON Schema export) | DONE | `9bcd33a` on `task-2-shared`, PR #1 | All Task 2 acceptance criteria PASS — see mapping: (1) unknown-key rejection: every schema `.strict()` + tests PASS; path traversal: RelativePathSchema matrix (24 fail/pass cases) PASS; (2) key-order independence: property tests PASS; goldens match on Node 22+24 CI PASS (run `37260444537`); simple vector triple-verified (impl + hand-built node hash + certutil) PASS; (3) committed `registry.lock.json` validates against `RegistryLockSchema` (`lock.test.ts`) PASS; (4) `turbo run lint typecheck test build --force` 24/24 green, 0 `any`, 0 ts-ignore (18 lint errors found and fixed in-branch) PASS; (5) `docs/CONTRACTS.md` written, code/doc in sync PASS; (6) PR #1 open, CI green both versions PASS. NOT merged (owner reviews). 290 tests in shared (293 repo-wide), 0 skipped. New runtime deps: `zod@4.6.5` (approved list), `semver@7.8.5` (justified in CONTRACTS.md); `zod-to-json-schema` NOT added (native `z.toJSONSchema` verified); `@types/semver` + `@types/node` dev-only. |
 | 3 | Component generator (`pnpm new-component`) | DONE (merged via PR #3) | `7ac5fcf`+`46f3484` on `main` | Core in `packages/builder/src/scaffold/` PASS; wrapper exit 0/1/2 PASS; determinism + LF-only PASS; live root run PASS; CI 22/24 green PASS. |
-| 4 | `packages/builder` (validate 4a; emit 4b) + 3 sample components | 4a IN PROGRESS (draft PR #4) | — | Discovery → model pipeline (`loadRegistry`) + `build:registry --check` implemented; emit/lock/type-check are 4b. Acceptance reported at completion. |
+| 4 | `packages/builder` (validate 4a DONE; emit 4b IN PROGRESS) + 3 samples | 4b IN PROGRESS (draft PR #5) | — | 4a merged via PR #4. 4b: typecheck/env/versioning/emit/archive/search/samples implemented; full `--force` green locally; CI pending. Acceptance reported at completion. |
 | 5 | CLI: `init` and `add` | NOT STARTED | — | All FAIL (stub; `bin`/`dist` gap known, real build lands in this task per §16 decision 3) |
 | 6 | Docker, Caddy, deploy scripts | NOT STARTED | — | All FAIL (only placeholder README) |
 | 7 | `packages/db` (schema, migrations, client, sync, seed) | NOT STARTED | — | All FAIL (`db:sync`/`db:migrate` absent — intentional per §16 decision 4) |
@@ -497,13 +497,13 @@ include administrators). Awaiting owner go-ahead.
    `pnpm.cmd turbo run lint typecheck test build --force` (24 tasks, ~13s; build warns
    "no output files" — expected, noEmit until Task 5). Remote: `origin` =
    `github.com/otassh/algorithco-ui` (private); CI matrix [22, 24], green on run 37256803283.
-6. Current state: branch `task-4a-builder-validate`, draft PR #4 open (CI pending at last edit),
-   NOT merged. `packages/shared` complete; builder has scaffold + registry-validation core;
-   emit/lock/type-check are Task 4b. Root `new-component` + `build:registry --check` work;
-   `db:sync`/`db:migrate` still point at future Task 7 code — intentional, do not stub.
-   CLI `bin/dist` gap lands in Task 5. No generated components in `registry/` (Task 4 samples).
-7. Exact next action: Task 4b (emit, lock, type-check, samples) — only after owner
-   merges/reviews PR #4. Do NOT start API/DB/CLI work first. STOP after reporting.
+6. Current state: branch `task-4b-builder-emit`, draft PR open (CI pending at last edit),
+   NOT merged. Builder complete through emit (typecheck/env/versioning/archive/search);
+   3 samples + lock committed on the branch. Root `new-component` + `build:registry`
+   (all flags) work; `db:sync`/`db:migrate` still point at future Task 7 code —
+   intentional, do not stub. CLI `bin/dist` gap lands in Task 5.
+7. Exact next action: Task 5 (CLI init/add) — only after owner merges/reviews the 4b PR.
+   Do NOT start API/DB work first. STOP after reporting.
 8. Agent commit attribution (owner decision 2026-10-05): every agent-authored commit ends with
    trailer `Co-Authored-By: opencode <noreply@opencode.ai>` (upstream OpenCode TOOL convention —
    not a personal account; no GitHub user behind it). No bot footer line. Never rewrite pushed

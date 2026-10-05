@@ -1,0 +1,17 @@
+{
+  "slug": "cn",
+  "title": "Cn",
+  "type": "lib",
+  "category": "utilities",
+  "tags": ["classnames", "tailwind", "utility"],
+  "description": "Joins class names with clsx and merges Tailwind conflicts with tailwind-merge.",
+  "dependencies": {
+    "clsx": "^2.0.0",
+    "tailwind-merge": "^3.0.0"
+  },
+  "registryDependencies": [],
+  "difficulty": "easy",
+  "performance": "light",
+  "status": "published",
+  "addedAt": "2026-10-05"
+}

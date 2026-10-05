@@ -8,6 +8,7 @@ import {
 } from "./imports.js";
 import { buildItemModel } from "./model.js";
 import { scanSecurity } from "./security.js";
+import { runTypecheck, type TypecheckItem } from "./typecheck.js";
 import {
   checkCycles,
   checkDuplicateSlugs,
@@ -88,6 +89,16 @@ export async function loadRegistry(options: LoadRegistryOptions): Promise<LoadRe
     if (model !== undefined) items.push(model);
   }
 
+  if (options.skipTypecheck !== true) {
+    const tcItems: TypecheckItem[] = [];
+    for (const record of parsed) {
+      const tc = toTypecheckItem(record.item, record.meta);
+      if (tc !== undefined) tcItems.push(tc);
+    }
+    const typed = await runTypecheck(tcItems);
+    diagnostics.push(...typed.diagnostics);
+  }
+
   items.sort((a, b) => (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0));
   diagnostics.sort(compareDiagnostics);
 
@@ -96,11 +107,14 @@ export async function loadRegistry(options: LoadRegistryOptions): Promise<LoadRe
     modeled: items.length,
     byType: { component: 0, lib: 0, hook: 0 },
     byStatus: { draft: 0, published: 0, deprecated: 0 },
+    draftSlugs: [],
   };
   for (const { meta } of parsed) {
     summary.byType[meta.type] += 1;
     summary.byStatus[meta.status] += 1;
+    if (meta.status === "draft") summary.draftSlugs.push(meta.slug);
   }
+  summary.draftSlugs.sort();
   return { registryRoot, items, diagnostics, summary };
 }
 
@@ -159,7 +173,7 @@ function checkItemContent(
 
     for (const issue of scanSecurity(file.text, name)) {
       diagnostics.push({
-        severity: "error",
+        severity: issue.severity,
         code: issue.code,
         file: file.relPath,
         line: issue.line,
@@ -234,6 +248,31 @@ export function hasDefaultExport(text: string): boolean {
 function hasDefaultModifier(node: ts.Node): boolean {
   const modifiers = ts.canHaveModifiers(node) ? ts.getModifiers(node) : undefined;
   return modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword) === true;
+}
+
+/** Collect the materializable files for type-checking; undefined when skipped. */
+function toTypecheckItem(
+  item: DiscoveredItem,
+  meta: Meta,
+): TypecheckItem | undefined {
+  const byName = new Map(item.files.map((file) => [file.relPath.slice(item.dirRel.length + 1), file]));
+  const sourceName = ownSourceName(meta);
+  const source = byName.get(sourceName);
+  if (source?.text === undefined) return undefined;
+  const files: Record<string, string> = {};
+  const target =
+    meta.type === "component"
+      ? `components/ui/${meta.slug}.tsx`
+      : meta.type === "lib"
+        ? `lib/${meta.slug}.ts`
+        : `hooks/${meta.slug}.ts`;
+  files[target] = source.text;
+  if (meta.type === "component") {
+    const css = byName.get(`${meta.slug}.css`);
+    if (css?.text !== undefined) files[`components/ui/${meta.slug}.css`] = css.text;
+  }
+  const demo = byName.get("demo.tsx");
+  return { meta, files, demoText: demo?.text };
 }
 
 function buildModel(record: {

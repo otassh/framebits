@@ -509,3 +509,25 @@ Each of Tasks 11-14 must have its own acceptance criteria written by you at the 
    D8. Builder never rewrites imports; content passes through normalizeContent only.
    D9. In-memory model per non-draft item with shared computeItemHash; `loadRegistry({registryRoot})`
    returns `{ items, diagnostics, summary }` (summary is an additive rollup).
+8. Task 4b binding decisions (B1-B9; same precedence as D1-D9):
+   B1. Security scan also flags bare `Function()` calls, `window.`/`globalThis.`/`self.`
+   `fetch` (+ `const f = fetch` aliases), `window.`/`globalThis.eval`, string-arg timers
+   (eval), `new Worker` (network); `dangerouslySetInnerHTML` and browser storage warn
+   (INNER_HTML/STORAGE). The scan is a mistake-guard, not a boundary; PR human review
+   is the control.
+   B2. `packages/registry-env` pins react/react-dom/@types + every allowlisted package
+   (incl. `@types/three`) at EXACT versions; the allowlist test fails CI on drift.
+   B3. Type-check via the compiler API in a temp project inside registry-env (strict,
+   exactOptionalPropertyTypes false, react-jsx/Bundler); demo `./<slug>` imports are
+   rewritten to the materialized path for checking only; `--skip-typecheck` is local-only,
+   loud, and refused for emit; env-range mismatches error (TYPECHECK_ENV_RANGE_MISMATCH).
+   B4. `files[].type` always equals the item type (a css file belongs to a component item).
+   B5. `loadRegistry` result carries an additive `summary` (counts + draft slugs).
+   B6. Index items carry optional `deprecated: true`; `/search-index.json` validated by
+   shared `SearchIndexSchema`.
+   B7. Emit/versioning per the Part 2 decision table; `--bump`/`--prune` CLI args;
+   atomic output swap + post-write self-verification; immutable archive with
+   violation errors; `--out`/`--archive-dir` must live outside the registry root.
+   B8. `minisearch` (builder dep, already approved) powers the search index.
+   B9. Sample components: lib `cn`, `aurora-text` (motion + cn), `shimmer-button`
+   (CSS keyframes via styles.json + cn); `motion@^14.0.0` researched 2026-10-05.
