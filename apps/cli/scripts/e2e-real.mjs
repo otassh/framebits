@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* global process */
+/* global process, URL */
 /**
  * Real end-to-end test (Task 5b, NOT hermetic): builds the registry, serves it
  * locally, scaffolds REAL projects from the network, runs the BUILT CLI, and
@@ -10,11 +10,11 @@
  *   create-next-app@16.3.8, vite@8.3.2 (via npm create), tailwindcss@3.4.19,
  *   postcss@8.5.29, autoprefixer@10.6.1
  */
-import { execFileSync, spawnSync } from "node:child_process";
+import spawn from "cross-spawn";
 import { createServer } from "node:http";
 import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const PINS = {
@@ -25,7 +25,7 @@ const PINS = {
   autoprefixer: "10.6.1",
 };
 
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const cliJs = join(repoRoot, "apps", "cli", "dist", "cli.js");
 
 function log(message) {
@@ -34,9 +34,9 @@ function log(message) {
 
 function run(cmd, args, options) {
   log(`$ ${cmd} ${args.join(" ")}`);
-  const result = spawnSync(cmd, args, { encoding: "utf8", ...options });
-  const stdout = typeof result.stdout === "string" ? result.stdout : "";
-  const stderr = typeof result.stderr === "string" ? result.stderr : "";
+  const result = spawn.sync(cmd, args, { encoding: "utf8", ...options });
+  const stdout = typeof result.stdout === "string" ? result.stdout : String(result.stdout ?? "");
+  const stderr = typeof result.stderr === "string" ? result.stderr : String(result.stderr ?? "");
   if (result.status !== 0) {
     throw new Error(`${cmd} failed (${result.status}):\n${stdout}\n${stderr}`);
   }
@@ -152,13 +152,13 @@ async function scenarioVite(workRoot, registryUrl) {
 async function main() {
   const scenario = process.argv[2] ?? "all";
   log(`e2e-real pins: ${JSON.stringify(PINS)}`);
-  execFileSync("pnpm", ["--filter", "algorithco-ui", "build"], { cwd: repoRoot, stdio: "inherit" });
+  run("pnpm", ["--filter", "algorithco-ui", "build"], { cwd: repoRoot, timeout: 300000 });
   const regOut = mkdtempSync(join(tmpdir(), "e2e-reg-"));
   const regArchive = mkdtempSync(join(tmpdir(), "e2e-archive-"));
   const workRoot = mkdtempSync(join(tmpdir(), "e2e-work-"));
   log(`registry out: ${regOut}`);
   try {
-    execFileSync("pnpm", ["build:registry", "--out", regOut, "--archive-dir", regArchive], { cwd: repoRoot, stdio: "inherit" });
+    run("pnpm", ["build:registry", "--out", regOut, "--archive-dir", regArchive], { cwd: repoRoot, timeout: 600000 });
     const { server, url } = await startRegistryServer(regOut);
     log(`registry: ${url}`);
     try {
