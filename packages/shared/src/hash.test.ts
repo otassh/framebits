@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { canonicalize } from "./canonical.js";
 import {
   computeItemHash,
-  normalizeFileContent,
+  normalizeContent,
   normalizeItemForHash,
   verifyItemHash,
   type ItemHashInput,
@@ -23,23 +23,23 @@ const baseInput: ItemHashInput = {
   ],
 };
 
-describe("normalizeFileContent", () => {
+describe("normalizeContent", () => {
   it("leaves clean content alone", () => {
-    expect(normalizeFileContent("a\nb\n")).toBe("a\nb\n");
+    expect(normalizeContent("a\nb\n")).toBe("a\nb\n");
   });
 
   it("normalizes CRLF and CR", () => {
-    expect(normalizeFileContent("a\r\nb\r\n")).toBe("a\nb\n");
-    expect(normalizeFileContent("a\rb\r")).toBe("a\nb\n");
+    expect(normalizeContent("a\r\nb\r\n")).toBe("a\nb\n");
+    expect(normalizeContent("a\rb\r")).toBe("a\nb\n");
   });
 
   it("strips a leading BOM", () => {
-    expect(normalizeFileContent("\uFEFFconst x = 1;\n")).toBe("const x = 1;\n");
+    expect(normalizeContent("\uFEFFconst x = 1;\n")).toBe("const x = 1;\n");
   });
 
   it("ensures a trailing newline but keeps empty empty", () => {
-    expect(normalizeFileContent("no-newline")).toBe("no-newline\n");
-    expect(normalizeFileContent("")).toBe("");
+    expect(normalizeContent("no-newline")).toBe("no-newline\n");
+    expect(normalizeContent("")).toBe("");
   });
 });
 

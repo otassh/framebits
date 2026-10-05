@@ -217,7 +217,10 @@ Pipeline (each stage is a separate, unit-tested function; a failure prints the *
 8. **Version** using `registry.lock.json`:
    - New slug -> `1.0.0`.
    - Hash unchanged -> keep version.
-   - Hash changed -> bump **patch** automatically; if `meta.json` contains an optional `"bump": "minor" | "major"` field for this release, use that (the builder removes the field requirement afterward by recording it only in the lock). Never decrease or reuse a version.
+   - Hash changed -> bump **patch** automatically; a per-release minor/major bump is
+     requested via the builder CLI argument `--bump <slug>=minor|major` (Task 4b) — it is
+     NOT a `meta.json` field (amended by Task 4a decision D1) and is recorded only in the
+     lock. Never decrease or reuse a version.
    - If `<slug>@<version>.json` already exists with a different hash -> hard error (immutability violation).
    - `--write-lock` updates and writes the lock file; in CI `--check` fails if the lock is out of date.
 9. **Emit** files atomically: write to a temp dir, then rename into place. Output must be **byte-for-byte identical** between two runs on identical input (stable key order, no timestamps in item files; `generatedAt` appears only in `index.json` and `build-manifest.json`, and an env `SOURCE_DATE_EPOCH` override must make even those deterministic for tests).
@@ -494,3 +497,15 @@ Each of Tasks 11-14 must have its own acceptance criteria written by you at the 
 4. Root scripts `build:registry`, `db:sync`, `db:migrate`, `new-component` intentionally point to scripts that will be created in Tasks 3, 4, and 7.
 5. The repo is private until launch; no LICENSE file yet (license choice is an open question).
 6. Windows development: use WSL2 or Git Bash for shell scripts; keep `.gitattributes` forcing LF.
+7. Task 4a binding decisions (D1-D9; where they conflict with Sections above, they win):
+   D1. No `bump` field in MetaSchema/meta.json; bump level is a builder CLI argument in 4b.
+   D2. Optional per-component `styles.json` (`ComponentStylesSchema` in shared, reusing RegistryItem sub-schemas).
+   D3. Shared exports `normalizeContent` (LF/BOM/trailing-newline); goldens stay untouched.
+   D4. Item layout/file table as implemented (component: tsx+demo+meta required, css+styles.json optional;
+   lib/hook: ts+meta only); no symlinks; 200 KB max; UTF-8 + no NUL; `files[].type` always equals the item type.
+   D5. Drafts fully validated but excluded from output; no deps on draft/missing items; cycles reported with full path.
+   D6. Import analysis via the TS compiler API (parse only); peers react/react-dom; rules as in docs/BUILDER.md.
+   D7. AST security scan (eval/cookie/network codes), errors, no escape hatch.
+   D8. Builder never rewrites imports; content passes through normalizeContent only.
+   D9. In-memory model per non-draft item with shared computeItemHash; `loadRegistry({registryRoot})`
+   returns `{ items, diagnostics, summary }` (summary is an additive rollup).

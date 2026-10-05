@@ -30,6 +30,19 @@ export const CssVarsSchema = z
 
 export type CssVars = z.infer<typeof CssVarsSchema>;
 
+/**
+ * Optional per-component `styles.json` (Task 4a decision D2): `{ tailwind?, cssVars? }`.
+ * Reuses the exact sub-schemas of RegistryItemSchema — no duplicated definitions.
+ */
+export const ComponentStylesSchema = z
+  .object({
+    tailwind: TailwindFragmentSchema.optional(),
+    cssVars: CssVarsSchema.optional(),
+  })
+  .strict();
+
+export type ComponentStyles = z.infer<typeof ComponentStylesSchema>;
+
 export const RegistryFileSchema = z
   .object({
     path: RelativePathSchema,
