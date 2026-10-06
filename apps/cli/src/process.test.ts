@@ -3,7 +3,8 @@
  * Requires `pnpm build` to have run (turbo test depends on build).
  */
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -47,5 +48,36 @@ describe("built cli.js", () => {
     expect(result.stdout).toContain("--no-styles");
     expect(result.stdout).toContain("--dry-run");
     expect(result.stdout).toContain("--overwrite");
+  });
+
+  it("runs through a symlink/junction shim like an npm bin link", () => {
+    // npm bin shims are symlinks on POSIX (.cmd shims on Windows pass the
+    // real path, so this bug never showed there): argv[1] is the shim path
+    // while import.meta.url is the real path. The CLI must still run (it once
+    // exited 0 silently here, which the pack-smoke caught on Linux CI).
+    const dir = mkdtempSync(join(tmpdir(), "framebits-shim-"));
+    try {
+      let entry: string;
+      if (process.platform === "win32") {
+        // File symlinks need privilege; a junction to the dist dir (allowed)
+        // produces the same argv[1]-vs-real-path mismatch.
+        const junction = join(dir, "distlink");
+        try {
+          symlinkSync(dirname(distCli), junction, "junction");
+        } catch {
+          return; // No privilege: skip.
+        }
+        entry = join(junction, "cli.js");
+      } else {
+        entry = join(dir, "framebits");
+        symlinkSync(distCli, entry, "file");
+      }
+      const result = spawnSync(process.execPath, [entry, "--version"], { encoding: "utf8" });
+      const stdout = typeof result.stdout === "string" ? result.stdout : "";
+      expect(result.status).toBe(0);
+      expect(stdout.trim().length).toBeGreaterThan(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
