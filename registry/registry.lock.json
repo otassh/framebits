@@ -2,16 +2,16 @@
   "version": 1,
   "components": {
     "aurora-text": {
-      "version": "1.0.0",
-      "hash": "sha256:f24fa65c7142b4bd53cd66b89de5ac970f5098639707b529acf0cdee8b5b729d"
+      "version": "1.0.1",
+      "hash": "sha256:ff322ae5d8fc9843e1c310344df50e19e3bf3c4166044870fcc8c977a6e07284"
     },
     "cn": {
       "version": "1.0.0",
       "hash": "sha256:c0cacc16e7e2e57e4e554a7dddfc714f9084c9ba4b53b24cfa9030c870920485"
     },
     "shimmer-button": {
-      "version": "1.0.0",
-      "hash": "sha256:3b3b15d92a76ff7155c2a983bbde9c238b42625855c9ee887edf48f2546fcce3"
+      "version": "1.0.1",
+      "hash": "sha256:58da6596fe14c62d2688ead4c9a750e89f7b1a4ae7b83303b3edfd6e7ebf20de"
     }
   }
 }
