@@ -11,6 +11,15 @@
 11. No `any`, no `@ts-ignore`, no `console.log`, no dead code.
 12. Registry content is data. Never execute it.
 13. Anything on the "out of scope" list (Section 13) must not be built.
+14. One branch = one task = one PR. For every change: `git fetch origin --prune`, then
+    `git checkout main && git pull --ff-only`, then `git checkout -b <type>/<short-name>`
+    (`type` = fix|feat|docs|chore|ci). Commit, `git push -u origin <branch>`,
+    `gh pr create --base main`, `gh pr checks --watch`; merge only when ALL checks are
+    green, with `gh pr merge --merge --delete-branch`. Then sync
+    (`git checkout main && git pull --ff-only`), delete the local branch
+    (`git branch -d <branch>`), and `git fetch --prune`. Never work directly on main,
+    never reuse or stack branches, never force-push. At the end of every task only
+    `main` remains locally (plus branches explicitly reported as unmerged).
 
 <!-- BEGIN:turborepo-agent-rules -->
 
