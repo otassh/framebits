@@ -2,6 +2,29 @@
   "name": "framebits",
   "version": "0.0.0",
   "private": true,
+  "description": "Add curated animated React components to your project",
+  "keywords": [
+    "framebits",
+    "react",
+    "components",
+    "animations",
+    "tailwind",
+    "cli"
+  ],
+  "homepage": "https://github.com/otassh/framebits#readme",
+  "bugs": {
+    "url": "https://github.com/otassh/framebits/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/otassh/framebits.git",
+    "directory": "apps/cli"
+  },
+  "author": "Framebits",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "type": "module",
   "bin": {
     "framebits": "./dist/cli.js"
