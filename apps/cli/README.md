@@ -5,11 +5,11 @@ The Framebits CLI. Adds curated animated React components to your project.
 ## Install
 
 ```sh
-npx framebits init
-npx framebits add aurora-text
+npx @framebits/cli init
+npx @framebits/cli add aurora-text
 ```
 
-Or install globally (`npm i -g framebits`) and run `framebits`.
+Or install globally (`npm i -g @framebits/cli`) and run `framebits`.
 
 Using the CLI requires Node >= 20. Developing this repo requires Node >= 22. The bundle is a single ESM file (`dist/cli.js`, ~1 MB, no runtime dependencies to install).
 

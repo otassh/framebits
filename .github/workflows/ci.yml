@@ -42,7 +42,7 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter framebits build
+      - run: pnpm --filter @framebits/cli build
       - name: packed bundle has no workspace runtime imports
         run: |
           if grep -F "@framebits/" apps/cli/dist/cli.js; then
@@ -50,6 +50,6 @@ jobs:
             exit 1
           fi
           echo "dist/cli.js is self-contained (no @framebits/* references)"
-      - run: pnpm --filter framebits exec tsup --version
+      - run: pnpm --filter @framebits/cli exec tsup --version
       - run: node apps/cli/scripts/pack-smoke.mjs
-      - run: pnpm --filter framebits test
+      - run: pnpm --filter @framebits/cli test
