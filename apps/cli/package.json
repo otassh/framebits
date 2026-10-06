@@ -2,6 +2,7 @@
   "name": "framebits",
   "version": "0.0.0",
   "private": true,
+  "license": "MIT",
   "description": "Add curated animated React components to your project",
   "keywords": [
     "framebits",
@@ -20,7 +21,7 @@
     "url": "git+https://github.com/otassh/framebits.git",
     "directory": "apps/cli"
   },
-  "author": "Framebits",
+  "author": "otassh",
   "publishConfig": {
     "access": "public",
     "provenance": true
