@@ -11,7 +11,7 @@ npx framebits add aurora-text
 
 Or install globally (`npm i -g framebits`) and run `framebits`.
 
-Requires Node >= 20. The bundle is a single ESM file (`dist/cli.js`, ~1 MB, no runtime dependencies to install).
+Using the CLI requires Node >= 20. Developing this repo requires Node >= 22. The bundle is a single ESM file (`dist/cli.js`, ~1 MB, no runtime dependencies to install).
 
 ## Usage
 
