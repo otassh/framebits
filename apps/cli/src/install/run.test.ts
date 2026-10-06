@@ -27,7 +27,36 @@ describe("createInstaller", () => {
     const installer = createInstaller(() =>
       Promise.resolve({ exitCode: 1, timedOut: false, stdout: "out", stderr: "boom" }),
     );
-    const outcome = await installer.run({ program: "npm", args: ["install", "x"], cwd: "/proj" }, false, false);
+    const outcome = await installer.run(
+      { program: "npm", args: ["install", "x"], cwd: "/proj" },
+      false,
+      false,
+    );
     expect(outcome.exitCode).toBe(1);
+  });
+
+  it("forwards program + args as separate argv entries (no shell interpolation)", async () => {
+    const seen: Array<{ program: string; args: readonly string[] }> = [];
+    const installer = createInstaller((program, args) => {
+      seen.push({ program, args: [...args] });
+      return Promise.resolve({ exitCode: 0, timedOut: false, stdout: "", stderr: "" });
+    });
+    // A malicious-looking spec must stay a single argv element, never joined
+    // into a shell string. nodeSpawn (run.ts) calls cross-spawn as
+    // spawn(program, [...args], { cwd, timeout, stdio }) with no `shell`
+    // option, so no shell ever interprets these entries.
+    await installer.run(
+      { program: "pnpm", args: ["add", "motion@^14.0.0", "clsx@^2.0.0; rm -rf /"], cwd: "/proj" },
+      false,
+      false,
+    );
+    expect(seen).toHaveLength(1);
+    const call = seen[0];
+    if (call === undefined) expect.unreachable();
+    else {
+      expect(call.program).toBe("pnpm");
+      expect(call.args).toEqual(["add", "motion@^14.0.0", "clsx@^2.0.0; rm -rf /"]);
+      expect(call.args).toHaveLength(3);
+    }
   });
 });

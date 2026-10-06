@@ -1,0 +1,116 @@
+name: release
+
+# SECRET-FREE npm Trusted Publishing via OIDC for the `framebits` package
+# (apps/cli). There is deliberately NO NODE_AUTH_TOKEN / NPM_TOKEN anywhere in
+# this file: authentication uses the ambient OIDC token (`id-token: write`),
+# exchanged by the npm CLI (>= 11.5.1) on Node >= 22.14 (both enforced below).
+# Nothing is committed, no token is stored, nothing is flipped to public here:
+# the package is already public (`chore/first-publish-prep` removed
+# `"private"` and set version `0.1.0`); the version guard still fails any tag
+# that does not equal the `apps/cli` version (notably `v0.1.0`, which must
+# never be pushed — see docs/RELEASING.md).
+
+on:
+  push:
+    # npm docs use `v*` as the publish-tag example; we require full semver so
+    # the version guard can match the tag against apps/cli/package.json.
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Exercise the pipeline through `npm publish --dry-run` (no publish, no GitHub Release)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    # The repo owner adds required reviewers on this environment in the repo
+    # settings, so even a tag push needs a human approval before publishing.
+    environment: npm-publish
+    permissions:
+      id-token: write # OIDC trusted publishing with npm (no tokens)
+      contents: write # creating the GitHub Release after a successful publish
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10 # must match the repo `packageManager` (pnpm 10.x)
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22 # latest 22.x, satisfies the >= 22.14 OIDC floor
+          cache: pnpm
+        # NOTE: no `registry-url` here on purpose. setup-node's `registry-url`
+        # writes `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}` into
+        # .npmrc, and that dummy placeholder breaks native OIDC auth (npm sends
+        # the literal placeholder and the registry answers 404). Upstream fixed
+        # this only in setup-node V7 by dropping the dummy fallback, so until
+        # then the registry is configured explicitly in the step below.
+      - name: Enforce npm CLI >= 11.5.1 (OIDC floor, self-heal once)
+        run: |
+          REQUIRED_NPM="11.5.1"
+          echo "npm version: $(npm --version) (required >= ${REQUIRED_NPM} for OIDC trusted publishing)"
+          if ! printf '%s\n%s\n' "${REQUIRED_NPM}" "$(npm --version)" | sort -V -C; then
+            echo "npm is too old; upgrading to npm@^11.5.1 once"
+            npm install -g "npm@^11.5.1"
+            echo "npm version after upgrade: $(npm --version)"
+            if ! printf '%s\n%s\n' "${REQUIRED_NPM}" "$(npm --version)" | sort -V -C; then
+              echo "::error::npm CLI is still < ${REQUIRED_NPM} after upgrade; refusing to publish"
+              exit 1
+            fi
+          fi
+      - name: Configure npm registry (no auth token; OIDC only)
+        run: npm config set registry https://registry.npmjs.org
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build:registry --check
+      - run: pnpm build
+      - name: Release version guard (tag must equal apps/cli version, package must be public)
+        # Manual dry-runs must be dispatched FROM a `v*.*.*` tag: on a branch
+        # `github.ref_name` is the branch name and this guard fails fast,
+        # which itself demonstrates the gate.
+        run: node scripts/check-release-version.mjs "${{ github.ref_name }}"
+      - name: CLI pack smoke (clean-room install + init/add --dry-run)
+        run: node apps/cli/scripts/pack-smoke.mjs
+      - name: Pack the publishable tarball
+        run: pnpm --filter framebits pack
+      - name: Publish to npm via OIDC trusted publishing (no tokens)
+        # NOTE: never add NODE_AUTH_TOKEN / NPM_TOKEN env here (or anywhere in
+        # this file). pnpm 10 delegates to the npm CLI, but native OIDC had
+        # the NODE_AUTH_TOKEN-placeholder 404 bug, so publish with the npm CLI
+        # directly. `dry_run` still exercises everything up to and including
+        # `npm publish --dry-run`.
+        run: |
+          TARBALL="$(ls apps/cli/dist-pack/framebits-*.tgz | head -n 1)"
+          echo "Publishing tarball: ${TARBALL}"
+          PROVENANCE="--provenance"
+          if [ "${{ github.event.repository.private }}" = "true" ]; then
+            # TODO(question): the repo is currently private, so npm provenance
+            # is unavailable (the registry only issues it for a public package
+            # in a public repo on a GitHub-hosted runner). Skip the flag for
+            # now; OIDC publish still works. Owner: confirm dropping this
+            # fallback once the repo goes public at launch.
+            echo "::warning::Private repo: skipping --provenance (unavailable until the repo is public)"
+            PROVENANCE=""
+          fi
+          # shellcheck disable=SC2086
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            npm publish "${TARBALL}" ${PROVENANCE} --access public --dry-run
+          else
+            npm publish "${TARBALL}" ${PROVENANCE} --access public
+          fi
+      - name: Create GitHub Release
+        if: ${{ inputs.dry_run != true }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "${{ github.ref_name }}" --generate-notes --title "${{ github.ref_name }}"

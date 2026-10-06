@@ -38,11 +38,25 @@ Detection:
   usable alias → exit 2 with a `tsconfig.json` `paths` snippet (plus a Vite
   `resolve.alias` snippet when Vite is detected).
 
-### `add <slug...> [--overwrite] [--dry-run] [--yes] [--cwd <dir>] [--registry <url>] [--debug]`
+### `add <slug...> [--overwrite] [--dry-run] [--yes] [--cwd <dir>] [--registry <url>] [--timeout <seconds>] [--debug]`
 
 `add` before `init` → exit 2 ("run `framebits init` first"). Slug args
 (`slug` or `slug@1.2.3`) are validated before any request. Exactly one network
 fetch per item.
+
+## Network timeout
+
+Every registry request aborts after a configurable timeout (default 10 s),
+with 2 retries and backoff on 5xx/network errors (unchanged). Timeout errors
+report the effective value (e.g. `timed out after 30s`). Sources, in order:
+
+1. `--timeout <seconds>`: integer 1–300 (seconds).
+2. `FRAMEBITS_TIMEOUT`: integer 1–300 (seconds).
+3. `timeoutSeconds` in `framebits.json`: integer 1–300 (seconds).
+4. Default: 10 s.
+
+Any invalid value (non-integer, out of range, wrong type) → exit 2 with a
+usage error naming the offending source; nothing is fetched or written.
 
 1. Resolve the registry URL (flag > env > config > default; must be `https`,
    except `http://localhost`, `127.0.0.1`, `[::1]`).
@@ -161,6 +175,8 @@ bad schema, redirect to non-https, cycle).
 disable color/spinners.
 
 ## Security model (honest)
+
+> Precise threat model: `docs/SECURITY.md`.
 
 Registry content is data, never executed. Every item is schema-validated and
 hash-verified before anything touches disk (mismatch → exit 4, nothing

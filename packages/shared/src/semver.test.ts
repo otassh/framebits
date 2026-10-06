@@ -24,6 +24,24 @@ describe("isValidSemverRange", () => {
   it.each(["not a version!!!", "^^1", "1.2.3.4.5"])("rejects %s", (range) => {
     expect(isValidSemverRange(range)).toBe(false);
   });
+
+  it.each([
+    "latest",
+    "next",
+    "beta",
+    "https://example.com/foo.tgz",
+    "git+https://github.com/user/repo.git",
+    "git://github.com/user/repo",
+    "github:user/repo",
+    "file:../foo",
+    "link:../foo",
+    "portal:../foo",
+    "workspace:*",
+    "npm:motion@^14.0.0",
+    "motion@^14.0.0",
+  ])("rejects non-registry spec %s", (range) => {
+    expect(isValidSemverRange(range)).toBe(false);
+  });
 });
 
 describe("isBoundedSemverRange", () => {
@@ -58,6 +76,19 @@ describe("SemverRangeSchema", () => {
   });
 
   it.each(["", "*", "x", "latest", "banana", ">=0.0.0", ">0", ">=1"])("rejects %s", (range) => {
+    expect(SemverRangeSchema.safeParse(range).success).toBe(false);
+  });
+
+  it.each([
+    "next",
+    "https://example.com/motion.tgz",
+    "git+https://github.com/user/repo.git",
+    "github:user/repo",
+    "file:../foo",
+    "workspace:*",
+    "npm:motion@^14.0.0",
+    "   ",
+  ])("rejects non-registry/dist-tag spec %s", (range) => {
     expect(SemverRangeSchema.safeParse(range).success).toBe(false);
   });
 });

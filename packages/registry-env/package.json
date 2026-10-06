@@ -2,6 +2,7 @@
   "name": "@framebits/registry-env",
   "version": "0.0.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "build": "echo \"@framebits/registry-env: nothing to build\"",

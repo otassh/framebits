@@ -11,13 +11,13 @@ npx framebits add aurora-text
 
 Or install globally (`npm i -g framebits`) and run `framebits`.
 
-Requires Node >= 20. The bundle is a single ESM file (`dist/cli.js`, ~1 MB, no runtime dependencies to install).
+Using the CLI requires Node >= 20. Developing this repo requires Node >= 22. The bundle is a single ESM file (`dist/cli.js`, ~1 MB, no runtime dependencies to install).
 
 ## Usage
 
 ```sh
 framebits init [--yes] [--cwd <dir>] [--registry <url>]
-framebits add <slug...> [--overwrite] [--dry-run] [--yes] [--no-install] [--no-styles] [--cwd <dir>] [--registry <url>] [--debug]
+framebits add <slug...> [--overwrite] [--dry-run] [--yes] [--no-install] [--no-styles] [--cwd <dir>] [--registry <url>] [--timeout <seconds>] [--debug]
 framebits --version
 framebits --help
 ```
@@ -47,6 +47,9 @@ Flags:
 - `--cwd <dir>`: run inside another app directory.
 - `--registry <url>`: override the registry (flag > env
   `FRAMEBITS_REGISTRY_URL` > config > default `https://framebits.dev/r`).
+- `--timeout <seconds>`: network timeout, integer 1–300 (flag > env
+  `FRAMEBITS_TIMEOUT` in seconds > `timeoutSeconds` in `framebits.json`
+  in seconds > default 10 s). Invalid values exit 2.
 - `--debug`: show stack traces (otherwise concise messages with `Hint:`).
 
 Exit codes: `0` success, `1` failure/conflict, `2` usage/config/detection,

@@ -3,6 +3,7 @@
  * delegates to commands/init and commands/add.
  */
 import { Command } from "commander";
+import { realpathSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -23,6 +24,7 @@ const EXAMPLES = [
   "  framebits add aurora-text shimmer-button --overwrite",
   "  framebits add cn@1.0.0 --dry-run",
   "  framebits add shimmer-button --no-install --no-styles",
+  "  framebits add aurora-text --timeout 30",
 ].join("\n");
 
 interface SnapshotPackageJson {
@@ -129,6 +131,7 @@ export async function main(argv: readonly string[]): Promise<number> {
     .option("--debug", "show stack traces")
     .option("--cwd <dir>", "project directory (default: current directory)")
     .option("--registry <url>", "registry base URL (overrides config and env)")
+    .option("--timeout <seconds>", "network timeout 1-300s (overrides env and config)")
     .option("--yes", "non-interactive: accept defaults (does not imply --overwrite)");
 
   program
@@ -192,11 +195,12 @@ export async function main(argv: readonly string[]): Promise<number> {
     .option("--no-styles", "skip Tailwind CSS patching (print the snippet instead)")
     .option("--cwd <dir>", "project directory")
     .option("--registry <url>", "registry base URL")
+    .option("--timeout <seconds>", "network timeout 1-300s (overrides env and config)")
     .action(async (
       slugs: string[],
-      cmdOptions: { overwrite?: boolean; dryRun?: boolean; yes?: boolean; noInstall?: boolean; noStyles?: boolean; cwd?: string; registry?: string },
+      cmdOptions: { overwrite?: boolean; dryRun?: boolean; yes?: boolean; noInstall?: boolean; noStyles?: boolean; cwd?: string; registry?: string; timeout?: string },
     ) => {
-      const globalOptions = program.opts<{ debug?: boolean; cwd?: string; registry?: string; yes?: boolean }>();
+      const globalOptions = program.opts<{ debug?: boolean; cwd?: string; registry?: string; timeout?: string; yes?: boolean }>();
       const debug = globalOptions.debug === true;
       try {
         const cwd = resolve(cmdOptions.cwd ?? globalOptions.cwd ?? process.cwd());
@@ -214,6 +218,7 @@ export async function main(argv: readonly string[]): Promise<number> {
             noInstall: cmdOptions.noInstall === true,
             noStyles: cmdOptions.noStyles === true,
             registryFlag: cmdOptions.registry ?? globalOptions.registry,
+            timeoutFlag: cmdOptions.timeout ?? globalOptions.timeout,
             debug,
           },
           {
@@ -286,8 +291,22 @@ export async function main(argv: readonly string[]): Promise<number> {
   }
 }
 
-const invokedAsScript = process.argv[1] !== undefined &&
-  resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+function invokedEntryPath(): string | undefined {
+  const raw = process.argv[1];
+  if (raw === undefined) return undefined;
+  // npm/npx bin shims are symlinks: resolve() is purely lexical and keeps the
+  // shim path, while import.meta.url is the real path. Compare real paths so
+  // an installed `framebits` actually runs instead of exiting 0 silently.
+  try {
+    return realpathSync(raw);
+  } catch {
+    return resolve(raw);
+  }
+}
+
+const invokedPath = invokedEntryPath();
+const invokedAsScript = invokedPath !== undefined &&
+  resolve(invokedPath) === fileURLToPath(import.meta.url);
 if (invokedAsScript) {
   main(process.argv.slice(2)).then(
     (code) => {
