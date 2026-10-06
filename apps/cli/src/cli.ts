@@ -5,11 +5,12 @@
 import { Command } from "commander";
 import { realpathSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runAdd } from "./commands/add.js";
 import { runInit } from "./commands/init.js";
 import { nodeApplyFs, nodeConfigFs, readProjectSnapshot } from "./fs/node.js";
+import { withTemporaryJournal } from "./fs/temporary-journal.js";
 import { exitCodeFor, formatError } from "./errors.js";
 import { createInstaller, nodeSpawn } from "./install/run.js";
 import { createNodeOutput, isInteractiveProcess, printError, printHint } from "./ui/output.js";
@@ -208,7 +209,7 @@ export async function main(argv: readonly string[]): Promise<number> {
         const snapshot = await readSnapshotFor(cwd);
         const configFs = nodeConfigFs();
         const applyFs = nodeApplyFs();
-        await runAdd(
+        await withTemporaryJournal((journalDir) => runAdd(
           {
             cwd,
             slugs,
@@ -260,9 +261,9 @@ export async function main(argv: readonly string[]): Promise<number> {
               }
             },
             listExistingPaths: () => listExistingPaths(cwd),
-            journalDir: join(dirname(fileURLToPath(import.meta.url)), "..", ".journal-tmp"),
+            journalDir,
           },
-        );
+        ));
         process.exitCode = 0;
       } catch (error) {
         const formatted = formatError(error, debug);

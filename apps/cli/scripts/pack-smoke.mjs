@@ -226,6 +226,7 @@ const installDir = mkdtempSync(join(tmpdir(), "cli-install-"));
 const registryOutDir = mkdtempSync(join(tmpdir(), "cli-smoke-registry-"));
 const archiveDir = mkdtempSync(join(tmpdir(), "cli-smoke-archive-"));
 const projectDir = mkdtempSync(join(tmpdir(), "cli-smoke-project-"));
+const journalRoot = mkdtempSync(join(tmpdir(), "cli-smoke-journal-root-"));
 let staticServer = undefined;
 
 try {
@@ -370,6 +371,44 @@ try {
       throw new Error("add --dry-run modified the project directory (must write nothing)");
     }
     process.stdout.write("clean-room add aurora-text --dry-run against local registry: OK\n");
+
+    // 8. Force a real overwrite so the packed binary must create a backup.
+    // The journal belongs in a unique OS-temp directory, never beside the
+    // installed package, and must be removed after the transaction succeeds.
+    const componentTarget = join(projectDir, "src", "components", "ui", "aurora-text.tsx");
+    mkdirSync(dirname(componentTarget), { recursive: true });
+    writeFileSync(componentTarget, "export const conflict = true;\n", "utf8");
+    await runAsync(
+      asCommand,
+      [
+        ...asArgs,
+        "add",
+        "aurora-text",
+        "--overwrite",
+        "--no-install",
+        "--yes",
+        "--registry",
+        baseUrl,
+      ],
+      {
+        cwd: projectDir,
+        env: { TEMP: journalRoot, TMP: journalRoot, TMPDIR: journalRoot },
+      },
+    );
+    const installedPackageDir = join(dirname(installedBundle), "..");
+    if (existsSync(join(installedPackageDir, ".journal-tmp"))) {
+      throw new Error("packed CLI left transaction backups inside the installed package");
+    }
+    const journalEntries = readdirSync(journalRoot).filter((entry) =>
+      entry.startsWith("framebits-journal-"),
+    );
+    if (journalEntries.length > 0) {
+      throw new Error(`packed CLI left OS-temp journal entries: ${journalEntries.join(", ")}`);
+    }
+    if (!readFileSync(componentTarget, "utf8").includes("AuroraText")) {
+      throw new Error("packed CLI did not overwrite the fixture component");
+    }
+    process.stdout.write("clean-room real add cleans its isolated transaction journal: OK\n");
   } finally {
     await closeServer(staticServer);
     staticServer = undefined;
@@ -385,4 +424,5 @@ try {
   rmSync(registryOutDir, { recursive: true, force: true });
   rmSync(archiveDir, { recursive: true, force: true });
   rmSync(projectDir, { recursive: true, force: true });
+  rmSync(journalRoot, { recursive: true, force: true });
 }
