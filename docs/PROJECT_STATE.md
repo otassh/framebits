@@ -16,8 +16,11 @@ order: `docs/MASTER_PROMPT.md`.
   from `main`, unpushed by design).
 - Tracked files: 211 (`git ls-files` count).
 - Working tree at generation time (from `git status`): CLEAN, nothing to commit.
-- Remote, CI last-run outcome, Node/pnpm versions: NOT VERIFIED this session
-  (no commands run for them).
+- Remote: `origin/main` @ `41f1d48` (verified via `git rev-parse` + `gh`; repo
+  visibility PUBLIC). CI last-run outcome: VERIFIED GREEN — PR #14 run
+  37423956051 and PR #15 run 37428142177 both show `ci (22)`, `ci (24)`,
+  `cli-compat` passing (`gh pr checks`). Local Node/pnpm versions:
+  NOT VERIFIED this session.
 
 ## 2. Task progress (MASTER_PROMPT Section 14, Tasks 1–14)
 
@@ -212,9 +215,11 @@ All 10 turbo tasks successful, 0 failures:
 ## 7. CI / release workflows (read this session)
 
 - `.github/workflows/ci.yml`: present in `git ls-files`. Last-run outcome:
-  NOT VERIFIED this session.
-- `.github/workflows/e2e-real.yml`: present in `git ls-files`. Last-run outcome:
-  NOT VERIFIED this session.
+  VERIFIED GREEN — PR #15 run 37428142177 (`ci (22)`, `ci (24)`, `cli-compat`
+  all pass).
+- `.github/workflows/e2e-real.yml`: present in `git ls-files`. It runs only on
+  `workflow_dispatch` + weekly schedule (not a required check); last manual run
+  outcome NOT VERIFIED this session.
 - `.github/workflows/release.yml`: present in `git ls-files` and read this
   session (secret-free OIDC trusted publishing for `framebits`, tag-gated on
   `v*.*.*`, `environment: npm-publish`, `id-token: write`, no npm tokens;
@@ -252,14 +257,12 @@ Actionable code/doc TODOs (8):
    is `0.1.1`).
 5. `docs/RELEASING.md:44` + item 1 — confirm the production domain/registry URL
    if it changes any user-facing text.
-6. `docs/RELEASING.md:47` — make the repo public before the first automated
-   release (npm provenance requires a public package in a public repo).
-   Actual GitHub repo visibility: NOT VERIFIED this session (local files
-   describe the repo as currently private, e.g. `.github/workflows/release.yml:98`;
-   no network commands were run).
-7. `.github/workflows/release.yml:98` — same repo-visibility fallback: provenance
-   is skipped with a warning while the repo is private; confirm dropping that
-   fallback once the repo goes public at launch.
+6. `docs/RELEASING.md:47` — repo is PUBLIC (verified 2026-10-06 via
+    `gh repo view --json visibility` → `"visibility":"PUBLIC"`); npm provenance
+    is expected to work on the first CI release. Secret scanning + push
+    protection enabled the same day.
+7. `.github/workflows/release.yml:98` — TODO: drop the private-repo provenance
+    fallback now that the repo is public (verify on the first CI release).
 8. `docs/SECURITY.md:62` — owner to pick a trust-anchor option (recommendation:
    Option A, signed `index.json`); open sub-questions on key custody, public-key
    distribution, rotation/revocation, and `--insecure` opt-in for local dev.
