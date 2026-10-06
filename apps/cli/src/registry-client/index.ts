@@ -14,6 +14,12 @@ import { didYouMean } from "../levenshtein.js";
 import { CLI_VERSION } from "../version.js";
 
 export const FETCH_TIMEOUT_MS = 10000;
+/** Default is 10 s; valid range everywhere is 1-300 s. */
+export const TIMEOUT_MIN_S = 1;
+export const TIMEOUT_MAX_S = 300;
+export const TIMEOUT_MIN_MS = TIMEOUT_MIN_S * 1000;
+export const TIMEOUT_MAX_MS = TIMEOUT_MAX_S * 1000;
+export const TIMEOUT_ENV_VAR = "FRAMEBITS_TIMEOUT_MS";
 export const FETCH_MAX_RETRIES = 2;
 export const FETCH_MAX_BYTES = 2 * 1024 * 1024;
 export const RETRY_AFTER_CAP_MS = 10000;
@@ -100,6 +106,98 @@ function retryAfterMs(header: string | null): number | undefined {
 export interface FetchJsonOptions {
   fetchFn: FetchFn;
   sleep: (ms: number) => Promise<void>;
+  /**
+   * Per-request timeout in milliseconds. Optional for backwards
+   * compatibility; defaults to {@link FETCH_TIMEOUT_MS}. Prefer passing the
+   * value from {@link resolveTimeoutMs} so `--timeout`/env/config apply.
+   */
+  timeoutMs?: number | undefined;
+}
+
+/** Render a timeout for messages: whole seconds as `10s`, else `1500ms`. */
+export function formatTimeoutMs(timeoutMs: number): string {
+  if (Number.isInteger(timeoutMs / 1000)) return `${String(timeoutMs / 1000)}s`;
+  return `${String(timeoutMs)}ms`;
+}
+
+/**
+ * Parse `--timeout <seconds>` (integer seconds, 1-300). Throws a usage error
+ * (exit 2) on bad input. Returns undefined when the flag was not given.
+ */
+export function parseTimeoutFlag(raw: string | undefined): number | undefined {
+  if (raw === undefined) return undefined;
+  if (!/^\d+$/.test(raw)) {
+    throw usageError(
+      `invalid --timeout ${JSON.stringify(raw)}: expected an integer 1-300 (seconds)`,
+      "use e.g. --timeout 30",
+    );
+  }
+  const seconds = Number(raw);
+  if (!Number.isSafeInteger(seconds) || seconds < TIMEOUT_MIN_S || seconds > TIMEOUT_MAX_S) {
+    throw usageError(
+      `invalid --timeout ${JSON.stringify(raw)}: expected an integer 1-300 (seconds)`,
+      "use e.g. --timeout 30",
+    );
+  }
+  return seconds * 1000;
+}
+
+/**
+ * Parse `FRAMEBITS_TIMEOUT_MS` (integer milliseconds, 1000-300000). Throws a
+ * usage error (exit 2) on bad input. Returns undefined when unset/empty.
+ */
+export function parseTimeoutEnv(raw: string | undefined): number | undefined {
+  if (raw === undefined || raw === "") return undefined;
+  if (!/^\d+$/.test(raw)) {
+    throw usageError(
+      `invalid ${TIMEOUT_ENV_VAR} ${JSON.stringify(raw)}: expected an integer 1000-300000 (milliseconds)`,
+      "use e.g. FRAMEBITS_TIMEOUT_MS=30000 for 30s, or unset it",
+    );
+  }
+  const ms = Number(raw);
+  if (!Number.isSafeInteger(ms) || ms < TIMEOUT_MIN_MS || ms > TIMEOUT_MAX_MS) {
+    throw usageError(
+      `invalid ${TIMEOUT_ENV_VAR} ${JSON.stringify(raw)}: expected an integer 1000-300000 (milliseconds)`,
+      "use e.g. FRAMEBITS_TIMEOUT_MS=30000 for 30s, or unset it",
+    );
+  }
+  return ms;
+}
+
+export interface TimeoutInput {
+  /** Raw `--timeout <seconds>` value from the CLI. */
+  flag: string | undefined;
+  /** Raw `FRAMEBITS_TIMEOUT_MS` value (milliseconds). */
+  env: string | undefined;
+  /** Validated `timeoutMs` from `framebits.json` (milliseconds). */
+  configMs: number | undefined;
+}
+
+/**
+ * Resolve the effective timeout in milliseconds.
+ * Precedence: `--timeout` flag > `FRAMEBITS_TIMEOUT_MS` env >
+ * `timeoutMs` in `framebits.json` > default (10 s).
+ * Throws a usage error (exit 2) on any invalid input.
+ */
+export function resolveTimeoutMs(input: TimeoutInput): number {
+  const fromFlag = parseTimeoutFlag(input.flag);
+  if (fromFlag !== undefined) return fromFlag;
+  const fromEnv = parseTimeoutEnv(input.env);
+  if (fromEnv !== undefined) return fromEnv;
+  if (input.configMs !== undefined) {
+    if (
+      !Number.isInteger(input.configMs) ||
+      input.configMs < TIMEOUT_MIN_MS ||
+      input.configMs > TIMEOUT_MAX_MS
+    ) {
+      throw usageError(
+        `invalid timeoutMs ${JSON.stringify(input.configMs)} in framebits.json: expected an integer 1000-300000 (milliseconds)`,
+        "fix timeoutMs or remove it to use the 10s default",
+      );
+    }
+    return input.configMs;
+  }
+  return FETCH_TIMEOUT_MS;
 }
 
 interface HttpStatusError extends Error {
@@ -122,9 +220,11 @@ function isCliLike(error: unknown): boolean {
     (error.name === "CliError" || "exitCode" in error);
 }
 
-function classifyNetworkError(error: unknown): string {
+function classifyNetworkError(error: unknown, timeoutMs: number): string {
   const message = error instanceof Error ? error.message : String(error);
-  if (/timeout|timed out|abort/i.test(message)) return "timed out after 10s";
+  if (/timeout|timed out|abort/i.test(message)) {
+    return `timed out after ${formatTimeoutMs(timeoutMs)}`;
+  }
   if (/ENOTFOUND|EAI_AGAIN|getaddrinfo/i.test(message)) return "DNS lookup failed (offline?)";
   if (/ECONNREFUSED|ENETUNREACH|EHOSTUNREACH/i.test(message)) return "connection refused (offline?)";
   if (/fetch failed/i.test(message)) return "fetch failed (offline?)";
@@ -136,6 +236,7 @@ export function fetchJsonText(
   options: FetchJsonOptions,
 ): Promise<{ text: string; finalUrl: string }> {
   assertAllowedRegistryUrl(url, "registry URL");
+  const timeoutMs = options.timeoutMs ?? FETCH_TIMEOUT_MS;
   let attempt = 0;
   let lastError: unknown;
   const run = (): Promise<{ text: string; finalUrl: string }> => {
@@ -145,7 +246,7 @@ export function fetchJsonText(
           Accept: "application/json",
           "User-Agent": `framebits/${CLI_VERSION}`,
         },
-        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        signal: AbortSignal.timeout(timeoutMs),
         redirect: "follow",
       })
       .then((response) => handleResponse(response, url, attempt, options, run))
@@ -163,7 +264,7 @@ export function fetchJsonText(
           return options.sleep(500 * attempt).then(() => run());
         }
         throw networkError(
-          `network error fetching ${url}: ${classifyNetworkError(error)}`,
+          `network error fetching ${url}: ${classifyNetworkError(error, timeoutMs)}`,
           "check your connection and retry",
         );
       });
@@ -171,7 +272,7 @@ export function fetchJsonText(
   return run().catch((error: unknown): Promise<{ text: string; finalUrl: string }> => {
     if (isHttpStatusError(error) || isCliLike(error)) throw error;
     throw networkError(
-      `network error fetching ${url}: ${classifyNetworkError(lastError ?? error)}`,
+      `network error fetching ${url}: ${classifyNetworkError(lastError ?? error, timeoutMs)}`,
       "check your connection and retry",
     );
   });
