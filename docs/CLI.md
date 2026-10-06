@@ -51,8 +51,8 @@ with 2 retries and backoff on 5xx/network errors (unchanged). Timeout errors
 report the effective value (e.g. `timed out after 30s`). Sources, in order:
 
 1. `--timeout <seconds>`: integer 1–300 (seconds).
-2. `FRAMEBITS_TIMEOUT_MS`: integer 1000–300000 (**milliseconds**).
-3. `timeoutMs` in `framebits.json`: integer 1000–300000 (**milliseconds**).
+2. `FRAMEBITS_TIMEOUT`: integer 1–300 (seconds).
+3. `timeoutSeconds` in `framebits.json`: integer 1–300 (seconds).
 4. Default: 10 s.
 
 Any invalid value (non-integer, out of range, wrong type) → exit 2 with a

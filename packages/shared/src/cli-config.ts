@@ -50,15 +50,15 @@ export const CliConfigSchema = z
       })
       .strict(),
     /**
-     * Per-request network timeout in **milliseconds** (1-300 s).
+     * Per-request network timeout in **seconds** (1-300).
      * Optional; when absent the CLI default (10 s) applies. Overridden by the
-     * `FRAMEBITS_TIMEOUT_MS` env var and the `--timeout <seconds>` flag.
+     * `FRAMEBITS_TIMEOUT` env var and the `--timeout <seconds>` flag.
      */
-    timeoutMs: z
+    timeoutSeconds: z
       .number()
-      .int("timeoutMs must be an integer number of milliseconds")
-      .min(1000, "timeoutMs must be at least 1000 (1s)")
-      .max(300000, "timeoutMs must be at most 300000 (300s)")
+      .int("timeoutSeconds must be an integer number of seconds")
+      .min(1, "timeoutSeconds must be at least 1")
+      .max(300, "timeoutSeconds must be at most 300")
       .optional(),
     installed: z.record(z.string(), InstalledEntrySchema).default({}),
   })

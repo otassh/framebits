@@ -26,26 +26,26 @@ describe("CliConfigSchema", () => {
     }
   });
 
-  it("accepts an optional timeoutMs in milliseconds (1-300s)", () => {
+  it("accepts an optional timeoutSeconds in seconds (1-300)", () => {
     expect(
-      CliConfigSchema.safeParse({ ...validConfig, timeoutMs: 10000 }).success,
+      CliConfigSchema.safeParse({ ...validConfig, timeoutSeconds: 10 }).success,
     ).toBe(true);
-    expect(CliConfigSchema.safeParse({ ...validConfig, timeoutMs: 1000 }).success).toBe(
+    expect(CliConfigSchema.safeParse({ ...validConfig, timeoutSeconds: 1 }).success).toBe(
       true,
     );
     expect(
-      CliConfigSchema.safeParse({ ...validConfig, timeoutMs: 300000 }).success,
+      CliConfigSchema.safeParse({ ...validConfig, timeoutSeconds: 300 }).success,
     ).toBe(true);
     // Absent entirely: still valid (CLI default applies).
     expect(CliConfigSchema.safeParse({ ...validConfig }).success).toBe(true);
   });
 
   it.each([
-    ["below 1s", { timeoutMs: 999 }],
-    ["above 300s", { timeoutMs: 300001 }],
-    ["non-integer", { timeoutMs: 1500.5 }],
-    ["wrong type", { timeoutMs: "30" }],
-  ])("rejects timeoutMs %s", (_rule, override) => {
+    ["below 1s", { timeoutSeconds: 0 }],
+    ["above 300s", { timeoutSeconds: 301 }],
+    ["non-integer", { timeoutSeconds: 1.5 }],
+    ["wrong type", { timeoutSeconds: "30" }],
+  ])("rejects timeoutSeconds %s", (_rule, override) => {
     expect(CliConfigSchema.safeParse({ ...validConfig, ...override }).success).toBe(
       false,
     );

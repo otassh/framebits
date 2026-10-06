@@ -46,16 +46,16 @@ describe("parseTimeoutFlag (--timeout <seconds>)", () => {
   );
 });
 
-describe("parseTimeoutEnv (FRAMEBITS_TIMEOUT_MS)", () => {
-  it("converts valid milliseconds and treats empty as unset", () => {
+describe("parseTimeoutEnv (FRAMEBITS_TIMEOUT)", () => {
+  it("converts valid seconds and treats empty as unset", () => {
     expect(parseTimeoutEnv(undefined)).toBe(undefined);
     expect(parseTimeoutEnv("")).toBe(undefined);
-    expect(parseTimeoutEnv("1000")).toBe(1000);
-    expect(parseTimeoutEnv("15000")).toBe(15000);
-    expect(parseTimeoutEnv("300000")).toBe(300000);
+    expect(parseTimeoutEnv("1")).toBe(1000);
+    expect(parseTimeoutEnv("15")).toBe(15000);
+    expect(parseTimeoutEnv("300")).toBe(300000);
   });
 
-  it.each(["999", "300001", "abc", "1.5", "30s"])(
+  it.each(["0", "301", "abc", "1.5", "30s"])(
     "rejects %s with usage error (exit 2)",
     (raw) => {
       try {
@@ -71,16 +71,16 @@ describe("parseTimeoutEnv (FRAMEBITS_TIMEOUT_MS)", () => {
 describe("resolveTimeoutMs", () => {
   it("applies precedence flag > env > config > default", () => {
     expect(
-      resolveTimeoutMs({ flag: "30", env: "15000", configMs: 20000 }),
+      resolveTimeoutMs({ flag: "30", env: "15", configSeconds: 20 }),
     ).toBe(30000);
     expect(
-      resolveTimeoutMs({ flag: undefined, env: "15000", configMs: 20000 }),
+      resolveTimeoutMs({ flag: undefined, env: "15", configSeconds: 20 }),
     ).toBe(15000);
     expect(
-      resolveTimeoutMs({ flag: undefined, env: undefined, configMs: 20000 }),
+      resolveTimeoutMs({ flag: undefined, env: undefined, configSeconds: 20 }),
     ).toBe(20000);
     expect(
-      resolveTimeoutMs({ flag: undefined, env: undefined, configMs: undefined }),
+      resolveTimeoutMs({ flag: undefined, env: undefined, configSeconds: undefined }),
     ).toBe(FETCH_TIMEOUT_MS);
   });
 
@@ -89,9 +89,9 @@ describe("resolveTimeoutMs", () => {
   });
 
   it.each([
-    ["bad flag wins over good env", { flag: "0", env: "15000", configMs: 20000 }],
-    ["bad env wins over good config", { flag: undefined, env: "500", configMs: 20000 }],
-    ["bad config", { flag: undefined, env: undefined, configMs: 999 }],
+    ["bad flag wins over good env", { flag: "0", env: "15", configSeconds: 20 }],
+    ["bad env wins over good config", { flag: undefined, env: "500", configSeconds: 20 }],
+    ["bad config", { flag: undefined, env: undefined, configSeconds: 0 }],
   ])("rejects %s with usage error (exit 2)", (_label, input) => {
     try {
       resolveTimeoutMs(input);

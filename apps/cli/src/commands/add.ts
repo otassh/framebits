@@ -130,8 +130,8 @@ export async function runAdd(options: AddOptions, deps: AddDeps): Promise<AddRes
   });
   const timeoutMs = resolveTimeoutMs({
     flag: options.timeoutFlag,
-    env: process.env["FRAMEBITS_TIMEOUT_MS"],
-    configMs: config.timeoutMs,
+    env: process.env["FRAMEBITS_TIMEOUT"],
+    configSeconds: config.timeoutSeconds,
   });
 
   const fetchOptions = { fetchFn: deps.fetchFn, sleep: deps.sleep, timeoutMs };
