@@ -35,24 +35,26 @@ npm i -g framebits
 framebits add aurora-text --dry-run   # preview the plan, change nothing
 ```
 
-Requires Node >= 20. See [`apps/cli/README.md`](apps/cli/README.md) and [`docs/CLI.md`](docs/CLI.md) for all commands, flags, and exit codes.
+Using the CLI requires Node >= 20. Developing this repo requires Node >= 22. See [`apps/cli/README.md`](apps/cli/README.md) and [`docs/CLI.md`](docs/CLI.md) for all commands, flags, and exit codes.
 
 ## 📦 What's inside
 
-| Path | Description |
-| ---- | ----------- |
-| `apps/api` | Hono server (events, stats) |
-| `apps/cli` | The `framebits` npm package — init, add, registry client |
-| `apps/web` | Placeholder (out of scope) |
-| `packages/shared` | Zod schemas + inferred types (single source of truth) |
-| `packages/db` | Drizzle schema, migrations, DB client, seed/sync |
-| `packages/builder` | Registry build pipeline (validate → hash → emit) |
-| `packages/config` | Shared tsconfig + eslint config |
-| `registry/components/<category>/<slug>/` | Component sources |
-| `registry/lib/<slug>/` | Shared helpers |
-| `deploy/` | Docker Compose, Caddyfile, deploy scripts |
+| Path | Description | Status |
+| ---- | ----------- | ------ |
+| `apps/api` | Hono server (events, stats) — planned, Task 8 | Planned (stub) |
+| `apps/cli` | The `framebits` npm package — `init`, `add`, registry client (`list`/`search`/`diff`/`update` planned, Task 9) | Ready |
+| `apps/web` | Placeholder (out of scope, MASTER_PROMPT §13) | Placeholder |
+| `packages/shared` | Zod schemas + inferred types (single source of truth) | Ready |
+| `packages/db` | Drizzle schema, migrations, DB client, seed/sync — planned, Task 7 | Planned (stub) |
+| `packages/builder` | Registry build pipeline (validate → hash → emit) | Ready |
+| `packages/config` | Shared tsconfig + eslint config | Ready |
+| `registry/components/<category>/<slug>/` | Component sources (3 samples) | Ready |
+| `registry/lib/<slug>/` | Shared helpers (`cn`) | Ready |
+| `deploy/` | Docker Compose, Caddyfile, deploy scripts — planned, Task 6 | Placeholder |
 
-## 🏗 Architecture
+## 🏗 Architecture (target)
+
+> Target architecture — not all parts exist yet. Implemented today: Git registry, `packages/builder`, static `/r/*.json`, CLI `init`/`add`. Planned (not built): events ingestion, `apps/api` (stub, Task 8), Postgres via `packages/db` (stub, Task 7), Caddy/`deploy/` (placeholder, Task 6).
 
 ```mermaid
 flowchart LR
@@ -64,7 +66,7 @@ flowchart LR
   Caddy --> API
 ```
 
-Reading components never hits the API or DB — they are served as static files by Caddy.
+Target: reading components never hits the API or DB — they are served as static files by Caddy (Task 6).
 
 ## 🛠 Development
 
@@ -76,7 +78,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Node >= 22, pnpm only.
+Developing this repo requires Node >= 22 (`.nvmrc` = 22, CI runs 22 + 24), pnpm only. Using the CLI requires Node >= 20.
 
 <details>
 <summary>Windows note</summary>
@@ -84,6 +86,14 @@ Node >= 22, pnpm only.
 Deploy scripts are bash/POSIX. Develop inside WSL2 or Git Bash so shell scripts keep LF line endings (enforced by `.gitattributes`).
 
 </details>
+
+## 📌 Project status
+
+Implemented (Tasks 1–5): monorepo, `packages/shared` contracts, `pnpm new-component` generator, `packages/builder` pipeline with 3 sample components, CLI `init` + `add` (styles + install).
+
+Not built yet: Task 6 (Docker/Caddy/deploy), Task 7 (`packages/db`), Task 8 (`apps/api`: events, stats, likes, newsletter, RSS), Task 9 (CLI telemetry, `list`/`search`/`diff`/`update`), Task 10 (admin), Tasks 11–14 (quality gates, props docs, previews, polish).
+
+See [`docs/MASTER_PROMPT.md`](docs/MASTER_PROMPT.md) §14 for the full roadmap. `apps/api`, `packages/db`, and `deploy/` are stubs/placeholders until their tasks land.
 
 ## 📚 Docs
 
