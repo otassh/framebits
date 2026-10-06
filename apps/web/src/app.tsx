@@ -17,8 +17,12 @@ import {
 } from "lucide-react";
 import {
   AnimatePresence,
+  MotionConfig,
+  animate,
   motion,
+  useInView,
   useMotionValue,
+  useMotionValueEvent,
   useReducedMotion,
   useScroll,
   useSpring,
@@ -27,8 +31,10 @@ import {
   type MouseEvent,
   type PointerEvent as ReactPointerEvent,
   type PropsWithChildren,
+  useDeferredValue,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -44,6 +50,67 @@ import brandMarkUrl from "./assets/framebits-mark.png";
 
 const REGISTRY_URL = import.meta.env.VITE_REGISTRY_URL ?? "/r";
 const INSTALL_COMMAND = "npm install -g @framebits/cli";
+
+/** Shared motion language: ease-out everywhere, tweens for entrances, springs for gestures. */
+const EASE: [number, number, number, number] = [0.2, 0.8, 0.2, 1];
+
+/** Magnetic hover drift for the primary CTA (mouse + full motion only). */
+function Magnetic({ children }: PropsWithChildren): React.JSX.Element {
+  const reduceMotion = useReducedMotion();
+  const x = useSpring(useMotionValue(0), { stiffness: 300, damping: 25 });
+  const y = useSpring(useMotionValue(0), { stiffness: 300, damping: 25 });
+
+  const drift = (event: ReactPointerEvent<HTMLSpanElement>): void => {
+    if (reduceMotion || event.pointerType !== "mouse") return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    x.set((event.clientX - (bounds.left + bounds.width / 2)) * 0.12);
+    y.set((event.clientY - (bounds.top + bounds.height / 2)) * 0.18);
+  };
+
+  const settle = (): void => {
+    x.set(0);
+    y.set(0);
+  };
+
+  return (
+    <motion.span
+      className="magnetic"
+      style={{ x, y }}
+      onPointerMove={drift}
+      onPointerLeave={settle}
+    >
+      {children}
+    </motion.span>
+  );
+}
+
+/** Registry proof stat that counts up on first view (final value under reduced motion). */
+function ProofStat({ value, label }: { value: number | undefined; label: string }): React.JSX.Element {
+  const reduceMotion = useReducedMotion();
+  const ref = useRef<HTMLElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-40px" });
+
+  useEffect(() => {
+    if (!inView || value === undefined || reduceMotion) return;
+    const controls = animate(0, value, {
+      duration: 1.4,
+      ease: EASE,
+      onUpdate: (latest) => {
+        if (ref.current !== null) ref.current.textContent = String(Math.round(latest));
+      },
+    });
+    return () => {
+      controls.stop();
+    };
+  }, [inView, reduceMotion, value]);
+
+  return (
+    <div>
+      <strong ref={ref}>{value ?? "—"}</strong>
+      <span>{label}</span>
+    </div>
+  );
+}
 
 type IndexState =
   | { status: "loading" }
@@ -94,7 +161,7 @@ function Brand({ onNavigate }: { onNavigate?: () => void }): React.JSX.Element {
       {...(onNavigate === undefined ? {} : { onNavigate })}
     >
       <span className="brand-mark" aria-hidden="true">
-        <img src={brandMarkUrl} alt="" width={29} height={29} />
+        <img src={brandMarkUrl} alt="" width={29} height={29} decoding="async" />
       </span>
       <span className="brand-word">
         Frame<span>bits</span>
@@ -105,12 +172,30 @@ function Brand({ onNavigate }: { onNavigate?: () => void }): React.JSX.Element {
 
 function Header(): React.JSX.Element {
   const [open, setOpen] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const reduceMotion = useReducedMotion();
+  const { scrollY } = useScroll();
   const close = (): void => {
     setOpen(false);
   };
 
+  useMotionValueEvent(scrollY, "change", (latest) => {
+    if (reduceMotion || open) {
+      setHidden(false);
+      return;
+    }
+    const previous = scrollY.getPrevious() ?? 0;
+    if (latest > previous + 2 && latest > 160) setHidden(true);
+    else if (previous - latest > 2) setHidden(false);
+  });
+
   return (
-    <header className="site-header">
+    <motion.header
+      className="site-header"
+      animate={hidden ? "hidden" : "visible"}
+      variants={{ visible: { y: 0 }, hidden: { y: "-100%" } }}
+      transition={{ duration: 0.3, ease: EASE }}
+    >
       <div className="shell header-inner">
         <Brand onNavigate={close} />
         <nav className={`main-nav ${open ? "is-open" : ""}`} aria-label="Main navigation">
@@ -134,7 +219,7 @@ function Header(): React.JSX.Element {
           {open ? <X size={20} /> : <Menu size={20} />}
         </button>
       </div>
-    </header>
+    </motion.header>
   );
 }
 
@@ -157,7 +242,7 @@ function CopyCommandButton({
       setCopied(true);
       window.setTimeout(() => {
         setCopied(false);
-      }, 1800);
+      }, 1500);
     } catch {
       setCopied(false);
     }
@@ -165,14 +250,30 @@ function CopyCommandButton({
 
   return (
     <button
-      className={compact ? "copy-command copy-command-compact" : "copy-command"}
+      className={
+        compact
+          ? `copy-command copy-command-compact${copied ? " is-copied" : ""}`
+          : `copy-command${copied ? " is-copied" : ""}`
+      }
       type="button"
       onClick={() => void copy()}
       aria-label={`Copy command: ${command}`}
     >
       <Terminal size={compact ? 14 : 17} aria-hidden="true" />
       <code>{label ?? command}</code>
-      {copied ? <Check size={compact ? 14 : 17} /> : <Copy size={compact ? 14 : 17} />}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.span
+          className="copy-icon"
+          key={copied ? "check" : "copy"}
+          initial={{ opacity: 0, scale: 0.6, rotate: -90 }}
+          animate={{ opacity: 1, scale: 1, rotate: 0 }}
+          exit={{ opacity: 0, scale: 0.6, rotate: 90 }}
+          transition={{ duration: 0.18, ease: EASE }}
+          aria-hidden="true"
+        >
+          {copied ? <Check size={compact ? 14 : 17} /> : <Copy size={compact ? 14 : 17} />}
+        </motion.span>
+      </AnimatePresence>
     </button>
   );
 }
@@ -192,6 +293,7 @@ function AmbientField(): React.JSX.Element {
         transition={{ duration: 16, repeat: Infinity, ease: "easeInOut" }}
       />
       <span className="ambient-grid" />
+      <span className="ambient-beam" />
     </div>
   );
 }
@@ -276,20 +378,16 @@ function Hero({ state }: HeroProps): React.JSX.Element {
             No mystery bundle. Just clean TypeScript in your codebase.
           </p>
           <div className="hero-actions">
-            <AppLink href="/components" className="button button-primary">
-              Explore components <ArrowRight size={18} />
-            </AppLink>
+            <Magnetic>
+              <AppLink href="/components" className="button button-primary">
+                Explore components <ArrowRight size={18} />
+              </AppLink>
+            </Magnetic>
             <CopyCommandButton command={INSTALL_COMMAND} label="Install the CLI" />
           </div>
           <div className="hero-proof" aria-label="Registry facts">
-            <div>
-              <strong>{stats?.components ?? "—"}</strong>
-              <span>published components</span>
-            </div>
-            <div>
-              <strong>{stats?.categories ?? "—"}</strong>
-              <span>active categories</span>
-            </div>
+            <ProofStat value={stats?.components} label="published components" />
+            <ProofStat value={stats?.categories} label="active categories" />
             <div>
               <strong>100%</strong>
               <span>source ownership</span>
@@ -381,15 +479,10 @@ function RegistryTicker({ state }: HeroProps): React.JSX.Element | null {
       <p className="sr-only">
         Live registry with {state.index.items.length} validated packages.
       </p>
-      <motion.div
-        className="ticker-track"
-        animate={reduceMotion ? false : { x: ["0%", "-50%"] }}
-        transition={{ duration: 28, repeat: Infinity, ease: "linear" }}
-        aria-hidden="true"
-      >
+      <div className={`ticker-track${reduceMotion ? " ticker-track-static" : ""}`} aria-hidden="true">
         <div className="ticker-set">{renderItems("primary")}</div>
         <div className="ticker-set">{renderItems("duplicate")}</div>
-      </motion.div>
+      </div>
     </aside>
   );
 }
@@ -403,10 +496,10 @@ function Reveal({ children, className }: RevealProps): React.JSX.Element {
   return (
     <motion.div
       className={className}
-      initial={reduceMotion ? false : { opacity: 0, y: 26 }}
+      initial={reduceMotion ? false : { opacity: 0, y: 18 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.18 }}
-      transition={{ duration: 0.58, ease: [0.2, 0.8, 0.2, 1] }}
+      transition={{ duration: 0.5, ease: EASE }}
     >
       {children}
     </motion.div>
@@ -437,8 +530,8 @@ function PreviewArtwork({ item }: { item: RegistryIndexItem }): React.JSX.Elemen
     return (
       <div className="preview-art preview-text" aria-hidden="true">
         <motion.span
-          animate={reduceMotion ? false : { backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }}
-          transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+          animate={reduceMotion ? false : { opacity: [0.65, 1, 0.65] }}
+          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
         >
           Aurora
         </motion.span>
@@ -470,19 +563,44 @@ function PreviewArtwork({ item }: { item: RegistryIndexItem }): React.JSX.Elemen
 function ComponentCard({
   item,
   index,
+  immediate = false,
 }: {
   item: RegistryIndexItem;
   index: number;
+  /** Skip scroll-in gating so filter changes animate instantly. */
+  immediate?: boolean;
 }): React.JSX.Element {
   const reduceMotion = useReducedMotion();
+
+  const glow = (event: ReactPointerEvent<HTMLElement>): void => {
+    if (reduceMotion || event.pointerType !== "mouse") return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    event.currentTarget.style.setProperty(
+      "--card-x",
+      `${String(event.clientX - bounds.left)}px`,
+    );
+    event.currentTarget.style.setProperty(
+      "--card-y",
+      `${String(event.clientY - bounds.top)}px`,
+    );
+  };
+
+  const entrance = immediate
+    ? { animate: { opacity: 1, y: 0 } }
+    : { whileInView: { opacity: 1, y: 0 } };
+
   return (
     <motion.article
       className="component-card"
+      layout={immediate && !reduceMotion}
       initial={reduceMotion ? false : { opacity: 0, y: 18 }}
-      whileInView={{ opacity: 1, y: 0 }}
+      {...entrance}
       whileHover={reduceMotion ? {} : { y: -6 }}
+      whileTap={reduceMotion ? {} : { scale: 0.98 }}
+      exit={reduceMotion ? {} : { opacity: 0, scale: 0.96, transition: { duration: 0.2 } }}
       viewport={{ once: true, amount: 0.15 }}
-      transition={{ duration: 0.42, delay: Math.min(index * 0.06, 0.24) }}
+      transition={{ duration: 0.42, delay: Math.min(index * 0.05, 0.2) }}
+      onPointerMove={glow}
     >
       <AppLink href={`/components/${item.slug}`} className="card-link">
         <PreviewArtwork item={item} />
@@ -678,13 +796,13 @@ function WorkflowSection({ state }: { state: IndexState }): React.JSX.Element {
 
 function HomePage({ state, retry }: { state: IndexState; retry: () => void }): React.JSX.Element {
   return (
-    <>
+    <main id="main-content" tabIndex={-1} className="home-main">
       <Hero state={state} />
       <RegistryTicker state={state} />
       <HomeCatalog state={state} retry={retry} />
       <ValueSection />
       <WorkflowSection state={state} />
-    </>
+    </main>
   );
 }
 
@@ -697,16 +815,27 @@ function CatalogPage({
 }): React.JSX.Element {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<CategoryFilter>("all");
+  const reduceMotion = useReducedMotion();
+  const deferredQuery = useDeferredValue(query);
   const items = state.status === "ready" ? componentItems(state.index.items) : [];
   const categories = useMemo(
     () => Array.from(new Set(items.map((item) => item.category))),
     [items],
   );
   const filtered =
-    state.status === "ready" ? filterCatalog(state.index.items, { query, category }) : [];
+    state.status === "ready"
+      ? filterCatalog(state.index.items, { query: deferredQuery, category })
+      : [];
+  const options: CategoryFilter[] = ["all", ...categories];
+
+  const stepCategory = (direction: 1 | -1): void => {
+    const current = options.indexOf(category);
+    const next = options[(current + direction + options.length) % options.length];
+    if (next !== undefined) setCategory(next);
+  };
 
   return (
-    <main className="page catalog-page">
+    <main id="main-content" tabIndex={-1} className="page catalog-page">
       <div className="shell">
         <div className="page-heading">
           <div>
@@ -730,39 +859,66 @@ function CatalogPage({
               }}
               placeholder="Search components, tags, categories…"
             />
-            {query !== "" ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setQuery("");
-                }}
-                aria-label="Clear search"
-              >
-                <X size={17} />
-              </button>
-            ) : null}
+            <AnimatePresence initial={false}>
+              {query !== "" ? (
+                <motion.button
+                  type="button"
+                  key="clear"
+                  initial={{ opacity: 0, scale: 0.75 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.75 }}
+                  transition={{ duration: 0.15, ease: EASE }}
+                  onClick={() => {
+                    setQuery("");
+                  }}
+                  aria-label="Clear search"
+                >
+                  <X size={17} />
+                </motion.button>
+              ) : null}
+            </AnimatePresence>
           </label>
-          <div className="filter-row" aria-label="Filter by category">
+          <div
+            className="filter-row"
+            role="group"
+            aria-label="Filter by category"
+            onKeyDown={(event) => {
+              if (event.key === "ArrowRight") stepCategory(1);
+              else if (event.key === "ArrowLeft") stepCategory(-1);
+            }}
+          >
             <button
               type="button"
               className={category === "all" ? "is-active" : ""}
+              aria-pressed={category === "all"}
               onClick={() => {
                 setCategory("all");
               }}
             >
-              All <span>{items.length}</span>
+              {category === "all" && !reduceMotion ? (
+                <motion.span className="filter-pill" layoutId="filter-pill" aria-hidden="true" />
+              ) : null}
+              <span className="filter-label">
+                All <span>{items.length}</span>
+              </span>
             </button>
             {categories.map((value) => (
               <button
                 type="button"
                 className={category === value ? "is-active" : ""}
+                aria-pressed={category === value}
                 onClick={() => {
                   setCategory(value);
                 }}
                 key={value}
               >
-                {formatCategory(value)}
-                <span>{items.filter((item) => item.category === value).length}</span>
+                {category === value && !reduceMotion ? (
+                  <motion.span className="filter-pill" layoutId="filter-pill" aria-hidden="true" />
+                ) : null}
+                <span className="filter-label">
+                  {formatCategory(value)}
+                  <span>{items.filter((item) => item.category === value).length}</span>
+                </span>
               </button>
             ))}
           </div>
@@ -770,15 +926,37 @@ function CatalogPage({
 
         {state.status === "loading" ? <LoadingCards /> : null}
         {state.status === "error" ? <ErrorPanel message={state.message} retry={retry} /> : null}
+        {state.status === "ready" ? (
+          <p className="result-count" role="status" aria-live="polite" aria-atomic="true">
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.span
+                key={filtered.length}
+                initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reduceMotion ? {} : { opacity: 0, y: -8 }}
+                transition={{ duration: 0.18, ease: EASE }}
+              >
+                {filtered.length} of {items.length}
+              </motion.span>
+            </AnimatePresence>
+          </p>
+        ) : null}
         {state.status === "ready" && filtered.length > 0 ? (
-          <div className="component-grid catalog-grid">
-            {filtered.map((item, index) => (
-              <ComponentCard key={item.slug} item={item} index={index} />
-            ))}
-          </div>
+          <motion.div className="component-grid catalog-grid" layout={reduceMotion ? false : true}>
+            <AnimatePresence mode="popLayout" initial={false}>
+              {filtered.map((item, index) => (
+                <ComponentCard key={item.slug} item={item} index={index} immediate />
+              ))}
+            </AnimatePresence>
+          </motion.div>
         ) : null}
         {state.status === "ready" && filtered.length === 0 ? (
-          <div className="state-panel empty-panel">
+          <motion.div
+            className="state-panel empty-panel"
+            initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.22, ease: EASE }}
+          >
             <span className="state-icon">
               <Search size={22} />
             </span>
@@ -796,7 +974,7 @@ function CatalogPage({
             >
               Reset filters
             </button>
-          </div>
+          </motion.div>
         ) : null}
       </div>
     </main>
@@ -815,6 +993,7 @@ function DetailPage({
   const [state, setState] = useState<ItemState>({ status: "loading" });
   const [selectedPath, setSelectedPath] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  const reduceMotion = useReducedMotion();
   const indexItem =
     indexState.status === "ready"
       ? indexState.index.items.find((candidate) => candidate.slug === slug)
@@ -846,8 +1025,15 @@ function DetailPage({
       ? (state.item.files.find((file) => file.path === selectedPath) ?? state.item.files[0])
       : undefined;
 
+  const stepFile = (direction: 1 | -1): void => {
+    if (state.status !== "ready" || selectedFile === undefined) return;
+    const current = state.item.files.findIndex((file) => file.path === selectedFile.path);
+    const next = state.item.files[(current + direction + state.item.files.length) % state.item.files.length];
+    if (next !== undefined) setSelectedPath(next.path);
+  };
+
   return (
-    <main className="page detail-page">
+    <main id="main-content" tabIndex={-1} className="page detail-page">
       <div className="shell">
         <AppLink href="/components" className="back-link">
           <ArrowLeft size={17} /> Back to components
@@ -881,7 +1067,15 @@ function DetailPage({
 
             <section className="detail-layout">
               <div className="code-panel">
-                <div className="code-tabs" role="tablist" aria-label="Component files">
+                <div
+                  className="code-tabs"
+                  role="tablist"
+                  aria-label="Component files"
+                  onKeyDown={(event) => {
+                    if (event.key === "ArrowRight") stepFile(1);
+                    else if (event.key === "ArrowLeft") stepFile(-1);
+                  }}
+                >
                   {state.item.files.map((file) => (
                     <button
                       type="button"
@@ -893,6 +1087,13 @@ function DetailPage({
                       }}
                       key={file.path}
                     >
+                      {selectedFile?.path === file.path && !reduceMotion ? (
+                        <motion.span
+                          className="code-tab-underline"
+                          layoutId="code-tab-underline"
+                          aria-hidden="true"
+                        />
+                      ) : null}
                       {file.path.split("/").at(-1)}
                     </button>
                   ))}
@@ -900,9 +1101,19 @@ function DetailPage({
                     <CopyCodeButton content={selectedFile.content} />
                   )}
                 </div>
-                <pre tabIndex={0} aria-label={selectedFile?.path ?? "Component source"}>
-                  <code>{selectedFile?.content ?? ""}</code>
-                </pre>
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.pre
+                    key={selectedFile?.path ?? "empty"}
+                    tabIndex={0}
+                    aria-label={selectedFile?.path ?? "Component source"}
+                    initial={reduceMotion ? false : { opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={reduceMotion ? {} : { opacity: 0, y: -4 }}
+                    transition={{ duration: 0.15, ease: EASE }}
+                  >
+                    <code>{selectedFile?.content ?? ""}</code>
+                  </motion.pre>
+                </AnimatePresence>
               </div>
               <aside className="detail-sidebar">
                 <div className="info-card">
@@ -977,14 +1188,31 @@ function CopyCodeButton({ content }: { content: string }): React.JSX.Element {
       setCopied(true);
       window.setTimeout(() => {
         setCopied(false);
-      }, 1800);
+      }, 1500);
     } catch {
       setCopied(false);
     }
   };
   return (
-    <button className="copy-code" type="button" onClick={() => void copy()}>
-      {copied ? <Check size={15} /> : <Copy size={15} />}
+    <button
+      className={`copy-code${copied ? " is-copied" : ""}`}
+      type="button"
+      onClick={() => void copy()}
+      aria-live="polite"
+    >
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.span
+          className="copy-icon"
+          key={copied ? "check" : "copy"}
+          initial={{ opacity: 0, scale: 0.6, rotate: -90 }}
+          animate={{ opacity: 1, scale: 1, rotate: 0 }}
+          exit={{ opacity: 0, scale: 0.6, rotate: 90 }}
+          transition={{ duration: 0.18, ease: EASE }}
+          aria-hidden="true"
+        >
+          {copied ? <Check size={15} /> : <Copy size={15} />}
+        </motion.span>
+      </AnimatePresence>
       {copied ? "Copied" : "Copy"}
     </button>
   );
@@ -1003,7 +1231,7 @@ function DetailSkeleton(): React.JSX.Element {
 
 function NotFoundPage(): React.JSX.Element {
   return (
-    <main className="page not-found-page">
+    <main id="main-content" tabIndex={-1} className="page not-found-page">
       <div className="shell not-found-inner">
         <span>404</span>
         <h1>This frame slipped away.</h1>
@@ -1017,8 +1245,15 @@ function NotFoundPage(): React.JSX.Element {
 }
 
 function Footer(): React.JSX.Element {
+  const reduceMotion = useReducedMotion();
   return (
-    <footer className="site-footer">
+    <motion.footer
+      className="site-footer"
+      initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.2 }}
+      transition={{ duration: 0.45, ease: EASE }}
+    >
       <div className="shell footer-grid">
         <div>
           <Brand />
@@ -1035,7 +1270,7 @@ function Footer(): React.JSX.Element {
         </div>
         <p className="footer-meta">Built from the live Framebits registry.</p>
       </div>
-    </footer>
+    </motion.footer>
   );
 }
 
@@ -1066,6 +1301,8 @@ export function App(): React.JSX.Element {
     };
   }, [client, reloadKey]);
 
+  const routeKey = route.kind === "component" ? `${route.kind}:${route.slug}` : route.kind;
+
   useEffect(() => {
     const title =
       route.kind === "home"
@@ -1078,32 +1315,48 @@ export function App(): React.JSX.Element {
     document.title = title;
   }, [route]);
 
+  const firstRoute = useRef(true);
+  useEffect(() => {
+    if (firstRoute.current) {
+      firstRoute.current = false;
+      return;
+    }
+    window.scrollTo(0, 0);
+    document.getElementById("main-content")?.focus({ preventScroll: true });
+  }, [routeKey]);
+
   const retry = (): void => {
     setReloadKey((value) => value + 1);
   };
-  const routeKey = route.kind === "component" ? `${route.kind}:${route.slug}` : route.kind;
 
   return (
-    <div className="app-shell">
-      <ScrollProgress />
-      <Header />
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.div
-          key={routeKey}
-          initial={reduceMotion ? false : { opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={reduceMotion ? {} : { opacity: 0, y: -8 }}
-          transition={{ duration: reduceMotion ? 0 : 0.28, ease: [0.2, 0.8, 0.2, 1] }}
-        >
-          {route.kind === "home" ? <HomePage state={state} retry={retry} /> : null}
-          {route.kind === "catalog" ? <CatalogPage state={state} retry={retry} /> : null}
-          {route.kind === "component" ? (
-            <DetailPage slug={route.slug} client={client} indexState={state} />
-          ) : null}
-          {route.kind === "not-found" ? <NotFoundPage /> : null}
-        </motion.div>
-      </AnimatePresence>
-      <Footer />
-    </div>
+    <MotionConfig transition={{ ease: EASE, duration: 0.45 }} reducedMotion="user">
+      <div className="app-shell">
+        <a className="skip-link" href="#main-content">
+          Skip to main content
+        </a>
+        <div className="grain" aria-hidden="true" />
+        <ScrollProgress />
+        <Header />
+        <AnimatePresence mode="sync" initial={false}>
+          <motion.div
+            key={routeKey}
+            id="route-view"
+            initial={reduceMotion ? false : { opacity: 0, y: 12, filter: "blur(6px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            exit={reduceMotion ? {} : { opacity: 0, y: -10, filter: "blur(4px)" }}
+            transition={{ duration: 0.32, ease: EASE }}
+          >
+            {route.kind === "home" ? <HomePage state={state} retry={retry} /> : null}
+            {route.kind === "catalog" ? <CatalogPage state={state} retry={retry} /> : null}
+            {route.kind === "component" ? (
+              <DetailPage slug={route.slug} client={client} indexState={state} />
+            ) : null}
+            {route.kind === "not-found" ? <NotFoundPage /> : null}
+          </motion.div>
+        </AnimatePresence>
+        <Footer />
+      </div>
+    </MotionConfig>
   );
 }
