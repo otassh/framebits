@@ -9,7 +9,7 @@
  * serve it over local http, init a fixture project with the packed binary and
  * run `framebits add aurora-text --dry-run` (exit 0, project untouched).
  *
- * Public package since first-publish prep (MIT, version 0.1.0): this script
+ * Public organization-scoped package (MIT, version 0.1.0): this script
  * never publishes. It only packs and installs locally. The LICENSE in the
  * tarball is the generated copy staged by `prepack` (scripts/copy-license.mjs).
  */
@@ -267,7 +267,7 @@ try {
     "utf8",
   );
   runSh("npm", ["install", "--no-audit", "--no-fund", tarball], { cwd: installDir });
-  const installedBundle = join(installDir, "node_modules", "framebits", "dist", "cli.js");
+  const installedBundle = join(installDir, "node_modules", "@framebits", "cli", "dist", "cli.js");
   if (!existsSync(installedBundle)) {
     throw new Error("installed tarball is missing dist/cli.js");
   }
@@ -306,7 +306,9 @@ try {
   }
   const helpOut = run(asCommand, [...asArgs, "--help"]);
   if (!helpOut.stdout.includes("framebits") || !helpOut.stdout.includes("add")) {
-    throw new Error(`installed framebits --help looks wrong:\n${helpOut.stdout}\n${helpOut.stderr}`);
+    throw new Error(
+      `installed framebits --help looks wrong:\n${helpOut.stdout}\n${helpOut.stderr}`,
+    );
   }
   runSh("npm", ["exec", "--yes", "--package", tarball, "--", "framebits", "--version"], {
     cwd: installDir,

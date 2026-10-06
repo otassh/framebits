@@ -133,14 +133,17 @@ function verifyCommon(projDir, label, cssFiles) {
   for (const dep of ["motion", "clsx", "tailwind-merge"]) {
     assertExists(join(projDir, "node_modules", dep), `${label} node_modules/${dep}`);
   }
-  const cssHits = cssFiles.filter((file) => readFileSync(file, "utf8").includes("@keyframes shimmer"));
+  const cssHits = cssFiles.filter((file) =>
+    readFileSync(file, "utf8").includes("@keyframes shimmer"),
+  );
   if (cssHits.length === 0) throw new Error(`${label}: built CSS has no @keyframes shimmer`);
   log(`ok: ${label} built CSS contains @keyframes shimmer (${cssHits.join(", ")})`);
   const utilHits = cssFiles.filter((file) => {
     const text = readFileSync(file, "utf8");
     return text.includes(".animate-shimmer") || text.includes("--animate-shimmer");
   });
-  if (utilHits.length === 0) throw new Error(`${label}: built CSS has no animate-shimmer utility/variable`);
+  if (utilHits.length === 0)
+    throw new Error(`${label}: built CSS has no animate-shimmer utility/variable`);
   log(`ok: ${label} built CSS contains the animation class/variable`);
 }
 
@@ -148,7 +151,13 @@ function snapshotProject(dir) {
   const entries = [];
   const walk = (current, rel) => {
     for (const entry of readdirSync(current, { withFileTypes: true })) {
-      if (entry.name === "node_modules" || entry.name === ".git" || entry.name === ".next" || entry.name === "dist") continue;
+      if (
+        entry.name === "node_modules" ||
+        entry.name === ".git" ||
+        entry.name === ".next" ||
+        entry.name === "dist"
+      )
+        continue;
       const abs = join(current, entry.name);
       const relPath = rel === "" ? entry.name : `${rel}/${entry.name}`;
       if (entry.isDirectory()) walk(abs, relPath);
@@ -174,7 +183,21 @@ async function verifyNoOp(projDir, label, registryUrl) {
   log(`verifyNoOp enter ${label}`);
   // Primary assertion: byte-exact snapshot equality (no git quirks involved).
   const before = snapshotProject(projDir);
-  await run(process.execPath, [cliJs, "add", "--yes", "aurora-text", "shimmer-button", "--cwd", projDir, "--registry", registryUrl], { cwd: projDir });
+  await run(
+    process.execPath,
+    [
+      cliJs,
+      "add",
+      "--yes",
+      "aurora-text",
+      "shimmer-button",
+      "--cwd",
+      projDir,
+      "--registry",
+      registryUrl,
+    ],
+    { cwd: projDir },
+  );
   const after = snapshotProject(projDir);
   if (JSON.stringify(before) !== JSON.stringify(after)) {
     throw new Error(`${label}: second add is not a no-op (project snapshot differs)`);
@@ -184,21 +207,73 @@ async function verifyNoOp(projDir, label, registryUrl) {
   writeFileSync(join(projDir, ".gitignore"), "node_modules/\ndist/\n.next/\n");
   await run("git", ["init"], { cwd: projDir });
   await run("git", ["add", "-A"], { cwd: projDir });
-  await run("git", ["-c", "user.email=e2e@local", "-c", "user.name=e2e", "commit", "-m", "e2e baseline"], { cwd: projDir });
-  await run(process.execPath, [cliJs, "add", "--yes", "aurora-text", "shimmer-button", "--cwd", projDir, "--registry", registryUrl], { cwd: projDir });
+  await run(
+    "git",
+    ["-c", "user.email=e2e@local", "-c", "user.name=e2e", "commit", "-m", "e2e baseline"],
+    { cwd: projDir },
+  );
+  await run(
+    process.execPath,
+    [
+      cliJs,
+      "add",
+      "--yes",
+      "aurora-text",
+      "shimmer-button",
+      "--cwd",
+      projDir,
+      "--registry",
+      registryUrl,
+    ],
+    { cwd: projDir },
+  );
   await run("git", ["diff", "--exit-code"], { cwd: projDir });
   const status = await run("git", ["status", "--porcelain"], { cwd: projDir });
-  if (status.stdout.trim() !== "") throw new Error(`${label}: second add is not a no-op:\n${status.stdout}`);
+  if (status.stdout.trim() !== "")
+    throw new Error(`${label}: second add is not a no-op:\n${status.stdout}`);
   log(`ok: ${label} second add changes nothing (git diff clean)`);
 }
 
 async function scenarioNext(workRoot, registryUrl) {
   const projDir = join(workRoot, "e2e-next");
   log(`--- scenario: Next.js app router + src + Tailwind v4 (${projDir}) ---`);
-  await run("npx", ["-y", `create-next-app@${PINS.createNextApp}`, "e2e-next", "--typescript", "--tailwind", "--eslint", "--app", "--src-dir", "--import-alias", "@/*", "--use-npm"], { cwd: workRoot, timeout: 600000 });
+  await run(
+    "npx",
+    [
+      "-y",
+      `create-next-app@${PINS.createNextApp}`,
+      "e2e-next",
+      "--typescript",
+      "--tailwind",
+      "--eslint",
+      "--app",
+      "--src-dir",
+      "--import-alias",
+      "@/*",
+      "--use-npm",
+    ],
+    { cwd: workRoot, timeout: 600000 },
+  );
   await run(process.execPath, [cliJs, "init", "--yes", "--cwd", projDir], { cwd: projDir });
-  await run(process.execPath, [cliJs, "add", "--yes", "aurora-text", "shimmer-button", "--cwd", projDir, "--registry", registryUrl], { cwd: projDir, timeout: 600000 });
-  await run(join(projDir, "node_modules", ".bin", "tsc"), ["--noEmit", "-p", "tsconfig.json"], { cwd: projDir, timeout: 300000 });
+  await run(
+    process.execPath,
+    [
+      cliJs,
+      "add",
+      "--yes",
+      "aurora-text",
+      "shimmer-button",
+      "--cwd",
+      projDir,
+      "--registry",
+      registryUrl,
+    ],
+    { cwd: projDir, timeout: 600000 },
+  );
+  await run(join(projDir, "node_modules", ".bin", "tsc"), ["--noEmit", "-p", "tsconfig.json"], {
+    cwd: projDir,
+    timeout: 300000,
+  });
   log("ok: next tsc --noEmit passes");
   await run("npm", ["run", "build"], { cwd: projDir, timeout: 600000 });
   log("ok: next build passes");
@@ -224,12 +299,35 @@ async function scenarioNext(workRoot, registryUrl) {
 async function scenarioVite(workRoot, registryUrl) {
   const projDir = join(workRoot, "e2e-vite");
   log(`--- scenario: Vite React-TS + Tailwind v3 (${projDir}) ---`);
-  await run("npm", ["create", `vite@${PINS.createVite}`, "e2e-vite", "--", "--template", "react-ts"], { cwd: workRoot, timeout: 300000 });
+  await run(
+    "npm",
+    ["create", `vite@${PINS.createVite}`, "e2e-vite", "--", "--template", "react-ts"],
+    { cwd: workRoot, timeout: 300000 },
+  );
   await run("npm", ["install"], { cwd: projDir, timeout: 600000 });
-  await run("npm", ["install", "-D", `tailwindcss@${PINS.tailwind3}`, `postcss@${PINS.postcss}`, `autoprefixer@${PINS.autoprefixer}`], { cwd: projDir, timeout: 600000 });
-  writeFileSync(join(projDir, "tailwind.config.js"), "/** @type {import('tailwindcss').Config} */\nexport default {\n  content: [\"./index.html\", \"./src/**/*.{ts,tsx}\"],\n  theme: { extend: {} },\n  plugins: [],\n};\n");
-  writeFileSync(join(projDir, "postcss.config.js"), "export default {\n  plugins: {\n    tailwindcss: {},\n    autoprefixer: {},\n  },\n};\n");
-  writeFileSync(join(projDir, "src", "index.css"), "@tailwind base;\n@tailwind components;\n@tailwind utilities;\n");
+  await run(
+    "npm",
+    [
+      "install",
+      "-D",
+      `tailwindcss@${PINS.tailwind3}`,
+      `postcss@${PINS.postcss}`,
+      `autoprefixer@${PINS.autoprefixer}`,
+    ],
+    { cwd: projDir, timeout: 600000 },
+  );
+  writeFileSync(
+    join(projDir, "tailwind.config.js"),
+    '/** @type {import(\'tailwindcss\').Config} */\nexport default {\n  content: ["./index.html", "./src/**/*.{ts,tsx}"],\n  theme: { extend: {} },\n  plugins: [],\n};\n',
+  );
+  writeFileSync(
+    join(projDir, "postcss.config.js"),
+    "export default {\n  plugins: {\n    tailwindcss: {},\n    autoprefixer: {},\n  },\n};\n",
+  );
+  writeFileSync(
+    join(projDir, "src", "index.css"),
+    "@tailwind base;\n@tailwind components;\n@tailwind utilities;\n",
+  );
   const tsconfigApp = join(projDir, "tsconfig.app.json");
   const tsconfigText = readFileSync(tsconfigApp, "utf8");
   const tsconfig = parseJsonc(tsconfigText);
@@ -239,7 +337,21 @@ async function scenarioVite(workRoot, registryUrl) {
   tsconfig.compilerOptions.paths = { "@/*": ["./src/*"] };
   writeFileSync(tsconfigApp, `${JSON.stringify(tsconfig, null, 2)}\n`);
   await run(process.execPath, [cliJs, "init", "--yes", "--cwd", projDir], { cwd: projDir });
-  await run(process.execPath, [cliJs, "add", "--yes", "aurora-text", "shimmer-button", "--cwd", projDir, "--registry", registryUrl], { cwd: projDir, timeout: 600000 });
+  await run(
+    process.execPath,
+    [
+      cliJs,
+      "add",
+      "--yes",
+      "aurora-text",
+      "shimmer-button",
+      "--cwd",
+      projDir,
+      "--registry",
+      registryUrl,
+    ],
+    { cwd: projDir, timeout: 600000 },
+  );
   await run("npm", ["run", "build"], { cwd: projDir, timeout: 600000 });
   log("ok: vite build (tsc -b + vite build) passes");
   const cssFiles = findFiles(join(projDir, "dist", "assets"), ".css", []);
@@ -251,13 +363,19 @@ async function scenarioVite(workRoot, registryUrl) {
 async function main() {
   const scenario = process.argv[2] ?? "all";
   log(`e2e-real pins: ${JSON.stringify(PINS)}`);
-  await run("pnpm", ["--filter", "framebits", "build"], { cwd: repoRoot, timeout: 300000 });
+  await run("pnpm", ["--filter", "@framebits/cli", "build"], {
+    cwd: repoRoot,
+    timeout: 300000,
+  });
   const regOut = mkdtempSync(join(tmpdir(), "e2e-reg-"));
   const regArchive = mkdtempSync(join(tmpdir(), "e2e-archive-"));
   const workRoot = mkdtempSync(join(tmpdir(), "e2e-work-"));
   log(`registry out: ${regOut}`);
   try {
-    await run("pnpm", ["build:registry", "--out", regOut, "--archive-dir", regArchive], { cwd: repoRoot, timeout: 600000 });
+    await run("pnpm", ["build:registry", "--out", regOut, "--archive-dir", regArchive], {
+      cwd: repoRoot,
+      timeout: 600000,
+    });
     const { server, url } = await startRegistryServer(regOut);
     log(`registry: ${url}`);
     try {
@@ -277,12 +395,16 @@ async function main() {
 main().then(
   () => undefined,
   (error) => {
-    process.stderr.write(`e2e-real FAILED: ${error instanceof Error ? error.message : String(error)}\n`);
+    process.stderr.write(
+      `e2e-real FAILED: ${error instanceof Error ? error.message : String(error)}\n`,
+    );
     process.exitCode = 1;
   },
 );
 
 process.on("unhandledRejection", (reason) => {
-  process.stderr.write(`e2e-real UNHANDLED REJECTION: ${reason instanceof Error ? reason.stack ?? reason.message : String(reason)}\n`);
+  process.stderr.write(
+    `e2e-real UNHANDLED REJECTION: ${reason instanceof Error ? (reason.stack ?? reason.message) : String(reason)}\n`,
+  );
   process.exitCode = 1;
 });

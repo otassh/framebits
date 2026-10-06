@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   checkReleaseVersion,
+  EXPECTED_PACKAGE_NAME,
   parseReleaseTag,
 } from "../../../../scripts/check-release-version.mjs";
 
@@ -30,28 +31,58 @@ describe("parseReleaseTag", () => {
 
 describe("checkReleaseVersion", () => {
   it("passes when the tag equals a public package version", () => {
-    expect(checkReleaseVersion({ tag: "v0.1.0", version: "0.1.0", isPrivate: false })).toEqual({
-      tag: "v0.1.0",
-      version: "0.1.0",
-    });
+    expect(
+      checkReleaseVersion({
+        tag: "v0.1.0",
+        version: "0.1.0",
+        isPrivate: false,
+        packageName: EXPECTED_PACKAGE_NAME,
+      }),
+    ).toEqual({ tag: "v0.1.0", version: "0.1.0" });
   });
 
   it("fails when the tag version differs from package.json", () => {
     expect(() =>
-      checkReleaseVersion({ tag: "v9.9.9", version: "0.1.0", isPrivate: false }),
+      checkReleaseVersion({
+        tag: "v9.9.9",
+        version: "0.1.0",
+        isPrivate: false,
+        packageName: EXPECTED_PACKAGE_NAME,
+      }),
     ).toThrow(/does not match/);
   });
 
   it("fails while the package is still private", () => {
     expect(() =>
-      checkReleaseVersion({ tag: "v0.1.0", version: "0.1.0", isPrivate: true }),
+      checkReleaseVersion({
+        tag: "v0.1.0",
+        version: "0.1.0",
+        isPrivate: true,
+        packageName: EXPECTED_PACKAGE_NAME,
+      }),
     ).toThrow(/"private": true/);
   });
 
   it("fails on a malformed tag even when the package is public", () => {
     expect(() =>
-      checkReleaseVersion({ tag: "framebits-v0.1.0", version: "0.1.0", isPrivate: false }),
+      checkReleaseVersion({
+        tag: "framebits-v0.1.0",
+        version: "0.1.0",
+        isPrivate: false,
+        packageName: EXPECTED_PACKAGE_NAME,
+      }),
     ).toThrow(/Invalid release tag/);
+  });
+
+  it("fails when the package is not in the framebits organization scope", () => {
+    expect(() =>
+      checkReleaseVersion({
+        tag: "v0.1.0",
+        version: "0.1.0",
+        isPrivate: false,
+        packageName: "framebits",
+      }),
+    ).toThrow(/does not match the required npm organization package/);
   });
 
   it("passes for the current repo state (live apps/cli/package.json)", () => {
@@ -59,15 +90,20 @@ describe("checkReleaseVersion", () => {
     // guard must accept the tag matching its version. Built from the live
     // version so this stays green on future bumps (v0.1.1, ...).
     const repoRoot = fileURLToPath(new URL("../../../..", import.meta.url));
-    const pkg: { version: unknown; private?: unknown } = JSON.parse(
+    const pkg: { name: unknown; version: unknown; private?: unknown } = JSON.parse(
       readFileSync(join(repoRoot, "apps", "cli", "package.json"), "utf8"),
-    ) as { version: unknown; private?: unknown };
+    ) as { name: unknown; version: unknown; private?: unknown };
     expect(pkg.private).not.toBe(true);
+    expect(pkg.name).toBe(EXPECTED_PACKAGE_NAME);
     expect(typeof pkg.version).toBe("string");
     const version = pkg.version as string;
-    expect(checkReleaseVersion({ tag: `v${version}`, version, isPrivate: false })).toEqual({
-      tag: `v${version}`,
-      version,
-    });
+    expect(
+      checkReleaseVersion({
+        tag: `v${version}`,
+        version,
+        isPrivate: false,
+        packageName: String(pkg.name),
+      }),
+    ).toEqual({ tag: `v${version}`, version });
   });
 });

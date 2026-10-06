@@ -4,7 +4,7 @@
 
 ## 0. Your role and how to work
 
-You are a senior staff-level TypeScript engineer building the complete **backend, registry builder, CLI, and deployment setup** for **Framebits**, a curated platform that distributes animated React components (similar in spirit to reactbits.dev), installable with our own CLI: `npx framebits add <slug>`.
+You are a senior staff-level TypeScript engineer building the complete **backend, registry builder, CLI, and deployment setup** for **Framebits**, a curated platform that distributes animated React components (similar in spirit to reactbits.dev), installable with our own CLI: `npx @framebits/cli add <slug>`.
 
 You write production-quality code. Not a prototype, not a demo.
 
@@ -39,22 +39,22 @@ Reading components (by the CLI or the website) must **never** hit the API or dat
 
 ## 2. Tech stack (approved, fixed)
 
-| Area | Choice |
-|---|---|
-| Language | TypeScript (`strict: true`, `noUncheckedIndexedAccess: true`, `exactOptionalPropertyTypes: true`), ESM only |
-| Runtime | Node.js 22 LTS |
-| Package manager / monorepo | pnpm workspaces + Turborepo |
-| API | Hono + `@hono/node-server` |
-| Validation | Zod (single source of truth in `packages/shared`) |
-| DB | PostgreSQL 16 + Drizzle ORM + drizzle-kit migrations |
-| Logging | pino |
-| Testing | Vitest (+ Testcontainers or a docker-compose test Postgres for DB tests) |
-| Lint/format | ESLint (typescript-eslint, strict) + Prettier |
-| CLI | commander, @clack/prompts, execa, picocolors, zod |
-| Builder | ts-morph or TypeScript compiler API (import analysis), fast-glob, MiniSearch (search index) |
-| Reverse proxy | Caddy 2 |
-| Containers | Docker + Docker Compose |
-| CI | GitHub Actions |
+| Area                       | Choice                                                                                                      |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Language                   | TypeScript (`strict: true`, `noUncheckedIndexedAccess: true`, `exactOptionalPropertyTypes: true`), ESM only |
+| Runtime                    | Node.js 22 LTS                                                                                              |
+| Package manager / monorepo | pnpm workspaces + Turborepo                                                                                 |
+| API                        | Hono + `@hono/node-server`                                                                                  |
+| Validation                 | Zod (single source of truth in `packages/shared`)                                                           |
+| DB                         | PostgreSQL 16 + Drizzle ORM + drizzle-kit migrations                                                        |
+| Logging                    | pino                                                                                                        |
+| Testing                    | Vitest (+ Testcontainers or a docker-compose test Postgres for DB tests)                                    |
+| Lint/format                | ESLint (typescript-eslint, strict) + Prettier                                                               |
+| CLI                        | commander, @clack/prompts, execa, picocolors, zod                                                           |
+| Builder                    | ts-morph or TypeScript compiler API (import analysis), fast-glob, MiniSearch (search index)                 |
+| Reverse proxy              | Caddy 2                                                                                                     |
+| Containers                 | Docker + Docker Compose                                                                                     |
+| CI                         | GitHub Actions                                                                                              |
 
 Anything else needs a written justification.
 
@@ -65,7 +65,7 @@ Anything else needs a written justification.
 ```
 /apps
   /api              Hono server
-  /cli              the framebits npm package
+  /cli              the @framebits/cli npm package (framebits binary)
   /web              (OUT OF SCOPE now; leave an empty placeholder with README only)
 /packages
   /shared           Zod schemas + inferred types (meta, registry, API, config)
@@ -122,6 +122,7 @@ All schemas live in `packages/shared` as Zod, with TS types inferred. Never defi
 ```
 
 Rules enforced by `MetaSchema`:
+
 - `slug`: `/^[a-z0-9]+(-[a-z0-9]+)*$/`, 2-64 chars, unique across `components` and `lib`.
 - `type`: `"component" | "lib" | "hook"`. Default `"component"`.
 - `category`: kebab-case; must exist in a central `categories` list in `packages/shared` (text-animations, backgrounds, cursors, buttons, scroll, 3d, layout, utilities; easily extendable).
@@ -145,7 +146,12 @@ Rules enforced by `MetaSchema`:
   "dependencies": { "motion": "^11.0.0" },
   "registryDependencies": ["cn"],
   "files": [
-    { "path": "components/ui/aurora-text.tsx", "content": "...", "type": "component", "variant": "ts-tw" }
+    {
+      "path": "components/ui/aurora-text.tsx",
+      "content": "...",
+      "type": "component",
+      "variant": "ts-tw"
+    }
   ],
   "tailwind": { "keyframes": {}, "animation": {} },
   "cssVars": { "light": {}, "dark": {} }
@@ -164,7 +170,19 @@ Rules enforced by `MetaSchema`:
   "schemaVersion": 1,
   "generatedAt": "ISO-8601",
   "items": [
-    { "slug": "...", "type": "...", "title": "...", "category": "...", "tags": [], "description": "...", "version": "1.0.0", "hash": "sha256:...", "performance": "light", "difficulty": "easy", "addedAt": "..." }
+    {
+      "slug": "...",
+      "type": "...",
+      "title": "...",
+      "category": "...",
+      "tags": [],
+      "description": "...",
+      "version": "1.0.0",
+      "hash": "sha256:...",
+      "performance": "light",
+      "difficulty": "easy",
+      "addedAt": "..."
+    }
   ]
 }
 ```
@@ -205,7 +223,7 @@ Entry: `pnpm build:registry [--out dist/registry] [--check]`. `--check` runs all
 Pipeline (each stage is a separate, unit-tested function; a failure prints the **file path and a human-readable reason** and exits non-zero):
 
 1. **Discover** all `meta.json` under `/registry`.
-2. **Validate** each with `MetaSchema`. Collect *all* errors, then fail (do not stop at the first).
+2. **Validate** each with `MetaSchema`. Collect _all_ errors, then fail (do not stop at the first).
 3. **Cross-validate**: duplicate slugs, missing `registryDependencies`, dependency cycles (report the cycle path), slug/folder name mismatch, missing source file `<slug>.tsx`, missing `demo.tsx` for `type: "component"`.
 4. **Type-check** all sources (`tsc --noEmit` against a fixture tsconfig with React + Tailwind types available).
 5. **Analyze imports** of each source with the TS compiler API:
@@ -246,16 +264,16 @@ Quality gates to add later (Task 11), design the pipeline so they plug in as sta
 
 Keep it minimal. Raw events are **never** stored, only daily aggregates.
 
-| Table | Columns |
-|---|---|
-| `components` | `slug` PK, `type`, `title`, `category`, `status`, `meta` jsonb, `version`, `hash`, `published_at`, `updated_at` |
-| `categories` | `slug` PK, `name`, `sort` |
-| `install_daily` | `component_slug`, `date`, `source` (`cli`\|`copy`), `count`; PK(slug, date, source) |
-| `view_daily` | `component_slug`, `date`, `count`; PK(slug, date) |
-| `likes` | `component_slug`, `visitor_hash`, `created_at`; unique(slug, visitor_hash) |
+| Table                    | Columns                                                                                                          |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| `components`             | `slug` PK, `type`, `title`, `category`, `status`, `meta` jsonb, `version`, `hash`, `published_at`, `updated_at`  |
+| `categories`             | `slug` PK, `name`, `sort`                                                                                        |
+| `install_daily`          | `component_slug`, `date`, `source` (`cli`\|`copy`), `count`; PK(slug, date, source)                              |
+| `view_daily`             | `component_slug`, `date`, `count`; PK(slug, date)                                                                |
+| `likes`                  | `component_slug`, `visitor_hash`, `created_at`; unique(slug, visitor_hash)                                       |
 | `newsletter_subscribers` | `id`, `email` unique (stored lowercase), `confirmed` bool, `confirm_token_hash`, `created_at`, `unsubscribed_at` |
-| `admin_audit_log` | `id`, `action`, `meta` jsonb, `created_at` |
-| `announcements` | `id`, `title`, `body`, `active`, `starts_at`, `ends_at` |
+| `admin_audit_log`        | `id`, `action`, `meta` jsonb, `created_at`                                                                       |
+| `announcements`          | `id`, `title`, `body`, `active`, `starts_at`, `ends_at`                                                          |
 
 - Foreign keys `ON DELETE CASCADE` where they reference `components`.
 - Index `install_daily(date)` and `view_daily(date)` for period queries.
@@ -265,6 +283,7 @@ Keep it minimal. Raw events are **never** stored, only daily aggregates.
 - Privacy: **no raw IPs, no emails in logs, no user agents stored.**
 
 `visitor_hash` rules:
+
 - For **likes**: `HMAC-SHA256(LIKE_PEPPER, ip + "|" + userAgent)`. Stable pepper (env secret) so a visitor's toggle works across days.
 - For **view/install de-duplication** (if you add any): use a **daily-rotating** salt, never persisted.
 
@@ -278,20 +297,21 @@ Structure: `src/app.ts` (builds the app, exportable for tests), `src/server.ts` 
 { "error": { "code": "VALIDATION_ERROR", "message": "...", "details": [] } }
 ```
 
-| Endpoint | Behavior |
-|---|---|
-| `GET /api/health` | `{ status, version, uptime, db: "ok"\|"down" }`. Does a cheap `SELECT 1`. 503 if DB down. |
-| `GET /api/search?q=&category=&limit=` | Postgres full-text fallback (`tsvector` over title/description/tags via generated column or query-time `to_tsvector`). Primary search is client-side with the static index. `q` 1-100 chars, `limit` 1-50 (default 20). |
-| `GET /api/stats/popular?period=day\|week\|month\|all&limit=` | Aggregates installs (+ views as tiebreaker) per slug. Response cached in memory 60 s. |
-| `POST /api/events` | Body: `{ events: [{ type: "install"\|"view", slug, source?: "cli"\|"copy" }] }`, max 50 events per request, body size limit 8 KB. Slug must exist (checked against an in-memory slug set refreshed every 5 min; unknown slugs are silently dropped, not errors). Events are accumulated in an in-memory `Map` and **flushed to Postgres every 10 s** and on `SIGTERM`/`SIGINT` (graceful shutdown must flush). Hard cap on buffer size (e.g. 10k keys); if exceeded, flush early. Always respond `202` quickly. |
-| `POST /api/components/:slug/like` | Anonymous toggle. Returns `{ liked, count }`. 404 for unknown slug. |
-| `GET /api/components/:slug/likes` | `{ count }` (cached 30 s). |
-| `POST /api/newsletter` | Body `{ email }`. Normalize, validate, store with double opt-in token (hash the token). Always respond with the same message whether or not the email already exists (no enumeration). Sending real email is out of scope: define an `EmailSender` interface with a console/no-op implementation. |
-| `GET /api/newsletter/confirm?token=` | Confirms subscription. |
-| `GET /api/changelog.rss` | RSS 2.0 of newly added/updated components (last 50), valid XML, proper escaping. |
-| `/api/admin/*` | Bearer token auth (see below): `GET /admin/stats` (totals, top components, last 30 days), `POST /admin/announcements`, `PATCH /admin/announcements/:id`, `POST /admin/reindex` (re-runs db sync from the current release), `GET /admin/audit`. Every mutating call writes an audit-log row. |
+| Endpoint                                                     | Behavior                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/health`                                            | `{ status, version, uptime, db: "ok"\|"down" }`. Does a cheap `SELECT 1`. 503 if DB down.                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `GET /api/search?q=&category=&limit=`                        | Postgres full-text fallback (`tsvector` over title/description/tags via generated column or query-time `to_tsvector`). Primary search is client-side with the static index. `q` 1-100 chars, `limit` 1-50 (default 20).                                                                                                                                                                                                                                                                                         |
+| `GET /api/stats/popular?period=day\|week\|month\|all&limit=` | Aggregates installs (+ views as tiebreaker) per slug. Response cached in memory 60 s.                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `POST /api/events`                                           | Body: `{ events: [{ type: "install"\|"view", slug, source?: "cli"\|"copy" }] }`, max 50 events per request, body size limit 8 KB. Slug must exist (checked against an in-memory slug set refreshed every 5 min; unknown slugs are silently dropped, not errors). Events are accumulated in an in-memory `Map` and **flushed to Postgres every 10 s** and on `SIGTERM`/`SIGINT` (graceful shutdown must flush). Hard cap on buffer size (e.g. 10k keys); if exceeded, flush early. Always respond `202` quickly. |
+| `POST /api/components/:slug/like`                            | Anonymous toggle. Returns `{ liked, count }`. 404 for unknown slug.                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `GET /api/components/:slug/likes`                            | `{ count }` (cached 30 s).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `POST /api/newsletter`                                       | Body `{ email }`. Normalize, validate, store with double opt-in token (hash the token). Always respond with the same message whether or not the email already exists (no enumeration). Sending real email is out of scope: define an `EmailSender` interface with a console/no-op implementation.                                                                                                                                                                                                               |
+| `GET /api/newsletter/confirm?token=`                         | Confirms subscription.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `GET /api/changelog.rss`                                     | RSS 2.0 of newly added/updated components (last 50), valid XML, proper escaping.                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `/api/admin/*`                                               | Bearer token auth (see below): `GET /admin/stats` (totals, top components, last 30 days), `POST /admin/announcements`, `PATCH /admin/announcements/:id`, `POST /admin/reindex` (re-runs db sync from the current release), `GET /admin/audit`. Every mutating call writes an audit-log row.                                                                                                                                                                                                                     |
 
 Cross-cutting requirements:
+
 - **Rate limiting**: in-memory sliding-window per client IP, per route group (events: 60/min, like: 30/min, newsletter: 5/min, default: 120/min). Return `429` with `Retry-After`. Client IP must come from `X-Forwarded-For` **only when the request comes from the trusted proxy** (configurable `TRUSTED_PROXY_COUNT`); otherwise use the socket address. Periodically evict stale entries (no memory leak).
 - **CORS**: `/api/events` allows any origin (CLI and sites); everything else only `WEB_ORIGIN`. Never `*` with credentials.
 - **Security headers** (`hono/secure-headers`), body size limits, request timeout, request-id on every log line.
@@ -303,18 +323,20 @@ Cross-cutting requirements:
 
 ---
 
-## 9. CLI (`apps/cli`, package `framebits`)
+## 9. CLI (`apps/cli`, package `@framebits/cli`, binary `framebits`)
 
 Binary: `framebits`. Built to a single ESM bundle with `tsup`, `engines.node >= 20`, shebang, `bin` field set, small install size.
 
 ### Commands
 
 **`init`** (interactive with @clack/prompts; flags `--yes`, `--cwd`):
+
 - Detect: package manager (lockfile: pnpm/yarn/npm/bun), framework (Next app/pages router, Vite, Remix, other), TypeScript (tsconfig.json), Tailwind version (v3 via config file / v4 via `@import "tailwindcss"` in CSS), `src/` directory, existing import alias from tsconfig `paths`.
 - Write `framebits.json`. Ensure the `cn` util dependency chain is satisfiable (install `clsx` + `tailwind-merge` if `cn` is requested).
 - Idempotent: running twice must not corrupt anything.
 
 **`add <slug...>`** (flags `--overwrite`, `--dry-run`, `--yes`, `--no-install`):
+
 1. Load config (error with guidance if `init` not run).
 2. Fetch `index.json` (or the individual item) from the registry; resolve `registryDependencies` **recursively**, de-duplicated, topologically ordered, cycle-safe.
 3. For each item: fetch `<slug>.json`, validate with the shared Zod schema, **verify `hash`** by recomputing it with the same canonicalization function (import it from `packages/shared`/`builder`-shared code, never reimplement). Mismatch -> abort, write nothing.
@@ -330,6 +352,7 @@ Binary: `framebits`. Built to a single ESM bundle with `tsup`, `engines.node >= 
 **`list [--category] [--json]`**, **`search <query> [--json]`** (uses `search-index.json` locally with MiniSearch, cached on disk for 1 h in the OS cache dir with ETag/If-None-Match support), **`diff <slug>`** (unified diff between local file and registry), **`update [slug...]`** (shows diff first, requires confirmation, respects `--yes`).
 
 ### Rules
+
 - `--dry-run` never touches disk or network writes (telemetry included).
 - Registry URL from, in order: `--registry` flag, `FRAMEBITS_REGISTRY_URL` env, config file, default `https://framebits.dev/r`. Must be `https://` (allow `http://localhost` and `127.0.0.1` for development).
 - Network: timeouts (10 s), 2 retries with backoff on 5xx/network errors, clear messages (offline, 404 "component not found, did you mean X?" using fuzzy match, 429).
@@ -344,17 +367,21 @@ Binary: `framebits`. Built to a single ESM bundle with `tsup`, `engines.node >= 
 ## 10. Deployment (VPS, Docker Compose, Caddy)
 
 ### Services
+
 `caddy`, `api`, `postgres` (and `web` later). Postgres is not exposed publicly. All containers: non-root user where possible, `restart: unless-stopped`, healthchecks, resource limits, pinned image versions, named volumes for Postgres and Caddy data.
 
 ### Directory layout on the VPS
+
 ```
 /var/www/releases/<git-sha>/registry/   (builder output)
 /var/www/registry -> /var/www/releases/<current-sha>/registry   (symlink)
 /var/backups/framebits/                                   (pg_dump files)
 ```
+
 Caddy mounts `/var/www` read-only.
 
 ### Caddyfile requirements
+
 - Automatic HTTPS for `framebits.dev`.
 - `encode zstd gzip`.
 - `/r/*`, `/search-index.json`, `/schema/*`, `/build-manifest.json` -> `file_server` from `/var/www/registry`.
@@ -367,6 +394,7 @@ Caddy mounts `/var/www` read-only.
 - Security headers (HSTS, `X-Content-Type-Options`, `Referrer-Policy`), access log in JSON.
 
 ### `deploy.sh` (idempotent, `set -euo pipefail`)
+
 1. Fetch the target commit.
 2. Install, run `pnpm build:registry --out /var/www/releases/<sha>/registry` (build in a temp dir, then move).
 3. Build and (re)start `api` with `docker compose up -d --build api`.
@@ -380,11 +408,13 @@ Caddy mounts `/var/www` read-only.
 `backup.sh`: nightly `pg_dump` (compressed), 7-day retention, with a documented restore procedure and optional `rclone`/`scp` offsite copy hook.
 
 ### GitHub Actions
+
 - `ci.yml` (PRs and main): install (frozen lockfile, cache), lint, typecheck, test, `pnpm build:registry --check`, build all packages.
 - `deploy.yml` (main only, manual approval optional): SSH to VPS using a deploy key stored in secrets, run `deploy.sh`.
 - Document required secrets in README.
 
 ### Hardening checklist (document in `deploy/README.md`)
+
 UFW (22/80/443 only), SSH key-only login, fail2ban, unattended security upgrades, Docker log rotation, Postgres bound to the internal network only.
 
 ---
@@ -431,41 +461,41 @@ User accounts/OAuth, user uploads, moderation, payments, comments, Redis/BullMQ,
 
 **Task 1. Monorepo skeleton**
 pnpm workspace, Turborepo pipeline (`build`, `typecheck`, `lint`, `test`), shared tsconfig/ESLint/Prettier configs, Vitest setup, empty package stubs per Section 3, `AGENTS.md` (Section 12), `.env.example`, `.gitignore`, `.editorconfig`, `.nvmrc`, GitHub Actions `ci.yml`.
-*Acceptance:* fresh clone -> `pnpm i && pnpm build && pnpm lint && pnpm typecheck && pnpm test` is green; CI workflow is valid.
+_Acceptance:_ fresh clone -> `pnpm i && pnpm build && pnpm lint && pnpm typecheck && pnpm test` is green; CI workflow is valid.
 
 **Task 2. `packages/shared`**
 `MetaSchema`, `RegistryItemSchema`, `RegistryIndexSchema`, `CliConfigSchema`, API request/response schemas, categories list, dependency allowlist, canonical JSON + hashing utility (used by both builder and CLI), JSON Schema export script.
-*Acceptance:* tests cover valid and invalid samples for every schema (including path-traversal paths, bad slugs, unknown deps, unknown keys); hashing is key-order-independent and stable; JSON Schemas are generated.
+_Acceptance:_ tests cover valid and invalid samples for every schema (including path-traversal paths, bad slugs, unknown deps, unknown keys); hashing is key-order-independent and stable; JSON Schemas are generated.
 
 **Task 3. Component generator**
 `pnpm new-component` per Section 6.
-*Acceptance:* generating a component creates a valid folder; refuses overwrite; result passes builder validation (once Task 4 exists, add that assertion as a test).
+_Acceptance:_ generating a component creates a valid folder; refuses overwrite; result passes builder validation (once Task 4 exists, add that assertion as a test).
 
 **Task 4. `packages/builder`** (stages 1-11 of Section 5, except future gates)
 Add 3 sample components (one with a `registryDependency` on `cn`, one with a Tailwind keyframe, one `lib`).
-*Acceptance:* correct `r/*.json`, `index.json`, `search-index.json`, `build-manifest.json`; two consecutive builds produce a byte-identical tree; cycle/missing-dependency/undeclared-import/duplicate-slug cases produce clear errors with file paths; version bump logic verified through `registry.lock.json` tests; `--check` writes nothing.
+_Acceptance:_ correct `r/*.json`, `index.json`, `search-index.json`, `build-manifest.json`; two consecutive builds produce a byte-identical tree; cycle/missing-dependency/undeclared-import/duplicate-slug cases produce clear errors with file paths; version bump logic verified through `registry.lock.json` tests; `--check` writes nothing.
 
 **Task 5. CLI: `init` and `add`**
 Per Section 9, including hash verification, path safety, alias rewriting, rollback on failure, Tailwind patching (v3 via AST, v4 via CSS), dependency install, `--dry-run`.
-*Acceptance:* e2e test: local static server + temp fixture project; `init` then `add aurora-text` writes the correct files, resolves `cn` recursively, installs (mocked package manager call is asserted), updates config; tampered JSON -> exit code 4 and no files written; path traversal payload rejected; `--dry-run` changes nothing.
+_Acceptance:_ e2e test: local static server + temp fixture project; `init` then `add aurora-text` writes the correct files, resolves `cn` recursively, installs (mocked package manager call is asserted), updates config; tampered JSON -> exit code 4 and no files written; path traversal payload rejected; `--dry-run` changes nothing.
 
 **Task 6. Docker, Caddy, deploy scripts**
 Per Section 10.
-*Acceptance:* `docker compose up` locally serves `http://localhost/r/index.json` with correct headers (verify `Cache-Control` for both mutable and `@version` files via a test script or curl-based check); atomic symlink switch works; `rollback.sh` restores the previous release; documented VPS setup steps are complete and ordered.
+_Acceptance:_ `docker compose up` locally serves `http://localhost/r/index.json` with correct headers (verify `Cache-Control` for both mutable and `@version` files via a test script or curl-based check); atomic symlink switch works; `rollback.sh` restores the previous release; documented VPS setup steps are complete and ordered.
 
 ### Phase 2: Dynamic features
 
 **Task 7. `packages/db`**: schema, migrations, client factory, `db:sync`, seed.
-*Acceptance:* migrations apply to an empty DB; sync is idempotent; removed components become `deprecated` and keep their stats; upsert aggregation tested.
+_Acceptance:_ migrations apply to an empty DB; sync is idempotent; removed components become `deprecated` and keep their stats; upsert aggregation tested.
 
 **Task 8. `apps/api`**: env parsing, health, events buffer, popular stats, like, newsletter (+confirm), RSS, rate limiting, CORS, security headers, graceful shutdown.
-*Acceptance:* all routes have tests; events flush on interval and on shutdown (test with fake timers); unknown slugs dropped; 429 behavior and `Retry-After` verified; RSS validates as XML; no stack traces leak; spoofed `X-Forwarded-For` ignored when proxy not trusted.
+_Acceptance:_ all routes have tests; events flush on interval and on shutdown (test with fake timers); unknown slugs dropped; 429 behavior and `Retry-After` verified; RSS validates as XML; no stack traces leak; spoofed `X-Forwarded-For` ignored when proxy not trusted.
 
 **Task 9. CLI: telemetry + `list`, `search`, `diff`, `update`**
-*Acceptance:* telemetry honors all opt-outs and never blocks or fails a command; `search` works offline from cached index; `update` shows diff and respects confirmation; tests for each command.
+_Acceptance:_ telemetry honors all opt-outs and never blocks or fails a command; `search` works offline from cached index; `update` shows diff and respects confirmation; tests for each command.
 
 **Task 10. Admin endpoints**: constant-time token auth, stats, announcements CRUD, reindex, audit log.
-*Acceptance:* unauthorized -> 401; brute-force limiting tested; every mutation writes an audit row.
+_Acceptance:_ unauthorized -> 401; brute-force limiting tested; every mutation writes an audit row.
 
 ### Phase 3: Quality
 
@@ -480,7 +510,7 @@ Each of Tasks 11-14 must have its own acceptance criteria written by you at the 
 
 ## 15. Definition of done (whole project)
 
-- A new component goes from `pnpm new-component` -> PR -> CI (`--check`) -> merge -> automatic deploy -> available via `npx framebits add <slug>` with no manual steps.
+- A new component goes from `pnpm new-component` -> PR -> CI (`--check`) -> merge -> automatic deploy -> available via `npx @framebits/cli add <slug>` with no manual steps.
 - `https://framebits.dev/r/index.json` is served statically and fast, even if the API and database are down.
 - The CLI refuses tampered or malicious registry data.
 - All checks green; docs complete; no open `TODO(question)` without being listed in the final report.
@@ -491,7 +521,7 @@ Each of Tasks 11-14 must have its own acceptance criteria written by you at the 
 
 ## 16. Decisions recorded so far (appendix, keep updated)
 
-1. Brand values: PROJECT_NAME = "Framebits", CLI = `framebits`, domain = `framebits.dev` (**placeholder, not confirmed**). The domain and default registry URL are defined in exactly one place: `packages/shared/src/site.ts` (plus env override). `PROJECT_NAME` must live there too.
+1. Brand values: PROJECT_NAME = "Framebits", CLI binary = `framebits`, npm package = `@framebits/cli`, domain = `framebits.dev` (**placeholder, not confirmed**). The domain and default registry URL are defined in exactly one place: `packages/shared/src/site.ts` (plus env override). `PROJECT_NAME` must live there too.
 2. `apps/cli` intentionally declares `engines.node >= 20` (end users may run Node 20), while the repo itself requires Node >= 22 for development. This is NOT a bug.
 3. Every package currently uses `tsc --noEmit` as `build`. The CLI must get a real bundled build (tsup -> `dist/cli.js`) in Task 5; until then `bin` is a known gap.
 4. Root scripts `build:registry`, `db:sync`, `db:migrate`, `new-component` intentionally point to scripts that will be created in Tasks 3, 4, and 7.
@@ -590,51 +620,55 @@ Each of Tasks 11-14 must have its own acceptance criteria written by you at the 
    C14. Temp-file + rename, dirs as needed, journal + reverse rollback (config
    last, rolled back too); realpath containment + symlink refusal pre-write.
    C15. `init` + `add <slug...>` (+ `--overwrite/--dry-run/--yes/--cwd/
-   --registry/--debug`, global `--version/--help` with examples); `add`
+--registry/--debug`, global `--version/--help` with examples); `add`
    before `init` → exit 2; one fetch per item.
 10. Task 5b binding decisions (E1-E12; same precedence as C1-C15; E1
-   explicitly REPLACES MASTER_PROMPT Section 9 step 8 — no AST patching of
-   tailwind config, ever):
-   E1. Styles without AST: blocks in the CSS entry between
-   `/* framebits:begin <slug> */` markers; v3 = top-level @keyframes +
-   `@layer utilities` animation classes + `@layer base` vars; v4 = `@theme`
-   with `--animate-*` + nested keyframes (per v4 docs) + plain var blocks;
-   verbatim property names (sample is kebab-case); deterministic (sorted,
-   2-space, LF). Safety (exit 4): kebab names, from/to/0-100% selectors,
-   constrained properties, value denylist + 200-char/50-declaration caps.
-   E2. Append with one blank line; file EOL reused, rest byte-identical;
-   identical → unchanged, different → conflict (C12, overwrite replaces only
-   between markers); malformed markers → exit 1 + manual snippet; collisions
-   (outside markers or different definitions, comments stripped) → skip +
-   warn + snippet; `patch-css` in dry-run with the exact block.
-   E3. No Tailwind / missing CSS / `--no-styles` → no patch, labeled manual
-   snippet (v3+v4 forms as appropriate), exit 0; v3 `content` globs
-   documented, never parsed.
-   E4. `cross-spawn` (+ types) for Windows .cmd shims without shell:true
-   (argv-only, never -D, `name@range`); allowlist + bounded-range checked
-   immediately before running (exit 4); declared+satisfied (installed or
-   subset) → skip, declared-unsatisfied → warn + manual, undeclared →
-   install (first range wins, non-intersection warns); `--no-install`
-   prints; interactive asks (default yes); `--yes` runs; non-interactive
-   without `--yes` prints manual + warns (exit 0); `--dry-run` prints;
-   cwd = project root, stdio inherit only interactive/debug else tail on
-   failure, 10-minute timeout.
-   E5. Journal order files → CSS → install → config (last); CSS/package.json/
-   lockfile snapshots; installer failure restores snapshots, rolls back
-   files+CSS, leaves config untouched, exit 1 with tail; rollback failures
-   reported loudly; installer injected (fake in tests).
-   E6. Codes per C4; installer failure = 1; invalid styles = 4.
-   E7. Success summary: files created/unchanged, CSS blocks written,
-   packages installed, warnings/manuals.
-   E8. cross-spawn stays an external runtime dependency (single exception to
-   bundling): its dynamic require("child_process") crashes the ESM bundle at
-   startup (verified); everything else bundled; budget < 1.3 MB.
-   E9. The 5a "Manual steps (automated in a later release)" output is removed;
-   manual commands/snippets print only for skipped or impossible steps.
-   E10. Default suite stays hermetic (node:http registry + fake installer, no
-   external network); real network projects only in the e2e-real workflow.
-   E11. e2e-real runs weekly + manually, never as a required check (keeps main
-   CI fast and hermetic); failures there are reported honestly with run URLs.
-   E12. Shared owns npm range algebra for install decisions
-   (`isSemverSubset`, `doSemverRangesIntersect` on top of semver); schemas
-   still live only in `packages/shared`.
+    explicitly REPLACES MASTER_PROMPT Section 9 step 8 — no AST patching of
+    tailwind config, ever):
+    E1. Styles without AST: blocks in the CSS entry between
+    `/* framebits:begin <slug> */` markers; v3 = top-level @keyframes +
+    `@layer utilities` animation classes + `@layer base` vars; v4 = `@theme`
+    with `--animate-*` + nested keyframes (per v4 docs) + plain var blocks;
+    verbatim property names (sample is kebab-case); deterministic (sorted,
+    2-space, LF). Safety (exit 4): kebab names, from/to/0-100% selectors,
+    constrained properties, value denylist + 200-char/50-declaration caps.
+    E2. Append with one blank line; file EOL reused, rest byte-identical;
+    identical → unchanged, different → conflict (C12, overwrite replaces only
+    between markers); malformed markers → exit 1 + manual snippet; collisions
+    (outside markers or different definitions, comments stripped) → skip +
+    warn + snippet; `patch-css` in dry-run with the exact block.
+    E3. No Tailwind / missing CSS / `--no-styles` → no patch, labeled manual
+    snippet (v3+v4 forms as appropriate), exit 0; v3 `content` globs
+    documented, never parsed.
+    E4. `cross-spawn` (+ types) for Windows .cmd shims without shell:true
+    (argv-only, never -D, `name@range`); allowlist + bounded-range checked
+    immediately before running (exit 4); declared+satisfied (installed or
+    subset) → skip, declared-unsatisfied → warn + manual, undeclared →
+    install (first range wins, non-intersection warns); `--no-install`
+    prints; interactive asks (default yes); `--yes` runs; non-interactive
+    without `--yes` prints manual + warns (exit 0); `--dry-run` prints;
+    cwd = project root, stdio inherit only interactive/debug else tail on
+    failure, 10-minute timeout.
+    E5. Journal order files → CSS → install → config (last); CSS/package.json/
+    lockfile snapshots; installer failure restores snapshots, rolls back
+    files+CSS, leaves config untouched, exit 1 with tail; rollback failures
+    reported loudly; installer injected (fake in tests).
+    E6. Codes per C4; installer failure = 1; invalid styles = 4.
+    E7. Success summary: files created/unchanged, CSS blocks written,
+    packages installed, warnings/manuals.
+    E8. cross-spawn stays an external runtime dependency (single exception to
+    bundling): its dynamic require("child_process") crashes the ESM bundle at
+    startup (verified); everything else bundled; budget < 1.3 MB.
+    E9. The 5a "Manual steps (automated in a later release)" output is removed;
+    manual commands/snippets print only for skipped or impossible steps.
+    E10. Default suite stays hermetic (node:http registry + fake installer, no
+    external network); real network projects only in the e2e-real workflow.
+    E11. e2e-real runs weekly + manually, never as a required check (keeps main
+    CI fast and hermetic); failures there are reported honestly with run URLs.
+    E12. Shared owns npm range algebra for install decisions
+    (`isSemverSubset`, `doSemverRangesIntersect` on top of semver); schemas
+    still live only in `packages/shared`.
+11. npm publishing is organization-scoped: the CLI package is `@framebits/cli`
+    under the `framebits` npm organization. The executable remains `framebits`;
+    one-shot usage is `npx @framebits/cli ...`. The accidental unscoped
+    `framebits` package is not a supported distribution channel.

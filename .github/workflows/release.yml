@@ -1,6 +1,6 @@
 name: release
 
-# SECRET-FREE npm Trusted Publishing via OIDC for the `framebits` package
+# SECRET-FREE npm Trusted Publishing via OIDC for the `@framebits/cli` package
 # (apps/cli). There is deliberately NO NODE_AUTH_TOKEN / NPM_TOKEN anywhere in
 # this file: authentication uses the ambient OIDC token (`id-token: write`),
 # exchanged by the npm CLI (>= 11.5.1) on Node >= 22.14 (both enforced below).
@@ -83,7 +83,7 @@ jobs:
       - name: CLI pack smoke (clean-room install + init/add --dry-run)
         run: node apps/cli/scripts/pack-smoke.mjs
       - name: Pack the publishable tarball
-        run: pnpm --filter framebits pack
+        run: pnpm --filter @framebits/cli pack
       - name: Publish to npm via OIDC trusted publishing (no tokens)
         # NOTE: never add NODE_AUTH_TOKEN / NPM_TOKEN env here (or anywhere in
         # this file). pnpm 10 delegates to the npm CLI, but native OIDC had
@@ -91,7 +91,7 @@ jobs:
         # directly. `dry_run` still exercises everything up to and including
         # `npm publish --dry-run`.
         run: |
-          TARBALL="$(ls apps/cli/dist-pack/framebits-*.tgz | head -n 1)"
+          TARBALL="$(ls apps/cli/dist-pack/framebits-cli-*.tgz | head -n 1)"
           echo "Publishing tarball: ${TARBALL}"
           PROVENANCE="--provenance"
           if [ "${{ github.event.repository.private }}" = "true" ]; then

@@ -8,6 +8,7 @@ export interface ReleaseVersionCheckInput {
   tag: string;
   version: string;
   isPrivate: boolean;
+  packageName: string;
 }
 
 export interface ReleaseVersionCheckResult {
@@ -16,4 +17,5 @@ export interface ReleaseVersionCheckResult {
 }
 
 export function parseReleaseTag(tag: string): string;
+export const EXPECTED_PACKAGE_NAME: "@framebits/cli";
 export function checkReleaseVersion(input: ReleaseVersionCheckInput): ReleaseVersionCheckResult;

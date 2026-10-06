@@ -1,4 +1,4 @@
-# RELEASING the `framebits` CLI — OWNER ONLY
+# RELEASING the `@framebits/cli` CLI — OWNER ONLY
 
 > **Owner-only.** All steps below are performed by the repo owner.
 > Routine releases are published by the `release` GitHub Actions workflow
@@ -6,8 +6,9 @@
 > no npm tokens anywhere. Only the one-time bootstrap publish (§1) is done
 > by hand from the owner machine. Never publish from a feature branch, never
 > from a fork. Since first-publish prep, `apps/cli/package.json` is **public**
-> at version **`0.1.0`** (MIT, `publishConfig.access: "public"`) — but the
-> package is **NOT on npm yet**. Nothing is published until the owner runs §1.
+> at version **`0.1.0`** (MIT, `publishConfig.access: "public"`) and is named
+> **`@framebits/cli`**, so npm publishes it under the `framebits` organization.
+> Never change it back to the accidental unscoped `framebits` package name.
 >
 > **Tag discipline:** `0.1.0` is published exactly once, by hand (§1). The
 > `v0.1.0` tag must NEVER be pushed — npm refuses to publish the same version
@@ -31,7 +32,7 @@ form — do not use it.
   the root `LICENSE` into `apps/cli/LICENSE`, gitignored so the copy cannot
   drift; npm auto-includes `LICENSE` in the tarball despite `files: ["dist"]`).
 - TODO(question): confirm the copyright holder name (`Copyright (c) 2026
-  otassh` in `LICENSE` — the login `otassh` is used because `gh api user`
+otassh` in `LICENSE` — the login `otassh` is used because `gh api user`
   returned only the single-letter placeholder name "O", so "O" must not be
   used) and the `"author": "otassh"` value in `apps/cli/package.json`
   (plain name, no email — no public email exists in the repo).
@@ -66,7 +67,7 @@ created once by hand before the OIDC flow can take over. After §1, the owner
 never publishes from a laptop again — all later releases go through §5.
 
 **Why 0.1.0 by hand, 0.1.1 via CI:** the hand publish below creates
-`framebits@0.1.0` on the registry, and npm refuses to publish the same
+`@framebits/cli@0.1.0` on the registry, and npm refuses to publish the same
 version twice. Pushing tag `v0.1.0` afterwards would start a `release` run
 that fails at `npm publish` — so NEVER push `v0.1.0`, and let the first
 CI-driven release be `0.1.1` (§5).
@@ -76,10 +77,10 @@ CI-driven release be `0.1.1` (§5).
 ```sh
 git status --porcelain               # must print nothing
 pnpm install --frozen-lockfile
-pnpm --filter framebits build
-pnpm --filter framebits lint
-pnpm --filter framebits typecheck
-pnpm --filter framebits test
+pnpm --filter @framebits/cli build
+pnpm --filter @framebits/cli lint
+pnpm --filter @framebits/cli typecheck
+pnpm --filter @framebits/cli test
 node apps/cli/scripts/pack-smoke.mjs
 node scripts/check-release-version.mjs v0.1.0   # must print OK
 ```
@@ -109,13 +110,12 @@ its real local pack + clean-room install; only the final upload is skipped.)
 
 1. Choose/verify the name (do not rename an existing package):
    ```sh
-   npm view framebits version dist-tags
+   npm view @framebits/cli version dist-tags
    ```
    - If the name is free, `npm view` answers 404 (`E404`) — proceed.
-   - If the name is **taken, STOP**. Do not rename, do not squat a variant.
-     Propose alternatives to the owner (e.g. `@otassh/framebits`,
-     `framebits-cli`) and wait for a decision. Name claim is an owner
-     decision, not part of this guide.
+   - If the name is **taken by another publisher, STOP**. Do not rename or
+     publish a variant. Confirm `npm org ls framebits` shows the logged-in
+     user as an organization owner before continuing.
 2. Log in as the owner (2FA on): `npm login`, then verify with `npm whoami`.
 3. Verify `apps/cli/package.json` (prepared by first-publish prep, already
    committed): `"version": "0.1.0"`, no `"private"` field,
@@ -137,8 +137,8 @@ its real local pack + clean-room install; only the final upload is skipped.)
    workflow in §5.)
 7. Verify (clean temp dir, NOT the repo):
    ```sh
-   npm view framebits version dist-tags
-   npx -y framebits@0.1.0 --version
+   npm view @framebits/cli version dist-tags
+   npx -y @framebits/cli@0.1.0 --version
    ```
    If `npm view` is unreachable (network blocked), report NOT VERIFIED.
 8. Do NOT tag, do NOT push any tag:
@@ -165,7 +165,7 @@ its real local pack + clean-room install; only the final upload is skipped.)
 
 ## 2. Connect npm to GitHub — trusted publisher (owner, npmjs.com)
 
-On npmjs.com, open the `framebits` package → **Settings → Trusted
+On npmjs.com, open the `@framebits/cli` package → **Settings → Trusted
 Publisher → Manage Trusted Publishers → GitHub Actions**, and enter exactly:
 
 | Field                | Value         |
@@ -236,18 +236,18 @@ Still on the package Settings page:
 3. **Approve the pending `npm-publish` environment** in the Actions run
    (required reviewers from §4). The run publishes with provenance and
    creates the GitHub Release from the tag.
-4. Verify as in §1 step 9 (`npm view framebits version dist-tags` and
-   `npx -y framebits@X.Y.Z --version` from a clean temp dir).
+4. Verify as in §1 step 7 (`npm view @framebits/cli version dist-tags` and
+   `npx -y @framebits/cli@X.Y.Z --version` from a clean temp dir).
 
 ## 6. Rollback — deprecate first, unpublish almost never
 
 - **Deprecate (preferred, always available):**
   ```sh
-  npm deprecate framebits@<ver> "<reason>"
+  npm deprecate @framebits/cli@<ver> "<reason>"
   ```
   Keeps installs working while steering users away. The tag stays; the fix
   goes out as a new version.
-- **Unpublish (last resort):** `npm unpublish framebits@<ver>` is possible
+- **Unpublish (last resort):** `npm unpublish @framebits/cli@<ver>` is possible
   only within **72 hours** of publishing (and only while the version has
   seen very few downloads) — after that npm refuses and support must
   intervene. It breaks anyone depending on that version, so prefer
@@ -274,7 +274,7 @@ below applies. Re-run with `dry_run` from the same tag to reproduce safely
 | Provenance / sigstore verification fails         | `repository.url` in `apps/cli/package.json` does not match the GitHub repo                                                                                | Keep `repository.url` as `git+https://github.com/otassh/framebits.git` (+ `directory: apps/cli`); never point it at a fork or placeholder                |
 | Version guard fails: tag/version mismatch        | Tag is not exactly `vX.Y.Z` or differs from `apps/cli` `version`                                                                                          | Set the package version to the tag version (or retag); manual dry-runs must be dispatched from a `v*.*.*` tag, not a branch                              |
 | Version guard fails: `private: true`             | Package still marked private                                                                                                                              | Remove `"private"` per §1 — only at launch, as an owner decision                                                                                         |
-| `npm publish` refuses: version already published | Pushed tag `v0.1.0` after the hand publish, or reused any published version                                                                               | NEVER push `v0.1.0`; never reuse a version number — cut a new version per §5 (§6 for the fallout)                                                         |
+| `npm publish` refuses: version already published | Pushed tag `v0.1.0` after the hand publish, or reused any published version                                                                               | NEVER push `v0.1.0`; never reuse a version number — cut a new version per §5 (§6 for the fallout)                                                        |
 | `gh release create` fails / release missing      | Tag ref mismatch or `contents: write` missing                                                                                                             | Push the exact tag first; keep `permissions: contents: write` on the publish job                                                                         |
 
 ## After the first release
@@ -282,6 +282,6 @@ below applies. Re-run with `dry_run` from the same tag to reproduce safely
 - Subsequent releases repeat §5 with the next version (semver; CLI-only
   changes bump patch/minor, never rewrite a published version).
 - Never unpublish (possible only within 72 h and breaks installs); deprecate
-  instead: `npm deprecate framebits@<ver> "<reason>"`.
+  instead: `npm deprecate @framebits/cli@<ver> "<reason>"`.
 - Re-lock the repo state if a release is ever yanked: the tag stays, the fix
   goes out as a new version.

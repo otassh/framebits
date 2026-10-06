@@ -10,7 +10,7 @@ order: `docs/MASTER_PROMPT.md`.
 ## 1. Snapshot
 
 - HEAD: `41f1d4895742aea82e4fd0e222fb4126f849ada8` (`Merge pull request #15 from
-  otassh/docs/branch-per-task-workflow`, 2026-10-06).
+otassh/docs/branch-per-task-workflow`, 2026-10-06).
 - Commit count: 77 (`git rev-list --count HEAD`).
 - Branch at generation time: `docs/project-state-final` (created this session
   from `main`, unpushed by design).
@@ -28,23 +28,23 @@ Commit evidence is from `git log --oneline` run on this repo this session
 (full history through HEAD `41f1d48`); every hash below was re-verified with
 `git cat-file -t` this session.
 
-| Task | Name (Section 14) | Status | Commit evidence |
-|---|---|---|---|
-| 1 | Monorepo skeleton | DONE | `d06c7e8` (+ `a0ae742` follow-up) |
-| 2 | `packages/shared` | DONE | `9bcd33a`, merged via PR #1 (`4526c48`) / PR #2 (`dd91324`) |
-| 3 | Component generator (`pnpm new-component`) | DONE | `7ac5fcf` (+ `46f3484`), merged via PR #3 (`0da2cff`) |
-| 4 | `packages/builder` + 3 sample components | DONE | 4a: `193455c` (PR #4 `9303c4d`); 4b: `24e18b7` (PR #5 `165f2dd`) |
-| 5a | CLI core (`init`, `add` file pipeline) | DONE | `46dc402`, merged via PR #6 (`2031a0e`) |
-| 5b | CLI install + styles (npm install, Tailwind blocks, real e2e) | DONE | `8524054`, merged via PR #7 (`60ce023`) / PR #9 (`64ddcbc`) / merge #8 (`9b011c2`) |
-| 6 | Docker, Caddy, deploy scripts | NOT STARTED | `deploy/` contains only `README.md` (one-line placeholder, read this session); no `Dockerfile`, `docker-compose*`, or `Caddyfile` in `git ls-files` |
-| 7 | `packages/db` (schema, migrations, client, sync, seed) | NOT STARTED | `packages/db/src/index.ts` is a one-line name stub (read this session); no migrations dir in `git ls-files` |
-| 8 | `apps/api` (env, health, events, stats, like, newsletter, RSS, limits, CORS, shutdown) | NOT STARTED | `apps/api/src/index.ts` is a one-line name stub (read this session) |
-| 9 | CLI telemetry + `list`, `search`, `diff`, `update` | NOT STARTED | `apps/cli/src/commands/` contains only `add.ts` and `init.ts` (per `git ls-files`) |
-| 10 | Admin endpoints | NOT STARTED | API is a stub (see Task 8 evidence) |
-| 11 | Builder quality gates | NOT STARTED | No gate code in `git ls-files`; criteria to be written at task start per Section 14 |
-| 12 | Props documentation | NOT STARTED | No props code in `git ls-files`; criteria to be written at task start per Section 14 |
-| 13 | Playwright previews | NOT STARTED | No previews code or output in `git ls-files`; criteria to be written at task start per Section 14 |
-| 14 | RSS polish, OG images, monitoring, k6, docs pass | NOT STARTED | No evidence of this work in `git ls-files`; criteria to be written at task start per Section 14 |
+| Task | Name (Section 14)                                                                      | Status      | Commit evidence                                                                                                                                     |
+| ---- | -------------------------------------------------------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | Monorepo skeleton                                                                      | DONE        | `d06c7e8` (+ `a0ae742` follow-up)                                                                                                                   |
+| 2    | `packages/shared`                                                                      | DONE        | `9bcd33a`, merged via PR #1 (`4526c48`) / PR #2 (`dd91324`)                                                                                         |
+| 3    | Component generator (`pnpm new-component`)                                             | DONE        | `7ac5fcf` (+ `46f3484`), merged via PR #3 (`0da2cff`)                                                                                               |
+| 4    | `packages/builder` + 3 sample components                                               | DONE        | 4a: `193455c` (PR #4 `9303c4d`); 4b: `24e18b7` (PR #5 `165f2dd`)                                                                                    |
+| 5a   | CLI core (`init`, `add` file pipeline)                                                 | DONE        | `46dc402`, merged via PR #6 (`2031a0e`)                                                                                                             |
+| 5b   | CLI install + styles (npm install, Tailwind blocks, real e2e)                          | DONE        | `8524054`, merged via PR #7 (`60ce023`) / PR #9 (`64ddcbc`) / merge #8 (`9b011c2`)                                                                  |
+| 6    | Docker, Caddy, deploy scripts                                                          | NOT STARTED | `deploy/` contains only `README.md` (one-line placeholder, read this session); no `Dockerfile`, `docker-compose*`, or `Caddyfile` in `git ls-files` |
+| 7    | `packages/db` (schema, migrations, client, sync, seed)                                 | NOT STARTED | `packages/db/src/index.ts` is a one-line name stub (read this session); no migrations dir in `git ls-files`                                         |
+| 8    | `apps/api` (env, health, events, stats, like, newsletter, RSS, limits, CORS, shutdown) | NOT STARTED | `apps/api/src/index.ts` is a one-line name stub (read this session)                                                                                 |
+| 9    | CLI telemetry + `list`, `search`, `diff`, `update`                                     | NOT STARTED | `apps/cli/src/commands/` contains only `add.ts` and `init.ts` (per `git ls-files`)                                                                  |
+| 10   | Admin endpoints                                                                        | NOT STARTED | API is a stub (see Task 8 evidence)                                                                                                                 |
+| 11   | Builder quality gates                                                                  | NOT STARTED | No gate code in `git ls-files`; criteria to be written at task start per Section 14                                                                 |
+| 12   | Props documentation                                                                    | NOT STARTED | No props code in `git ls-files`; criteria to be written at task start per Section 14                                                                |
+| 13   | Playwright previews                                                                    | NOT STARTED | No previews code or output in `git ls-files`; criteria to be written at task start per Section 14                                                   |
+| 14   | RSS polish, OG images, monitoring, k6, docs pass                                       | NOT STARTED | No evidence of this work in `git ls-files`; criteria to be written at task start per Section 14                                                     |
 
 ## 3. Completed work outside Section 14 (with commit refs)
 
@@ -66,8 +66,9 @@ All commits below are reachable from `main` at HEAD `41f1d48`
   (`fix(vitest): local configs for config and registry-env packages`),
   merged via `1e32957`.
 - First-publish prep: `303d392` (`chore(cli): first-publish prep for 0.1.0`),
-  merged via `1a0acf9`. `apps/cli/package.json` read this session: name
-  `framebits`, version `0.1.0`, no `private` field, `license` MIT,
+  merged via `1a0acf9`. The package was subsequently corrected to the npm
+  organization scope. `apps/cli/package.json`: name `@framebits/cli`, version
+  `0.1.0`, no `private` field, `license` MIT,
   `publishConfig.access` `public`, `author` `otassh`, `prepack`
   (`copy-license.mjs`) and `prepublishOnly` (build + pack-smoke) present.
 - Timeout units (seconds): `7898304`
@@ -169,17 +170,17 @@ vitest.config.ts
 There is no `apps/web` package: `apps/web` contains only `README.md`
 (a placeholder per MASTER_PROMPT Section 3); no `apps/web/package.json` is
 tracked, and `pnpm test` covers 7 packages (api, builder, config, db,
-registry-env, shared, CLI `framebits`).
+registry-env, shared, CLI `@framebits/cli`).
 
 ### 5.1 `*.test.ts` file counts (grouped from the `git ls-files` output this session)
 
-| Package | Test files |
-|---|---|
-| `packages/shared` | 17 |
+| Package            | Test files                                                         |
+| ------------------ | ------------------------------------------------------------------ |
+| `packages/shared`  | 17                                                                 |
 | `packages/builder` | 17 (12 `src/registry` incl. `src/index.test.ts`; 5 `src/scaffold`) |
-| `apps/cli` | 23 |
-| `apps/api` | 1 |
-| `packages/db` | 1 |
+| `apps/cli`         | 23                                                                 |
+| `apps/api`         | 1                                                                  |
+| `packages/db`      | 1                                                                  |
 
 Tracked total: 59 `*.test.ts` files. (`packages/config` and
 `packages/registry-env` have `vitest.config.ts` but no test files —
@@ -189,25 +190,25 @@ Tracked total: 59 `*.test.ts` files. (`packages/config` and
 
 All 10 turbo tasks successful, 0 failures:
 
-| Package | Tests passed | Test files passed |
-|---|---|---|
-| `packages/shared` | 389 | 17 |
-| `packages/builder` | 156 | 17 |
-| `apps/cli` (`framebits`) | 245 | 23 |
-| `apps/api` | 1 | 1 |
-| `packages/db` | 1 | 1 |
-| **Total** | **792** | **59** |
+| Package                       | Tests passed | Test files passed |
+| ----------------------------- | ------------ | ----------------- |
+| `packages/shared`             | 389          | 17                |
+| `packages/builder`            | 156          | 17                |
+| `apps/cli` (`@framebits/cli`) | 246          | 23                |
+| `apps/api`                    | 1            | 1                 |
+| `packages/db`                 | 1            | 1                 |
+| **Total**                     | **793**      | **59**            |
 
 ## 6. Registry items and versions
 
 `registry/registry.lock.json` (`version: 1`, read this session) lists exactly
 3 slugs:
 
-| Slug | Version | Hash (`sha256:…`) | Type / category / status (from `meta.json`, read this session) |
-|---|---|---|---|
-| `cn` | 1.0.0 | `sha256:c0cacc16e7e2e57e4e554a7dddfc714f9084c9ba4b53b24cfa9030c870920485` | lib / utilities / published; deps `clsx ^2.0.0`, `tailwind-merge ^3.0.0` |
-| `aurora-text` | 1.0.1 | `sha256:ff322ae5d8fc9843e1c310344df50e19e3bf3c4166044870fcc8c977a6e07284` | component / text-animations / published; dep `motion ^14.0.0`; `registryDependencies: ["cn"]` |
-| `shimmer-button` | 1.0.1 | `sha256:58da6596fe14c62d2688ead4c9a750e89f7b1a4ae7b83303b3edfd6e7ebf20de` | component / buttons / published; no npm deps; `registryDependencies: ["cn"]`; has `styles.json` |
+| Slug             | Version | Hash (`sha256:…`)                                                         | Type / category / status (from `meta.json`, read this session)                                  |
+| ---------------- | ------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `cn`             | 1.0.0   | `sha256:c0cacc16e7e2e57e4e554a7dddfc714f9084c9ba4b53b24cfa9030c870920485` | lib / utilities / published; deps `clsx ^2.0.0`, `tailwind-merge ^3.0.0`                        |
+| `aurora-text`    | 1.0.1   | `sha256:ff322ae5d8fc9843e1c310344df50e19e3bf3c4166044870fcc8c977a6e07284` | component / text-animations / published; dep `motion ^14.0.0`; `registryDependencies: ["cn"]`   |
+| `shimmer-button` | 1.0.1   | `sha256:58da6596fe14c62d2688ead4c9a750e89f7b1a4ae7b83303b3edfd6e7ebf20de` | component / buttons / published; no npm deps; `registryDependencies: ["cn"]`; has `styles.json` |
 
 (`meta.json` titles/added dates: `aurora-text` "Aurora Text", `shimmer-button`
 "Shimmer Button", `cn` "Cn", each `addedAt` 2026-10-05.)
@@ -221,11 +222,11 @@ All 10 turbo tasks successful, 0 failures:
   `workflow_dispatch` + weekly schedule (not a required check); last manual run
   outcome NOT VERIFIED this session.
 - `.github/workflows/release.yml`: present in `git ls-files` and read this
-  session (secret-free OIDC trusted publishing for `framebits`, tag-gated on
+  session (secret-free OIDC trusted publishing for `@framebits/cli`, tag-gated on
   `v*.*.*`, `environment: npm-publish`, `id-token: write`, no npm tokens;
   version guard against `apps/cli/package.json`). Last-run outcome:
-  NOT VERIFIED this session (no tag has been pushed; nothing is published —
-  `framebits@0.1.0` is prepared but NOT on npm yet, per `docs/RELEASING.md`).
+  The manual bootstrap target is `@framebits/cli@0.1.0`; the accidental
+  unscoped `framebits` package is not a supported distribution channel.
 
 ## 8. Known gaps
 
@@ -258,11 +259,11 @@ Actionable code/doc TODOs (8):
 5. `docs/RELEASING.md:44` + item 1 — confirm the production domain/registry URL
    if it changes any user-facing text.
 6. `docs/RELEASING.md:47` — repo is PUBLIC (verified 2026-10-06 via
-    `gh repo view --json visibility` → `"visibility":"PUBLIC"`); npm provenance
-    is expected to work on the first CI release. Secret scanning + push
-    protection enabled the same day.
+   `gh repo view --json visibility` → `"visibility":"PUBLIC"`); npm provenance
+   is expected to work on the first CI release. Secret scanning + push
+   protection enabled the same day.
 7. `.github/workflows/release.yml:98` — TODO: drop the private-repo provenance
-    fallback now that the repo is public (verify on the first CI release).
+   fallback now that the repo is public (verify on the first CI release).
 8. `docs/SECURITY.md:62` — owner to pick a trust-anchor option (recommendation:
    Option A, signed `index.json`); open sub-questions on key custody, public-key
    distribution, rotation/revocation, and `--insecure` opt-in for local dev.
@@ -272,19 +273,19 @@ Convention mentions (not actionable questions): `AGENTS.md:10` and
 
 ## 10. Verification this session
 
-| Command | Result |
-|---|---|
-| `git log -1 --format=%H` | `41f1d4895742aea82e4fd0e222fb4126f849ada8` |
-| `git rev-list --count HEAD` | `77` |
-| `git status` / `git branch --show-current` | CLEAN tree on `docs/project-state-final` (created from `main` this session, unpushed) |
-| `git ls-files` count | 211 tracked files |
-| `*.test.ts` counts per package | grouped from file listing — see Section 5.1 |
-| Fresh full `pnpm test` | PASS — 10/10 turbo tasks, 792 tests total (shared 389, CLI 245, builder 156, api 1, db 1) |
-| Read `registry/**/meta.json` + `registry.lock.json` | summarized in Section 6 |
+| Command                                                                  | Result                                                                                                                                                     |
+| ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `git log -1 --format=%H`                                                 | `41f1d4895742aea82e4fd0e222fb4126f849ada8`                                                                                                                 |
+| `git rev-list --count HEAD`                                              | `77`                                                                                                                                                       |
+| `git status` / `git branch --show-current`                               | CLEAN tree on `docs/project-state-final` (created from `main` this session, unpushed)                                                                      |
+| `git ls-files` count                                                     | 211 tracked files                                                                                                                                          |
+| `*.test.ts` counts per package                                           | grouped from file listing — see Section 5.1                                                                                                                |
+| Fresh full `pnpm test`                                                   | PASS — 10/10 turbo tasks, 792 tests total (shared 389, CLI 245, builder 156, api 1, db 1)                                                                  |
+| Read `registry/**/meta.json` + `registry.lock.json`                      | summarized in Section 6                                                                                                                                    |
 | Read `LICENSE`, `apps/cli/package.json`, `.github/workflows/release.yml` | summarized in Sections 3/7; CLI is `0.1.0` public (no `private` field), MIT, `publishConfig.access` `public`; release uses `environment: npm-publish` OIDC |
-| Counted numbered rules in `AGENTS.md` | 14 |
-| `git grep -n "TODO(question)"` (tracked files) | 8 actionable hits listed in Section 9 |
-| `pnpm build:registry --check` | PASS (exit 0) — run after rewriting this file, before commit |
+| Counted numbered rules in `AGENTS.md`                                    | 14                                                                                                                                                         |
+| `git grep -n "TODO(question)"` (tracked files)                           | 8 actionable hits listed in Section 9                                                                                                                      |
+| `pnpm build:registry --check`                                            | PASS (exit 0) — run after rewriting this file, before commit                                                                                               |
 
 ## 11. Doc links referenced here
 

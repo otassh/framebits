@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* global process */
 /**
- * Release version guard for the `framebits` npm package (apps/cli).
+ * Release version guard for the `@framebits/cli` npm package (apps/cli).
  *
  * Fails unless the release tag `vX.Y.Z` equals the version in
  * `apps/cli/package.json` exactly AND the package is not `"private": true`.
@@ -27,6 +27,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const TAG_PATTERN = /^v(\d+\.\d+\.\d+)$/;
+export const EXPECTED_PACKAGE_NAME = "@framebits/cli";
 
 /**
  * Return the `X.Y.Z` version encoded in a `vX.Y.Z` tag.
@@ -48,15 +49,21 @@ export function parseReleaseTag(tag) {
 }
 
 /**
- * Check a release tag against the `framebits` package metadata.
+ * Check a release tag against the `@framebits/cli` package metadata.
  *
- * @param {{ tag: string, version: string, isPrivate: boolean }} input
+ * @param {{ tag: string, version: string, isPrivate: boolean, packageName: string }} input
  * @returns {{ tag: string, version: string }} the normalized tag + version.
  * @throws {Error} on tag/version mismatch or when the package is private.
  */
-export function checkReleaseVersion({ tag, version, isPrivate }) {
+export function checkReleaseVersion({ tag, version, isPrivate, packageName }) {
   const tagVersion = parseReleaseTag(tag);
   const pkgVersion = version.trim();
+  if (packageName !== EXPECTED_PACKAGE_NAME) {
+    throw new Error(
+      `apps/cli/package.json name ${JSON.stringify(packageName)} does not match the required npm ` +
+        `organization package ${JSON.stringify(EXPECTED_PACKAGE_NAME)}.`,
+    );
+  }
   if (tagVersion !== pkgVersion) {
     throw new Error(
       `Release tag ${JSON.stringify(tag)} (version ${JSON.stringify(tagVersion)}) does not match ` +
@@ -96,15 +103,18 @@ function main() {
     const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
     pkg = JSON.parse(readFileSync(join(repoRoot, "apps", "cli", "package.json"), "utf8"));
   } catch (error) {
-    fail(`Cannot read apps/cli/package.json: ${error instanceof Error ? error.message : String(error)}`);
+    fail(
+      `Cannot read apps/cli/package.json: ${error instanceof Error ? error.message : String(error)}`,
+    );
     return;
   }
   const version = typeof pkg.version === "string" ? pkg.version : "";
+  const packageName = typeof pkg.name === "string" ? pkg.name : "";
   const isPrivate = pkg.private === true;
   try {
-    const ok = checkReleaseVersion({ tag, version, isPrivate });
+    const ok = checkReleaseVersion({ tag, version, isPrivate, packageName });
     process.stdout.write(
-      `release version guard: OK (tag ${ok.tag} == apps/cli@${ok.version}, package is public)\n`,
+      `release version guard: OK (tag ${ok.tag} == ${EXPECTED_PACKAGE_NAME}@${ok.version}, package is public)\n`,
     );
   } catch (error) {
     fail(error instanceof Error ? error.message : String(error));

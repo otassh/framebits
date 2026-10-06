@@ -11,7 +11,7 @@
   <a href="https://github.com/otassh/framebits/actions"><img src="https://github.com/otassh/framebits/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
 </p>
 
-`npx framebits add <slug>` drops a hand-reviewed, animated component straight into your project — no boilerplate, no lock-in. Git is the source of truth; the database is only an index. Components ship as static files, so installs stay fast even when the API is down.
+`npx @framebits/cli add <slug>` drops a hand-reviewed, animated component straight into your project — no boilerplate, no lock-in. Git is the source of truth; the database is only an index. Components ship as static files, so installs stay fast even when the API is down.
 
 ## ✨ Features
 
@@ -24,14 +24,14 @@
 ## 🚀 Quick start
 
 ```sh
-npx framebits init
-npx framebits add aurora-text
+npx @framebits/cli init
+npx @framebits/cli add aurora-text
 ```
 
 Or install globally and use it anywhere:
 
 ```sh
-npm i -g framebits
+npm i -g @framebits/cli
 framebits add aurora-text --dry-run   # preview the plan, change nothing
 ```
 
@@ -39,18 +39,18 @@ Using the CLI requires Node >= 20. Developing this repo requires Node >= 22. See
 
 ## 📦 What's inside
 
-| Path | Description | Status |
-| ---- | ----------- | ------ |
-| `apps/api` | Hono server (events, stats) — planned, Task 8 | Planned (stub) |
-| `apps/cli` | The `framebits` npm package — `init`, `add`, registry client (`list`/`search`/`diff`/`update` planned, Task 9) | Ready |
-| `apps/web` | Placeholder (out of scope, MASTER_PROMPT §13) | Placeholder |
-| `packages/shared` | Zod schemas + inferred types (single source of truth) | Ready |
-| `packages/db` | Drizzle schema, migrations, DB client, seed/sync — planned, Task 7 | Planned (stub) |
-| `packages/builder` | Registry build pipeline (validate → hash → emit) | Ready |
-| `packages/config` | Shared tsconfig + eslint config | Ready |
-| `registry/components/<category>/<slug>/` | Component sources (3 samples) | Ready |
-| `registry/lib/<slug>/` | Shared helpers (`cn`) | Ready |
-| `deploy/` | Docker Compose, Caddyfile, deploy scripts — planned, Task 6 | Placeholder |
+| Path                                     | Description                                                                                                                              | Status         |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| `apps/api`                               | Hono server (events, stats) — planned, Task 8                                                                                            | Planned (stub) |
+| `apps/cli`                               | The `@framebits/cli` npm package (`framebits` binary) — `init`, `add`, registry client (`list`/`search`/`diff`/`update` planned, Task 9) | Ready          |
+| `apps/web`                               | Placeholder (out of scope, MASTER_PROMPT §13)                                                                                            | Placeholder    |
+| `packages/shared`                        | Zod schemas + inferred types (single source of truth)                                                                                    | Ready          |
+| `packages/db`                            | Drizzle schema, migrations, DB client, seed/sync — planned, Task 7                                                                       | Planned (stub) |
+| `packages/builder`                       | Registry build pipeline (validate → hash → emit)                                                                                         | Ready          |
+| `packages/config`                        | Shared tsconfig + eslint config                                                                                                          | Ready          |
+| `registry/components/<category>/<slug>/` | Component sources (3 samples)                                                                                                            | Ready          |
+| `registry/lib/<slug>/`                   | Shared helpers (`cn`)                                                                                                                    | Ready          |
+| `deploy/`                                | Docker Compose, Caddyfile, deploy scripts — planned, Task 6                                                                              | Placeholder    |
 
 ## 🏗 Architecture (target)
 
