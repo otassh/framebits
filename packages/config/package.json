@@ -2,6 +2,7 @@
   "name": "@framebits/config",
   "version": "0.0.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "exports": {
     "./tsconfig.base.json": "./tsconfig.base.json"

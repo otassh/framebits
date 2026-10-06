@@ -110,4 +110,4 @@ If Framebits saves you or your company time, consider [sponsoring ongoing mainte
 
 ## 📄 License
 
-To be announced before public launch.
+MIT — see [LICENSE](LICENSE).

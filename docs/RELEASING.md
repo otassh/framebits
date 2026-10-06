@@ -17,15 +17,17 @@ form — do not use it.
 
 ## Blockers before the FIRST publish (do not publish until all are resolved)
 
-- TODO(question): **license is undecided** (MASTER_PROMPT §16 decision 5 —
-  repo is private until launch, no LICENSE file yet). Choose a license, add
-  a root `LICENSE` file, and set `"license": "<SPDX>"` in
-  `apps/cli/package.json`. The field is intentionally absent right now;
-  publishing an unlicensed package is not acceptable.
-- TODO(question): add the root `LICENSE` file itself (part of the license
-  decision above) — required before the first publish.
+- License is **MIT**: root `LICENSE` file added and `"license": "MIT"` set in
+  `apps/cli/package.json` (and every other workspace `package.json` for
+  consistency). The field is intentionally present now; publishing an
+  unlicensed package is not acceptable.
+- TODO(question): confirm the copyright holder name (`Copyright (c) 2026
+  otassh` in `LICENSE` — the login `otassh` is used because `gh api user`
+  returned only the single-letter placeholder name "O", so "O" must not be
+  used) and the `"author": "otassh"` value in `apps/cli/package.json`
+  (plain name, no email — no public email exists in the repo).
 - TODO(question): confirm the publish metadata added as placeholders:
-  `"author": "Framebits"` (name/org/email?), `repository`, `homepage`, `bugs`
+  `"author": "otassh"` (name/org/email?), `repository`, `homepage`, `bugs`
   URLs (currently point at `github.com/otassh/framebits`), and `keywords`.
 - TODO(question): confirm the starting version (`0.1.0` below).
 - TODO(question): confirm the production domain/registry URL if it changes
@@ -64,7 +66,7 @@ never publishes from a laptop again — all later releases go through §5.
 2. Log in as the owner (2FA on): `npm login`, then verify with `npm whoami`.
 3. Prepare `apps/cli/package.json`: `"version": "0.0.0"` → `"0.1.0"`,
    delete the `"private": true` line, add the decided
-   `"license": "<SPDX>"`. Keep `.env.example` current if any new env var is
+   `"license": "MIT"`. Keep `.env.example` current if any new env var is
    introduced (none expected for a CLI-only release).
 4. Add a changelog entry in `CHANGELOG.md` (root) under a new `## [0.1.0]`
    section. Per-release notes live in GitHub Releases (auto-generated, see
