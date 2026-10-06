@@ -48,8 +48,8 @@ Flags:
 - `--registry <url>`: override the registry (flag > env
   `FRAMEBITS_REGISTRY_URL` > config > default `https://framebits.dev/r`).
 - `--timeout <seconds>`: network timeout, integer 1–300 (flag > env
-  `FRAMEBITS_TIMEOUT_MS` in milliseconds > `timeoutMs` in `framebits.json`
-  in milliseconds > default 10 s). Invalid values exit 2.
+  `FRAMEBITS_TIMEOUT` in seconds > `timeoutSeconds` in `framebits.json`
+  in seconds > default 10 s). Invalid values exit 2.
 - `--debug`: show stack traces (otherwise concise messages with `Hint:`).
 
 Exit codes: `0` success, `1` failure/conflict, `2` usage/config/detection,

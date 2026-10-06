@@ -17,9 +17,7 @@ export const FETCH_TIMEOUT_MS = 10000;
 /** Default is 10 s; valid range everywhere is 1-300 s. */
 export const TIMEOUT_MIN_S = 1;
 export const TIMEOUT_MAX_S = 300;
-export const TIMEOUT_MIN_MS = TIMEOUT_MIN_S * 1000;
-export const TIMEOUT_MAX_MS = TIMEOUT_MAX_S * 1000;
-export const TIMEOUT_ENV_VAR = "FRAMEBITS_TIMEOUT_MS";
+export const TIMEOUT_ENV_VAR = "FRAMEBITS_TIMEOUT";
 export const FETCH_MAX_RETRIES = 2;
 export const FETCH_MAX_BYTES = 2 * 1024 * 1024;
 export const RETRY_AFTER_CAP_MS = 10000;
@@ -143,40 +141,40 @@ export function parseTimeoutFlag(raw: string | undefined): number | undefined {
 }
 
 /**
- * Parse `FRAMEBITS_TIMEOUT_MS` (integer milliseconds, 1000-300000). Throws a
- * usage error (exit 2) on bad input. Returns undefined when unset/empty.
+ * Parse `FRAMEBITS_TIMEOUT` (integer seconds, 1-300). Throws a usage error
+ * (exit 2) on bad input. Returns undefined when unset/empty.
  */
 export function parseTimeoutEnv(raw: string | undefined): number | undefined {
   if (raw === undefined || raw === "") return undefined;
   if (!/^\d+$/.test(raw)) {
     throw usageError(
-      `invalid ${TIMEOUT_ENV_VAR} ${JSON.stringify(raw)}: expected an integer 1000-300000 (milliseconds)`,
-      "use e.g. FRAMEBITS_TIMEOUT_MS=30000 for 30s, or unset it",
+      `invalid ${TIMEOUT_ENV_VAR} ${JSON.stringify(raw)}: expected an integer 1-300 (seconds)`,
+      "use e.g. FRAMEBITS_TIMEOUT=30 for 30s, or unset it",
     );
   }
-  const ms = Number(raw);
-  if (!Number.isSafeInteger(ms) || ms < TIMEOUT_MIN_MS || ms > TIMEOUT_MAX_MS) {
+  const seconds = Number(raw);
+  if (!Number.isSafeInteger(seconds) || seconds < TIMEOUT_MIN_S || seconds > TIMEOUT_MAX_S) {
     throw usageError(
-      `invalid ${TIMEOUT_ENV_VAR} ${JSON.stringify(raw)}: expected an integer 1000-300000 (milliseconds)`,
-      "use e.g. FRAMEBITS_TIMEOUT_MS=30000 for 30s, or unset it",
+      `invalid ${TIMEOUT_ENV_VAR} ${JSON.stringify(raw)}: expected an integer 1-300 (seconds)`,
+      "use e.g. FRAMEBITS_TIMEOUT=30 for 30s, or unset it",
     );
   }
-  return ms;
+  return seconds * 1000;
 }
 
 export interface TimeoutInput {
   /** Raw `--timeout <seconds>` value from the CLI. */
   flag: string | undefined;
-  /** Raw `FRAMEBITS_TIMEOUT_MS` value (milliseconds). */
+  /** Raw `FRAMEBITS_TIMEOUT` value (seconds). */
   env: string | undefined;
-  /** Validated `timeoutMs` from `framebits.json` (milliseconds). */
-  configMs: number | undefined;
+  /** Validated `timeoutSeconds` from `framebits.json` (seconds). */
+  configSeconds: number | undefined;
 }
 
 /**
  * Resolve the effective timeout in milliseconds.
- * Precedence: `--timeout` flag > `FRAMEBITS_TIMEOUT_MS` env >
- * `timeoutMs` in `framebits.json` > default (10 s).
+ * Precedence: `--timeout` flag > `FRAMEBITS_TIMEOUT` env >
+ * `timeoutSeconds` in `framebits.json` > default (10 s).
  * Throws a usage error (exit 2) on any invalid input.
  */
 export function resolveTimeoutMs(input: TimeoutInput): number {
@@ -184,18 +182,18 @@ export function resolveTimeoutMs(input: TimeoutInput): number {
   if (fromFlag !== undefined) return fromFlag;
   const fromEnv = parseTimeoutEnv(input.env);
   if (fromEnv !== undefined) return fromEnv;
-  if (input.configMs !== undefined) {
+  if (input.configSeconds !== undefined) {
     if (
-      !Number.isInteger(input.configMs) ||
-      input.configMs < TIMEOUT_MIN_MS ||
-      input.configMs > TIMEOUT_MAX_MS
+      !Number.isInteger(input.configSeconds) ||
+      input.configSeconds < TIMEOUT_MIN_S ||
+      input.configSeconds > TIMEOUT_MAX_S
     ) {
       throw usageError(
-        `invalid timeoutMs ${JSON.stringify(input.configMs)} in framebits.json: expected an integer 1000-300000 (milliseconds)`,
-        "fix timeoutMs or remove it to use the 10s default",
+        `invalid timeoutSeconds ${JSON.stringify(input.configSeconds)} in framebits.json: expected an integer 1-300 (seconds)`,
+        "fix timeoutSeconds or remove it to use the 10s default",
       );
     }
-    return input.configMs;
+    return input.configSeconds * 1000;
   }
   return FETCH_TIMEOUT_MS;
 }
