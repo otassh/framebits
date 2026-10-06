@@ -1,6 +1,6 @@
 # PROJECT STATE — generated from live repo facts
 
-> Generated from repo state at 034736d88d28337be3492123cad0afd2ba8a336f on 2026-10-06; regenerate before each release.
+> Generated from repo state at 41f1d4895742aea82e4fd0e222fb4126f849ada8 on 2026-10-06; regenerate before each release.
 
 This report contains only statements verifiable from the repo at the commit above
 plus the working-tree state recorded in Section 1. Anything not checked this
@@ -9,21 +9,21 @@ order: `docs/MASTER_PROMPT.md`.
 
 ## 1. Snapshot
 
-- HEAD: `034736d88d28337be3492123cad0afd2ba8a336f` (`Merge branch 'ci/pin-actions'
-  into chore/rename-to-framebits`, 2026-10-06).
-- Commit count: 68 (`git rev-list --count HEAD`).
-- Branch at generation time: `chore/rename-to-framebits`.
+- HEAD: `41f1d4895742aea82e4fd0e222fb4126f849ada8` (`Merge pull request #15 from
+  otassh/docs/branch-per-task-workflow`, 2026-10-06).
+- Commit count: 77 (`git rev-list --count HEAD`).
+- Branch at generation time: `docs/project-state-final` (created this session
+  from `main`, unpushed by design).
 - Tracked files: 211 (`git ls-files` count).
 - Working tree at generation time (from `git status`): CLEAN, nothing to commit.
-  Local branch is ahead of `origin/chore/rename-to-framebits` by 24 commits
-  (push status: NOT VERIFIED — no push performed this step by design).
 - Remote, CI last-run outcome, Node/pnpm versions: NOT VERIFIED this session
   (no commands run for them).
 
 ## 2. Task progress (MASTER_PROMPT Section 14, Tasks 1–14)
 
 Commit evidence is from `git log --oneline` run on this repo this session
-(full history through HEAD `034736d`).
+(full history through HEAD `41f1d48`); every hash below was re-verified with
+`git cat-file -t` this session.
 
 | Task | Name (Section 14) | Status | Commit evidence |
 |---|---|---|---|
@@ -45,17 +45,18 @@ Commit evidence is from `git log --oneline` run on this repo this session
 
 ## 3. Completed work outside Section 14 (with commit refs)
 
-All commits below are in `git log acda20d..HEAD` run this session.
-Release-prep integration on `chore/rename-to-framebits`, oldest first:
+All commits below are reachable from `main` at HEAD `41f1d48`
+(`git log --oneline` run this session), oldest first:
 
-- 7 fix merges: `afcbaaf` (fix/registry-8a-8b), `3f68996` (fix/config-8c-8d-8e),
-  `2a5ad24` (fix/cli-publishability), `c547e4d` (chore/release-pipeline),
-  `b52bcbb` (fix/registry-trust-model), `53deb12` (fix/readme-honesty),
-  `455db7b` (fix/project-state-refresh).
+- 7 fix merges onto the rename branch: `afcbaaf` (fix/registry-8a-8b),
+  `3f68996` (fix/config-8c-8d-8e), `2a5ad24` (fix/cli-publishability),
+  `c547e4d` (chore/release-pipeline), `b52bcbb` (fix/registry-trust-model),
+  `53deb12` (fix/readme-honesty), `455db7b` (fix/project-state-refresh).
 - Release pipeline (secret-free OIDC, version guard, runbook): `71e53d1`
   (`chore(release): secret-free OIDC release pipeline + version guard + runbook`),
   merged via `c547e4d`. Workflow file `.github/workflows/release.yml` exists
-  (verified in `git ls-files` and read this session).
+  (verified in `git ls-files` and read this session; `environment: npm-publish`,
+  `id-token: write`, no npm tokens).
 - MIT license: `52e7fc9` (`chore: add MIT license`), merged via `33fc13c`.
   Root `LICENSE` exists (read this session: MIT, `Copyright (c) 2026 otassh`).
 - Vitest per-package configs: `22fca7a`
@@ -64,14 +65,22 @@ Release-prep integration on `chore/rename-to-framebits`, oldest first:
 - First-publish prep: `303d392` (`chore(cli): first-publish prep for 0.1.0`),
   merged via `1a0acf9`. `apps/cli/package.json` read this session: name
   `framebits`, version `0.1.0`, no `private` field, `license` MIT,
-  `publishConfig.access` `public`, `prepack` (`copy-license.mjs`) and
-  `prepublishOnly` (build + pack-smoke) present.
+  `publishConfig.access` `public`, `author` `otassh`, `prepack`
+  (`copy-license.mjs`) and `prepublishOnly` (build + pack-smoke) present.
 - Timeout units (seconds): `7898304`
   (`fix(cli): unify network timeout units to seconds`), merged via `82e93e8`.
 - SHA-pinned workflows: `086c93b` (`ci: pin actions to commit SHAs`),
-  merged via HEAD `034736d`.
-- Registry versions bumped to `aurora-text 1.0.1` / `shimmer-button 1.0.1`
-  (`cn` stays `1.0.0`) — see Section 5.
+  merged via `034736d`.
+- Rename branch integrated to `main` via PR #14 (`806762d`), including the
+  intermediate state refresh `ba384bf`.
+- Symlink-shim fix: `d16b308`
+  (`fix(cli): run when invoked through a symlinked bin shim`),
+  merged via `742aae6`.
+- AGENTS.md rule 14 (one-branch-per-task workflow): `ca25fda`
+  (`docs: codify one-branch-per-task PR workflow`), merged via HEAD `41f1d48`
+  (PR #15). `AGENTS.md` has 14 numbered rules (counted this session).
+- Registry versions are `aurora-text 1.0.1` / `shimmer-button 1.0.1`
+  (`cn` stays `1.0.0`) — see Section 6.
 
 ## 4. Tracked file tree (`git ls-files`, 211 files)
 
@@ -154,7 +163,12 @@ vitest.config.ts
 
 ## 5. Tests
 
-### 5.1 `*.test.ts` file counts (counted from the `git ls-files` output this session)
+There is no `apps/web` package: `apps/web` contains only `README.md`
+(a placeholder per MASTER_PROMPT Section 3); no `apps/web/package.json` is
+tracked, and `pnpm test` covers 7 packages (api, builder, config, db,
+registry-env, shared, CLI `framebits`).
+
+### 5.1 `*.test.ts` file counts (grouped from the `git ls-files` output this session)
 
 | Package | Test files |
 |---|---|
@@ -176,10 +190,10 @@ All 10 turbo tasks successful, 0 failures:
 |---|---|---|
 | `packages/shared` | 389 | 17 |
 | `packages/builder` | 156 | 17 |
-| `apps/cli` (`framebits`) | 244 | 23 |
+| `apps/cli` (`framebits`) | 245 | 23 |
 | `apps/api` | 1 | 1 |
 | `packages/db` | 1 | 1 |
-| **Total** | **791** | **59** |
+| **Total** | **792** | **59** |
 
 ## 6. Registry items and versions
 
@@ -203,7 +217,8 @@ All 10 turbo tasks successful, 0 failures:
   NOT VERIFIED this session.
 - `.github/workflows/release.yml`: present in `git ls-files` and read this
   session (secret-free OIDC trusted publishing for `framebits`, tag-gated on
-  `v*.*.*`, version guard against `apps/cli/package.json`). Last-run outcome:
+  `v*.*.*`, `environment: npm-publish`, `id-token: write`, no npm tokens;
+  version guard against `apps/cli/package.json`). Last-run outcome:
   NOT VERIFIED this session (no tag has been pushed; nothing is published —
   `framebits@0.1.0` is prepared but NOT on npm yet, per `docs/RELEASING.md`).
 
@@ -220,18 +235,18 @@ All 10 turbo tasks successful, 0 failures:
   their green status is NOT VERIFIED (only `pnpm test` and
   `pnpm build:registry --check`, see Section 10).
 
-## 9. Open `TODO(question)` list (from grep this session)
+## 9. Open `TODO(question)` list (from `git grep` this session, tracked files only)
 
-Actionable code/doc TODOs:
+Actionable code/doc TODOs (8):
 
 1. `packages/shared/src/site.ts:1` — confirm production DOMAIN
    (`framebits.dev` is a placeholder); the domain and default registry URL are
    defined only here.
 2. `docs/RELEASING.md:33` — confirm the copyright holder name
    (`Copyright (c) 2026 otassh` in `LICENSE`).
-3. `docs/RELEASING.md:36-40` — confirm the `"author": "otassh"` value and the
-   publish metadata placeholders (`repository`, `homepage`, `bugs` URLs
-   pointing at `github.com/otassh/framebits`, `keywords`).
+3. `docs/RELEASING.md:38` — confirm the publish metadata placeholders
+   (`"author": "otassh"`, `repository`, `homepage`, `bugs` URLs pointing at
+   `github.com/otassh/framebits`, `keywords`).
 4. `docs/RELEASING.md:41` — confirm the starting version (marked DONE in
    first-publish prep: `apps/cli` is `0.1.0` public; first CI-driven release
    is `0.1.1`).
@@ -239,6 +254,9 @@ Actionable code/doc TODOs:
    if it changes any user-facing text.
 6. `docs/RELEASING.md:47` — make the repo public before the first automated
    release (npm provenance requires a public package in a public repo).
+   Actual GitHub repo visibility: NOT VERIFIED this session (local files
+   describe the repo as currently private, e.g. `.github/workflows/release.yml:98`;
+   no network commands were run).
 7. `.github/workflows/release.yml:98` — same repo-visibility fallback: provenance
    is skipped with a warning while the repo is private; confirm dropping that
    fallback once the repo goes public at launch.
@@ -248,22 +266,21 @@ Actionable code/doc TODOs:
 
 Convention mentions (not actionable questions): `AGENTS.md:10` and
 `docs/MASTER_PROMPT.md:17,415,486` define the `TODO(question)` rule itself.
-No `TODO(question)` in root `README.md` or `scripts/new-component.ts`
-(verified: grep found none there).
 
 ## 10. Verification this session
 
 | Command | Result |
 |---|---|
-| `git log -1 --format=%H` | `034736d88d28337be3492123cad0afd2ba8a336f` |
-| `git rev-list --count HEAD` | `68` |
-| `git status` / `git branch --show-current` | CLEAN tree on `chore/rename-to-framebits` (ahead of origin by 24; no push) |
+| `git log -1 --format=%H` | `41f1d4895742aea82e4fd0e222fb4126f849ada8` |
+| `git rev-list --count HEAD` | `77` |
+| `git status` / `git branch --show-current` | CLEAN tree on `docs/project-state-final` (created from `main` this session, unpushed) |
 | `git ls-files` count | 211 tracked files |
-| `*.test.ts` counts per package | counted from file listing — see Section 5.1 |
-| Fresh full `pnpm test` | PASS — 10/10 turbo tasks, 791 tests total (shared 389, CLI 244, builder 156, api 1, db 1) |
+| `*.test.ts` counts per package | grouped from file listing — see Section 5.1 |
+| Fresh full `pnpm test` | PASS — 10/10 turbo tasks, 792 tests total (shared 389, CLI 245, builder 156, api 1, db 1) |
 | Read `registry/**/meta.json` + `registry.lock.json` | summarized in Section 6 |
-| Read `LICENSE`, `apps/cli/package.json`, `.github/workflows/release.yml` | summarized in Sections 3/7; CLI is `0.1.0` public (no `private` field) |
-| Grep `TODO(question)` | 8 actionable hits listed in Section 9 |
+| Read `LICENSE`, `apps/cli/package.json`, `.github/workflows/release.yml` | summarized in Sections 3/7; CLI is `0.1.0` public (no `private` field), MIT, `publishConfig.access` `public`; release uses `environment: npm-publish` OIDC |
+| Counted numbered rules in `AGENTS.md` | 14 |
+| `git grep -n "TODO(question)"` (tracked files) | 8 actionable hits listed in Section 9 |
 | `pnpm build:registry --check` | PASS (exit 0) — run after rewriting this file, before commit |
 
 ## 11. Doc links referenced here
