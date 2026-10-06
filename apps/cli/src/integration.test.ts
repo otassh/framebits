@@ -348,6 +348,7 @@ async function runAddIn(
     noInstall?: boolean;
     noStyles?: boolean;
     yes?: boolean;
+    timeoutFlag?: string | undefined;
     installerState?: FakeInstallerState | undefined;
     nodeModules?: Record<string, string> | undefined;
   },
@@ -368,6 +369,7 @@ async function runAddIn(
         noInstall: options?.noInstall === true,
         noStyles: options?.noStyles === true,
         registryFlag: baseUrl,
+        timeoutFlag: options?.timeoutFlag,
         debug: false,
       },
       {
@@ -625,6 +627,20 @@ describe("cli integration (real builder output)", () => {
       expect(result.code).toBe(0);
       const cn = await readFile(join(dir, "src", "lib", "cn.ts"), "utf8");
       expect(cn).toContain("cn");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 120000);
+
+  it("add --timeout 0 fails with usage error (exit 2) and writes nothing", async () => {
+    const dir = await makeProject(NEXT_APP_SRC);
+    try {
+      await initProject(dir, baseUrl);
+      const before = await snapshotDir(dir);
+      const result = await runAddIn(dir, ["aurora-text"], { timeoutFlag: "0" });
+      expect(result.code).toBe(2);
+      expect(result.error).toContain("--timeout");
+      expect(snapshotsEqual(before, await snapshotDir(dir))).toBe(true);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

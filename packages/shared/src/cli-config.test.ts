@@ -26,6 +26,31 @@ describe("CliConfigSchema", () => {
     }
   });
 
+  it("accepts an optional timeoutMs in milliseconds (1-300s)", () => {
+    expect(
+      CliConfigSchema.safeParse({ ...validConfig, timeoutMs: 10000 }).success,
+    ).toBe(true);
+    expect(CliConfigSchema.safeParse({ ...validConfig, timeoutMs: 1000 }).success).toBe(
+      true,
+    );
+    expect(
+      CliConfigSchema.safeParse({ ...validConfig, timeoutMs: 300000 }).success,
+    ).toBe(true);
+    // Absent entirely: still valid (CLI default applies).
+    expect(CliConfigSchema.safeParse({ ...validConfig }).success).toBe(true);
+  });
+
+  it.each([
+    ["below 1s", { timeoutMs: 999 }],
+    ["above 300s", { timeoutMs: 300001 }],
+    ["non-integer", { timeoutMs: 1500.5 }],
+    ["wrong type", { timeoutMs: "30" }],
+  ])("rejects timeoutMs %s", (_rule, override) => {
+    expect(CliConfigSchema.safeParse({ ...validConfig, ...override }).success).toBe(
+      false,
+    );
+  });
+
   it.each([
     ["http registry", { registry: "http://example.com/r" }],
     ["not a url", { registry: "not-a-url" }],

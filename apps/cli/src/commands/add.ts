@@ -23,6 +23,7 @@ import {
   indexUrl,
   parseSlugArg,
   resolveRegistryUrl,
+  resolveTimeoutMs,
   type FetchFn,
 } from "../registry-client/index.js";
 import { resolveClosure } from "../resolve/index.js";
@@ -39,6 +40,8 @@ export interface AddOptions {
   noInstall: boolean;
   noStyles: boolean;
   registryFlag: string | undefined;
+  /** Raw `--timeout <seconds>` value; validated by resolveTimeoutMs. */
+  timeoutFlag: string | undefined;
   debug: boolean;
 }
 
@@ -125,8 +128,13 @@ export async function runAdd(options: AddOptions, deps: AddDeps): Promise<AddRes
     env: process.env["FRAMEBITS_REGISTRY_URL"],
     config: config.registry,
   });
+  const timeoutMs = resolveTimeoutMs({
+    flag: options.timeoutFlag,
+    env: process.env["FRAMEBITS_TIMEOUT_MS"],
+    configMs: config.timeoutMs,
+  });
 
-  const fetchOptions = { fetchFn: deps.fetchFn, sleep: deps.sleep };
+  const fetchOptions = { fetchFn: deps.fetchFn, sleep: deps.sleep, timeoutMs };
   const indexCache: { slugs: readonly string[] | undefined } = { slugs: undefined };
   const indexSlugs = (): Promise<readonly string[]> => {
     if (indexCache.slugs !== undefined) return Promise.resolve(indexCache.slugs);
@@ -155,6 +163,7 @@ export async function runAdd(options: AddOptions, deps: AddDeps): Promise<AddRes
     registry,
     fetchFn: deps.fetchFn,
     sleep: deps.sleep,
+    timeoutMs,
     indexSlugs,
   });
   const items: RegistryItem[] = closure.items;

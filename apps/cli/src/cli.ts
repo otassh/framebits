@@ -23,6 +23,7 @@ const EXAMPLES = [
   "  framebits add aurora-text shimmer-button --overwrite",
   "  framebits add cn@1.0.0 --dry-run",
   "  framebits add shimmer-button --no-install --no-styles",
+  "  framebits add aurora-text --timeout 30",
 ].join("\n");
 
 interface SnapshotPackageJson {
@@ -129,6 +130,7 @@ export async function main(argv: readonly string[]): Promise<number> {
     .option("--debug", "show stack traces")
     .option("--cwd <dir>", "project directory (default: current directory)")
     .option("--registry <url>", "registry base URL (overrides config and env)")
+    .option("--timeout <seconds>", "network timeout 1-300s (overrides env and config)")
     .option("--yes", "non-interactive: accept defaults (does not imply --overwrite)");
 
   program
@@ -192,11 +194,12 @@ export async function main(argv: readonly string[]): Promise<number> {
     .option("--no-styles", "skip Tailwind CSS patching (print the snippet instead)")
     .option("--cwd <dir>", "project directory")
     .option("--registry <url>", "registry base URL")
+    .option("--timeout <seconds>", "network timeout 1-300s (overrides env and config)")
     .action(async (
       slugs: string[],
-      cmdOptions: { overwrite?: boolean; dryRun?: boolean; yes?: boolean; noInstall?: boolean; noStyles?: boolean; cwd?: string; registry?: string },
+      cmdOptions: { overwrite?: boolean; dryRun?: boolean; yes?: boolean; noInstall?: boolean; noStyles?: boolean; cwd?: string; registry?: string; timeout?: string },
     ) => {
-      const globalOptions = program.opts<{ debug?: boolean; cwd?: string; registry?: string; yes?: boolean }>();
+      const globalOptions = program.opts<{ debug?: boolean; cwd?: string; registry?: string; timeout?: string; yes?: boolean }>();
       const debug = globalOptions.debug === true;
       try {
         const cwd = resolve(cmdOptions.cwd ?? globalOptions.cwd ?? process.cwd());
@@ -214,6 +217,7 @@ export async function main(argv: readonly string[]): Promise<number> {
             noInstall: cmdOptions.noInstall === true,
             noStyles: cmdOptions.noStyles === true,
             registryFlag: cmdOptions.registry ?? globalOptions.registry,
+            timeoutFlag: cmdOptions.timeout ?? globalOptions.timeout,
             debug,
           },
           {
