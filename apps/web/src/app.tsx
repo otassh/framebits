@@ -40,6 +40,7 @@ import {
 } from "./lib/catalog.js";
 import { createRegistryClient, type RegistryClient } from "./lib/registry.js";
 import { navigate, useRoute } from "./lib/router.js";
+import brandMarkUrl from "./assets/framebits-mark.png";
 
 const REGISTRY_URL = import.meta.env.VITE_REGISTRY_URL ?? "/r";
 const INSTALL_COMMAND = "npm install -g @framebits/cli";
@@ -93,9 +94,7 @@ function Brand({ onNavigate }: { onNavigate?: () => void }): React.JSX.Element {
       {...(onNavigate === undefined ? {} : { onNavigate })}
     >
       <span className="brand-mark" aria-hidden="true">
-        <span />
-        <span />
-        <span />
+        <img src={brandMarkUrl} alt="" width={29} height={29} />
       </span>
       <span className="brand-word">
         Frame<span>bits</span>

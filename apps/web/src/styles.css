@@ -127,35 +127,19 @@ a {
 }
 
 .brand-mark {
-  position: relative;
   display: grid;
   place-items: center;
   width: 29px;
   height: 29px;
-  transform: rotate(-8deg);
 }
 
-.brand-mark span {
-  position: absolute;
-  width: 20px;
-  height: 20px;
-  border: 2px solid var(--accent);
-  border-radius: 5px;
+.brand-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
   transition: transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.brand-mark span:nth-child(2) {
-  width: 14px;
-  height: 14px;
-  border-color: var(--accent-soft);
-}
-
-.brand-mark span:nth-child(3) {
-  width: 6px;
-  height: 6px;
-  border: 0;
-  border-radius: 2px;
-  background: var(--text);
 }
 
 .brand-word {
@@ -166,12 +150,8 @@ a {
   color: var(--accent);
 }
 
-.brand:hover .brand-mark span:first-child {
-  transform: rotate(8deg) scale(1.06);
-}
-
-.brand:hover .brand-mark span:nth-child(2) {
-  transform: rotate(-12deg) scale(0.94);
+.brand:hover .brand-mark img {
+  transform: scale(1.06);
 }
 
 .main-nav {
