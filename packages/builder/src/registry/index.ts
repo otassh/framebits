@@ -1,11 +1,7 @@
 import ts from "typescript";
 import type { ComponentStyles, Meta } from "@framebits/shared";
 import { discoverRegistry, type DiscoveredItem } from "./discover.js";
-import {
-  analyzeSource,
-  checkImports,
-  type ImportCheckContext,
-} from "./imports.js";
+import { analyzeSource, checkImports, type ImportCheckContext } from "./imports.js";
 import { buildItemModel } from "./model.js";
 import { scanSecurity } from "./security.js";
 import { runTypecheck, type TypecheckItem } from "./typecheck.js";
@@ -137,7 +133,9 @@ function checkItemContent(
   knownItems: ReadonlyMap<string, "component" | "lib" | "hook">,
   diagnostics: Diagnostic[],
 ): void {
-  const byName = new Map(item.files.map((file) => [file.relPath.slice(item.dirRel.length + 1), file]));
+  const byName = new Map(
+    item.files.map((file) => [file.relPath.slice(item.dirRel.length + 1), file]),
+  );
   const sourceName = ownSourceName(meta);
 
   const usedPackages = new Set<string>();
@@ -201,7 +199,9 @@ function checkItemContent(
 
   const metaRel = `${item.dirRel}/meta.json`;
   for (const name of Object.keys(meta.dependencies).sort()) {
-    if (!usedPackages.has(name)) {
+    // Declaration packages provide ambient types for runtime dependencies and
+    // therefore are intentionally not imported by component source files.
+    if (!usedPackages.has(name) && !name.startsWith("@types/")) {
       diagnostics.push({
         severity: "warning",
         code: "DEP_UNUSED",
@@ -251,11 +251,10 @@ function hasDefaultModifier(node: ts.Node): boolean {
 }
 
 /** Collect the materializable files for type-checking; undefined when skipped. */
-function toTypecheckItem(
-  item: DiscoveredItem,
-  meta: Meta,
-): TypecheckItem | undefined {
-  const byName = new Map(item.files.map((file) => [file.relPath.slice(item.dirRel.length + 1), file]));
+function toTypecheckItem(item: DiscoveredItem, meta: Meta): TypecheckItem | undefined {
+  const byName = new Map(
+    item.files.map((file) => [file.relPath.slice(item.dirRel.length + 1), file]),
+  );
   const sourceName = ownSourceName(meta);
   const source = byName.get(sourceName);
   if (source?.text === undefined) return undefined;
@@ -281,7 +280,9 @@ function buildModel(record: {
   styles: ComponentStyles | undefined;
 }): RegistryItemModel | undefined {
   const { item, meta, styles } = record;
-  const byName = new Map(item.files.map((file) => [file.relPath.slice(item.dirRel.length + 1), file]));
+  const byName = new Map(
+    item.files.map((file) => [file.relPath.slice(item.dirRel.length + 1), file]),
+  );
   const source = byName.get(ownSourceName(meta));
   if (source?.text === undefined) return undefined;
   const cssName = meta.type === "component" ? `${meta.slug}.css` : undefined;

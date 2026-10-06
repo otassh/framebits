@@ -22,7 +22,11 @@ describe("hasDefaultExport", () => {
   });
 });
 
-function componentFiles(dir: string, slug: string, tsx: string = SIMPLE_TSX): Record<string, string> {
+function componentFiles(
+  dir: string,
+  slug: string,
+  tsx: string = SIMPLE_TSX,
+): Record<string, string> {
   return {
     [`${dir}/${slug}/meta.json`]: metaJson(slug),
     [`${dir}/${slug}/${slug}.tsx`]: tsx,
@@ -69,6 +73,23 @@ describe("loadRegistry", () => {
         "components/ui/ok.tsx",
       ]);
       expect(items[0]?.cssVars).toEqual({ light: { "--ok": "red" } });
+    } finally {
+      await rmRegistry(root);
+    }
+  });
+
+  it("does not report ambient declaration packages as unused", async () => {
+    const root = await makeRegistry({
+      ...componentFiles("components/buttons", "typed-widget"),
+    });
+    await writeFile(
+      join(root, "components", "buttons", "typed-widget", "meta.json"),
+      metaJson("typed-widget", { dependencies: { "@types/three": "0.186.0" } }),
+      "utf8",
+    );
+    try {
+      const { diagnostics } = await loadRegistry({ registryRoot: root });
+      expect(diagnostics).toEqual([]);
     } finally {
       await rmRegistry(root);
     }

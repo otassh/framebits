@@ -130,9 +130,20 @@ function startRegistryServer(registryOut) {
 }
 
 function verifyCommon(projDir, label, cssFiles) {
-  for (const dep of ["motion", "clsx", "tailwind-merge"]) {
+  for (const dep of [
+    "motion",
+    "clsx",
+    "tailwind-merge",
+    "three",
+    "@types/three",
+    "@react-three/fiber",
+  ]) {
     assertExists(join(projDir, "node_modules", dep), `${label} node_modules/${dep}`);
   }
+  assertExists(
+    join(projDir, "src", "components", "ui", "framebits-logo-3d.tsx"),
+    `${label} FrameBitsLogo3D component`,
+  );
   const cssHits = cssFiles.filter((file) =>
     readFileSync(file, "utf8").includes("@keyframes shimmer"),
   );
@@ -191,6 +202,7 @@ async function verifyNoOp(projDir, label, registryUrl) {
       "--yes",
       "aurora-text",
       "shimmer-button",
+      "framebits-logo-3d",
       "--cwd",
       projDir,
       "--registry",
@@ -220,6 +232,7 @@ async function verifyNoOp(projDir, label, registryUrl) {
       "--yes",
       "aurora-text",
       "shimmer-button",
+      "framebits-logo-3d",
       "--cwd",
       projDir,
       "--registry",
@@ -263,12 +276,17 @@ async function scenarioNext(workRoot, registryUrl) {
       "--yes",
       "aurora-text",
       "shimmer-button",
+      "framebits-logo-3d",
       "--cwd",
       projDir,
       "--registry",
       registryUrl,
     ],
     { cwd: projDir, timeout: 600000 },
+  );
+  writeFileSync(
+    join(projDir, "src", "app", "page.tsx"),
+    '"use client";\n\nimport { FrameBitsLogo3D } from "@/components/ui/framebits-logo-3d";\n\nexport default function Home() {\n  return (\n    <main style={{ minHeight: "100vh", background: "#050505" }}>\n      <FrameBitsLogo3D quality="low" intro={false} style={{ height: "100vh" }} />\n    </main>\n  );\n}\n',
   );
   await run(join(projDir, "node_modules", ".bin", "tsc"), ["--noEmit", "-p", "tsconfig.json"], {
     cwd: projDir,
@@ -345,12 +363,17 @@ async function scenarioVite(workRoot, registryUrl) {
       "--yes",
       "aurora-text",
       "shimmer-button",
+      "framebits-logo-3d",
       "--cwd",
       projDir,
       "--registry",
       registryUrl,
     ],
     { cwd: projDir, timeout: 600000 },
+  );
+  writeFileSync(
+    join(projDir, "src", "App.tsx"),
+    'import { FrameBitsLogo3D } from "./components/ui/framebits-logo-3d";\n\nexport default function App() {\n  return (\n    <main style={{ minHeight: "100vh", background: "#050505" }}>\n      <FrameBitsLogo3D quality="low" intro={false} style={{ height: "100vh" }} />\n    </main>\n  );\n}\n',
   );
   await run("npm", ["run", "build"], { cwd: projDir, timeout: 600000 });
   log("ok: vite build (tsc -b + vite build) passes");
