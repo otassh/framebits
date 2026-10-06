@@ -15,8 +15,22 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { type MouseEvent, type PropsWithChildren, useEffect, useMemo, useState } from "react";
+import {
+  AnimatePresence,
+  motion,
+  useMotionValue,
+  useReducedMotion,
+  useScroll,
+  useSpring,
+} from "motion/react";
+import {
+  type MouseEvent,
+  type PointerEvent as ReactPointerEvent,
+  type PropsWithChildren,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   catalogStats,
   componentItems,
@@ -183,6 +197,19 @@ function AmbientField(): React.JSX.Element {
   );
 }
 
+function ScrollProgress(): React.JSX.Element | null {
+  const reduceMotion = useReducedMotion();
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 170,
+    damping: 28,
+    mass: 0.2,
+  });
+
+  if (reduceMotion) return null;
+  return <motion.div className="scroll-progress" style={{ scaleX }} aria-hidden="true" />;
+}
+
 interface HeroProps {
   state: IndexState;
 }
@@ -190,6 +217,24 @@ interface HeroProps {
 function Hero({ state }: HeroProps): React.JSX.Element {
   const reduceMotion = useReducedMotion();
   const stats = state.status === "ready" ? catalogStats(state.index.items) : undefined;
+  const stageRotateX = useSpring(useMotionValue(0), { stiffness: 180, damping: 24 });
+  const stageRotateY = useSpring(useMotionValue(0), { stiffness: 180, damping: 24 });
+
+  const moveStage = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    if (reduceMotion || event.pointerType !== "mouse") return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const x = (event.clientX - bounds.left) / bounds.width;
+    const y = (event.clientY - bounds.top) / bounds.height;
+    stageRotateX.set((0.5 - y) * 5);
+    stageRotateY.set((x - 0.5) * 6);
+    event.currentTarget.style.setProperty("--pointer-x", `${String(x * 100)}%`);
+    event.currentTarget.style.setProperty("--pointer-y", `${String(y * 100)}%`);
+  };
+
+  const resetStage = (): void => {
+    stageRotateX.set(0);
+    stageRotateY.set(0);
+  };
 
   return (
     <section className="hero">
@@ -205,10 +250,27 @@ function Hero({ state }: HeroProps): React.JSX.Element {
             <span className="live-dot" />
             Curated React motion, shipped as source
           </div>
-          <h1>
-            Motion,
-            <br />
-            <span>without the mess.</span>
+          <h1 aria-label="Motion, without the mess.">
+            <span className="hero-title-mask" aria-hidden="true">
+              <motion.span
+                className="hero-title-line"
+                initial={reduceMotion ? false : { y: "110%" }}
+                animate={{ y: 0 }}
+                transition={{ duration: 0.72, delay: 0.08, ease: [0.2, 0.8, 0.2, 1] }}
+              >
+                Motion,
+              </motion.span>
+            </span>
+            <span className="hero-title-mask" aria-hidden="true">
+              <motion.span
+                className="hero-title-line hero-title-accent"
+                initial={reduceMotion ? false : { y: "110%" }}
+                animate={{ y: 0 }}
+                transition={{ duration: 0.72, delay: 0.18, ease: [0.2, 0.8, 0.2, 1] }}
+              >
+                without the mess.
+              </motion.span>
+            </span>
           </h1>
           <p className="hero-lede">
             Production-ready animated components you install, inspect, and own. No runtime lock-in.
@@ -241,6 +303,13 @@ function Hero({ state }: HeroProps): React.JSX.Element {
           initial={reduceMotion ? false : { opacity: 0, scale: 0.94, rotate: 1.5 }}
           animate={{ opacity: 1, scale: 1, rotate: 0 }}
           transition={{ duration: 0.8, delay: 0.1, ease: [0.2, 0.8, 0.2, 1] }}
+          style={{
+            rotateX: stageRotateX,
+            rotateY: stageRotateY,
+            transformPerspective: 1000,
+          }}
+          onPointerMove={moveStage}
+          onPointerLeave={resetStage}
         >
           <div className="stage-topbar">
             <span className="traffic-lights">
@@ -278,6 +347,51 @@ function Hero({ state }: HeroProps): React.JSX.Element {
         </motion.div>
       </div>
     </section>
+  );
+}
+
+function RegistryTicker({ state }: HeroProps): React.JSX.Element | null {
+  const reduceMotion = useReducedMotion();
+  if (state.status !== "ready" || state.index.items.length === 0) {
+    const message =
+      state.status === "loading"
+        ? "Validating the live registry…"
+        : state.status === "error"
+          ? "Live registry connection paused"
+          : "The live registry is ready for its first package";
+    return (
+      <aside className="registry-ticker registry-ticker-pending" aria-live="polite">
+        <span>{message}</span>
+      </aside>
+    );
+  }
+
+  const registryItems = [...state.index.items, ...state.index.items];
+  const renderItems = (copy: "primary" | "duplicate"): React.JSX.Element[] =>
+    registryItems.map((item, index) => (
+      <span className="ticker-item" key={`${copy}-${String(index)}-${item.slug}`}>
+        <i aria-hidden="true" />
+        <strong>{item.slug}</strong>
+        <small>v{item.version}</small>
+        <em>{item.type}</em>
+      </span>
+    ));
+
+  return (
+    <aside className="registry-ticker" aria-label="Live registry packages">
+      <p className="sr-only">
+        Live registry with {state.index.items.length} validated packages.
+      </p>
+      <motion.div
+        className="ticker-track"
+        animate={reduceMotion ? false : { x: ["0%", "-50%"] }}
+        transition={{ duration: 28, repeat: Infinity, ease: "linear" }}
+        aria-hidden="true"
+      >
+        <div className="ticker-set">{renderItems("primary")}</div>
+        <div className="ticker-set">{renderItems("duplicate")}</div>
+      </motion.div>
+    </aside>
   );
 }
 
@@ -567,6 +681,7 @@ function HomePage({ state, retry }: { state: IndexState; retry: () => void }): R
   return (
     <>
       <Hero state={state} />
+      <RegistryTicker state={state} />
       <HomeCatalog state={state} retry={retry} />
       <ValueSection />
       <WorkflowSection state={state} />
@@ -971,14 +1086,15 @@ export function App(): React.JSX.Element {
 
   return (
     <div className="app-shell">
+      <ScrollProgress />
       <Header />
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={routeKey}
-          initial={reduceMotion ? false : { opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={reduceMotion ? {} : { opacity: 0 }}
-          transition={{ duration: reduceMotion ? 0 : 0.22 }}
+          initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={reduceMotion ? {} : { opacity: 0, y: -8 }}
+          transition={{ duration: reduceMotion ? 0 : 0.28, ease: [0.2, 0.8, 0.2, 1] }}
         >
           {route.kind === "home" ? <HomePage state={state} retry={retry} /> : null}
           {route.kind === "catalog" ? <CatalogPage state={state} retry={retry} /> : null}
