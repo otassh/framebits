@@ -1,0 +1,42 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Deploy to VPS over SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_SSH_PORT: ${{ secrets.VPS_SSH_PORT }}
+          VPS_REPO_DIR: ${{ secrets.VPS_REPO_DIR }}
+          DEPLOY_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          : "${VPS_HOST:?set VPS_HOST secret}"
+          : "${VPS_USER:?set VPS_USER secret}"
+          : "${VPS_SSH_KEY:?set VPS_SSH_KEY secret}"
+          port="${VPS_SSH_PORT:-22}"
+          repo_dir="${VPS_REPO_DIR:-~/framebits}"
+          mkdir -p ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh -i ~/.ssh/deploy_key -p "$port" \
+            -o StrictHostKeyChecking=accept-new \
+            -o BatchMode=yes \
+            "$VPS_USER@$VPS_HOST" \
+            "cd $repo_dir && bash deploy/deploy.sh $DEPLOY_SHA"

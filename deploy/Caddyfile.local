@@ -1,0 +1,79 @@
+# deploy/Caddyfile.local — local verification twin of Caddyfile (Task 6).
+# Plain HTTP on :8080 (no ACME locally), registry root bind-mounted from
+# ./dist/registry at /srv/registry. All cache/CORS/security semantics mirror
+# production so `scripts/verify-registry-headers.sh` validates the real thing.
+{
+  admin off
+  auto_https off
+
+  servers {
+    trusted_proxies static private_ranges
+  }
+
+  log {
+    output stdout
+    format json
+  }
+}
+
+:8080 {
+  encode zstd gzip
+
+  log {
+    output stdout
+    format json
+  }
+
+  header {
+    X-Content-Type-Options "nosniff"
+    Referrer-Policy "strict-origin-when-cross-origin"
+    X-Frame-Options "SAMEORIGIN"
+    -Server
+  }
+
+  handle /healthz {
+    respond "ok" 200
+  }
+
+  @immutable path_regexp ^/r/.+@[^/]+\.json$
+  handle @immutable {
+    root * /srv/registry
+    header Access-Control-Allow-Origin "*"
+    header Content-Type "application/json; charset=utf-8"
+    header Cache-Control "public, max-age=31536000, immutable"
+    file_server
+  }
+
+  handle /r/* {
+    root * /srv/registry
+    header Access-Control-Allow-Origin "*"
+    header Content-Type "application/json; charset=utf-8"
+    header Cache-Control "public, max-age=300, stale-while-revalidate=86400"
+    file_server
+  }
+
+  @registryStatic {
+    path /search-index.json /build-manifest.json /schema/*
+  }
+  handle @registryStatic {
+    root * /srv/registry
+    header Access-Control-Allow-Origin "*"
+    header Content-Type "application/json; charset=utf-8"
+    header Cache-Control "public, max-age=300, stale-while-revalidate=86400"
+    file_server
+  }
+
+  handle /api/* {
+    reverse_proxy api:3001 {
+      header_up X-Forwarded-Proto {scheme}
+      transport http {
+        dial_timeout 5s
+        response_header_timeout 30s
+      }
+    }
+  }
+
+  handle {
+    reverse_proxy web:3000
+  }
+}
