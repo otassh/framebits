@@ -7,6 +7,8 @@ apps/cli/.journal-tmp/
 # LICENSE into apps/cli so npm auto-includes it in the tarball. Gitignored so
 # the copy cannot drift from the root file; never commit it.
 apps/cli/LICENSE
+apps/web/.registry/
+apps/web/.registry-archive/
 .turbo/
 *.local
 .env

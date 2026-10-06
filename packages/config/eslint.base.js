@@ -3,7 +3,10 @@ import eslint from "@eslint/js";
 
 export default tseslint.config(
   eslint.configs.recommended,
-  ...tseslint.configs.strictTypeChecked.map((cfg) => ({ ...cfg, files: ["**/*.ts"] })),
+  ...tseslint.configs.strictTypeChecked.map((cfg) => ({
+    ...cfg,
+    files: ["**/*.{ts,tsx}"],
+  })),
   {
     ...tseslint.configs.disableTypeChecked,
     files: ["**/*.js"],

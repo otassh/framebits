@@ -52,6 +52,7 @@ Reading components (by the CLI or the website) must **never** hit the API or dat
 | Lint/format                | ESLint (typescript-eslint, strict) + Prettier                                                               |
 | CLI                        | commander, @clack/prompts, execa, picocolors, zod                                                           |
 | Builder                    | ts-morph or TypeScript compiler API (import analysis), fast-glob, MiniSearch (search index)                 |
+| Web                        | React 19 + Vite 7 + Motion 14; static SPA consuming validated registry JSON                                 |
 | Reverse proxy              | Caddy 2                                                                                                     |
 | Containers                 | Docker + Docker Compose                                                                                     |
 | CI                         | GitHub Actions                                                                                              |
@@ -66,7 +67,7 @@ Anything else needs a written justification.
 /apps
   /api              Hono server
   /cli              the @framebits/cli npm package (framebits binary)
-  /web              (OUT OF SCOPE now; leave an empty placeholder with README only)
+  /web              React + Vite frontend; static build reads generated registry JSON
 /packages
   /shared           Zod schemas + inferred types (meta, registry, API, config)
   /db               Drizzle schema, migrations, db client, seed/sync
@@ -451,7 +452,7 @@ UFW (22/80/443 only), SSH key-only login, fail2ban, unattended security upgrades
 
 ## 13. Out of scope (do NOT build)
 
-User accounts/OAuth, user uploads, moderation, payments, comments, Redis/BullMQ, Elasticsearch/Meilisearch/Typesense, Cloudflare R2/S3, Kubernetes, microservices, the frontend website (`apps/web`), Playwright previews (planned for Task 13), JS and plain-CSS variants (planned later; just keep `files[].variant` optional in the schema now), email delivery (interface + no-op only).
+User accounts/OAuth, user uploads, moderation, payments, comments, Redis/BullMQ, Elasticsearch/Meilisearch/Typesense, Cloudflare R2/S3, Kubernetes, microservices, Playwright component previews (planned for Task 13), JS and plain-CSS variants (planned later; just keep `files[].variant` optional in the schema now), email delivery (interface + no-op only).
 
 ---
 
@@ -478,6 +479,18 @@ _Acceptance:_ correct `r/*.json`, `index.json`, `search-index.json`, `build-mani
 **Task 5. CLI: `init` and `add`**
 Per Section 9, including hash verification, path safety, alias rewriting, rollback on failure, Tailwind patching (v3 via AST, v4 via CSS), dependency install, `--dry-run`.
 _Acceptance:_ e2e test: local static server + temp fixture project; `init` then `add aurora-text` writes the correct files, resolves `cn` recursively, installs (mocked package manager call is asserted), updates config; tampered JSON -> exit code 4 and no files written; path traversal payload rejected; `--dry-run` changes nothing.
+
+**Task 5c. Production frontend website**
+Replace the `apps/web` placeholder with a responsive React + Vite site powered only by
+the builder's static registry output. Include the product landing page, searchable and
+filterable component catalog, and component detail/code views. Use Motion for purposeful
+transitions and honor reduced-motion preferences. Do not invent stats, components,
+testimonials, or API responses; unavailable dynamic features stay absent.
+_Acceptance:_ all registry responses are parsed with shared Zod schemas; the web build
+bundles real generated `/r/*.json`; loading/error/empty states are usable; keyboard and
+mobile layouts work; unit tests cover registry parsing and catalog filtering; package
+smoke test, `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm build` are green; visual
+QA is performed against the production build at desktop and mobile widths.
 
 **Task 6. Docker, Caddy, deploy scripts**
 Per Section 10.

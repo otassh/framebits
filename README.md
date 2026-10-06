@@ -43,7 +43,7 @@ Using the CLI requires Node >= 20. Developing this repo requires Node >= 22. See
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
 | `apps/api`                               | Hono server (events, stats) — planned, Task 8                                                                                            | Planned (stub) |
 | `apps/cli`                               | The `@framebits/cli` npm package (`framebits` binary) — `init`, `add`, registry client (`list`/`search`/`diff`/`update` planned, Task 9) | Ready          |
-| `apps/web`                               | Placeholder (out of scope, MASTER_PROMPT §13)                                                                                            | Placeholder    |
+| `apps/web`                               | React + Vite frontend with a live-registry catalog and component source views                                                            | Ready          |
 | `packages/shared`                        | Zod schemas + inferred types (single source of truth)                                                                                    | Ready          |
 | `packages/db`                            | Drizzle schema, migrations, DB client, seed/sync — planned, Task 7                                                                       | Planned (stub) |
 | `packages/builder`                       | Registry build pipeline (validate → hash → emit)                                                                                         | Ready          |
@@ -54,7 +54,7 @@ Using the CLI requires Node >= 20. Developing this repo requires Node >= 22. See
 
 ## 🏗 Architecture (target)
 
-> Target architecture — not all parts exist yet. Implemented today: Git registry, `packages/builder`, static `/r/*.json`, CLI `init`/`add`. Planned (not built): events ingestion, `apps/api` (stub, Task 8), Postgres via `packages/db` (stub, Task 7), Caddy/`deploy/` (placeholder, Task 6).
+> Target architecture — not all parts exist yet. Implemented today: Git registry, `packages/builder`, static `/r/*.json`, CLI `init`/`add`, and the `apps/web` catalog. Planned (not built): events ingestion, `apps/api` (stub, Task 8), Postgres via `packages/db` (stub, Task 7), Caddy/`deploy/` (placeholder, Task 6).
 
 ```mermaid
 flowchart LR
@@ -91,7 +91,7 @@ Deploy scripts are bash/POSIX. Develop inside WSL2 or Git Bash so shell scripts 
 
 ## 📌 Project status
 
-Implemented (Tasks 1–5): monorepo, `packages/shared` contracts, `pnpm new-component` generator, `packages/builder` pipeline with 3 sample components, CLI `init` + `add` (styles + install).
+Implemented (Tasks 1–5c): monorepo, `packages/shared` contracts, `pnpm new-component` generator, `packages/builder` pipeline with 3 sample components, CLI `init` + `add` (styles + install), and the production registry frontend.
 
 Not built yet: Task 6 (Docker/Caddy/deploy), Task 7 (`packages/db`), Task 8 (`apps/api`: events, stats, likes, newsletter, RSS), Task 9 (CLI telemetry, `list`/`search`/`diff`/`update`), Task 10 (admin), Tasks 11–14 (quality gates, props docs, previews, polish).
 
