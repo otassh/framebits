@@ -14,6 +14,25 @@ Run from the repo root:
 
 Use conventional commits (e.g. `feat:`, `fix:`, `chore:`). One task = one commit/PR.
 
+## Commit signing
+
+All commits must show "Verified" on GitHub. We sign with SSH:
+
+```sh
+ssh-keygen -t ed25519 -C "<you> signing key" -f ~/.ssh/id_ed25519_signing
+git config --global gpg.format ssh
+git config --global user.signingkey ~/.ssh/id_ed25519_signing.pub
+git config --global commit.gpgsign true
+git config --global gpg.ssh.allowedSignersFile ~/.ssh/allowed_signers
+```
+
+Add `<your GitHub noreply email> <contents of the .pub key>` to
+`~/.ssh/allowed_signers` so `git log --show-signature` verifies locally.
+Then register the `.pub` key on GitHub under Settings → SSH and GPG keys as a
+**signing** key (not an authentication key). Use your
+`<id>+<user>@users.noreply.github.com` address as the commit email so the
+signature maps to your account.
+
 ## Registry
 
 Never edit files in `registry/components/**` by hand — use the generator (`pnpm new-component`).
