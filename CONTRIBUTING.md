@@ -44,6 +44,10 @@ PR checklist:
 - [ ] Reviewer read the full source of every new/changed component file (the security
   scan is a mistake-guard, not a boundary).
 
+## Releasing
+
+Releasing is owner-only, see [`docs/RELEASING.md`](docs/RELEASING.md).
+
 ## Versions and the lock
 
 - `registry/registry.lock.json` maps slug → `{ version, hash }`. Never edit it by hand.

@@ -78,6 +78,8 @@ pnpm test
 
 Node >= 22, pnpm only.
 
+Releasing is owner-only, see [`docs/RELEASING.md`](docs/RELEASING.md).
+
 <details>
 <summary>Windows note</summary>
 
