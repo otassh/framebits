@@ -64,7 +64,14 @@ describe("verifyItem", () => {
 
   it("rejects tampered content (exit 4, hash mismatch)", () => {
     const tampered = validItem({
-      files: [{ path: "components/ui/aurora-text.tsx", content: "tampered\n", type: "component", variant: "ts-tw" }],
+      files: [
+        {
+          path: "components/ui/aurora-text.tsx",
+          content: "tampered\n",
+          type: "component",
+          variant: "ts-tw",
+        },
+      ],
     });
     // Recompute is intentionally skipped: the stored hash is for the original content.
     const original = validItem();
@@ -94,7 +101,9 @@ describe("verifyItem", () => {
       hash,
       dependencies: { "left-pad": "^1.0.0" },
       registryDependencies: [],
-      files: [{ path: "components/ui/aurora-text.tsx", content, type: "component", variant: "ts-tw" }],
+      files: [
+        { path: "components/ui/aurora-text.tsx", content, type: "component", variant: "ts-tw" },
+      ],
     };
     try {
       verifyItem(JSON.stringify(payload), "aurora-text");
@@ -102,6 +111,39 @@ describe("verifyItem", () => {
     } catch (error) {
       expect(messageOf(error)).toContain("allowlist");
       expect(exitCodeOf(error)).toBe(4);
+    }
+  });
+
+  it("rejects non-registry dependency specs (URL/git/tag, exit 4)", () => {
+    const badRanges = [
+      "latest",
+      "next",
+      "https://example.com/motion.tgz",
+      "git+https://github.com/user/repo.git",
+      "github:user/repo",
+      "file:../foo",
+      "workspace:*",
+      "npm:motion@^14.0.0",
+      "",
+    ];
+    for (const range of badRanges) {
+      const payload = validItem({ dependencies: { motion: range } });
+      // Recompute the hash over the malicious deps so the failure is the
+      // schema/allowlist check, not a hash mismatch.
+      const content = "export {};\n";
+      const recomputed = computeItemHash({
+        type: "component",
+        dependencies: { motion: range },
+        registryDependencies: [],
+        files: [{ path: "components/ui/aurora-text.tsx", content, type: "component" }],
+      });
+      payload["hash"] = recomputed;
+      try {
+        verifyItem(JSON.stringify(payload), "aurora-text");
+        expect.unreachable(`range ${JSON.stringify(range)} should be rejected`);
+      } catch (error) {
+        expect(exitCodeOf(error)).toBe(4);
+      }
     }
   });
 

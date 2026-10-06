@@ -162,6 +162,8 @@ disable color/spinners.
 
 ## Security model (honest)
 
+> Precise threat model: `docs/SECURITY.md`.
+
 Registry content is data, never executed. Every item is schema-validated and
 hash-verified before anything touches disk (mismatch → exit 4, nothing
 written). The hash lives in the same JSON it verifies, so it only detects

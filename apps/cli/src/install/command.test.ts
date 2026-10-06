@@ -30,6 +30,24 @@ describe("buildInstallCommand", () => {
     expect(buildInstallCommand("npm", [])).toBeUndefined();
   });
 
+  it("keeps each package as a separate argv entry (no shell joining)", () => {
+    const command = buildInstallCommand("pnpm", [
+      { name: "motion", range: "^14.0.0" },
+      { name: "clsx", range: "^2.0.0" },
+    ]);
+    expect(command).toEqual({
+      program: "pnpm",
+      args: ["add", "motion@^14.0.0", "clsx@^2.0.0"],
+    });
+    // Display rendering is for humans only; execution always uses argv.
+    if (command !== undefined) {
+      expect(command.args).toHaveLength(3);
+      expect(command.args[1]).toBe("motion@^14.0.0");
+    } else {
+      expect.unreachable();
+    }
+  });
+
   it("rejects injection attempts in names and ranges (exit 4)", () => {
     const bad: Array<{ name: string; range: string }> = [
       { name: "motion; rm -rf /", range: "^14.0.0" },
@@ -38,6 +56,14 @@ describe("buildInstallCommand", () => {
       { name: "motion", range: "*" },
       { name: "motion", range: ">=1.0.0" },
       { name: "left-pad", range: "^1.0.0" },
+      { name: "motion", range: "latest" },
+      { name: "motion", range: "https://example.com/motion.tgz" },
+      { name: "motion", range: "git+https://github.com/user/repo.git" },
+      { name: "motion", range: "github:user/repo" },
+      { name: "motion", range: "file:../foo" },
+      { name: "motion", range: "workspace:*" },
+      { name: "motion", range: "npm:motion@^14.0.0" },
+      { name: "motion", range: "" },
     ];
     for (const spec of bad) {
       try {
