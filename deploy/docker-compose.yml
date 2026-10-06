@@ -1,0 +1,133 @@
+# deploy/docker-compose.yml — production stack for the single VPS (Task 6).
+# Services: caddy (TLS + static registry), api (Hono, Task 8), postgres 16
+# (internal only), web (static SPA). Postgres is never published to the host.
+# All images are pinned; all services have healthchecks, resource limits and
+# `restart: unless-stopped`; Postgres + Caddy data live in named volumes while
+# the registry is the host path /var/www (read-only) managed by deploy.sh.
+#
+# Required env (see deploy/README.md, never commit): POSTGRES_PASSWORD.
+# Optional: POSTGRES_USER/POSTGRES_DB (default framebits), DOMAIN
+# (default framebits.dev), GIT_SHA (image tags, default local).
+name: framebits
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+    internal: true
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
+
+services:
+  caddy:
+    image: caddy:2.10.2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:-framebits.dev}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - /var/www:/var/www:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+      - web
+    networks:
+      - frontend
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:80/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    image: framebits-api:${GIT_SHA:-local}
+    restart: unless-stopped
+    env_file:
+      - path: ../.env
+        required: false
+    environment:
+      PORT: "3001"
+      DATABASE_URL: postgres://${POSTGRES_USER:-framebits}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the environment or .env}:5432/${POSTGRES_DB:-framebits}
+      TRUSTED_PROXY_COUNT: "1"
+    expose:
+      - "3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - frontend
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3001/api/health').then((r)=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+
+  postgres:
+    image: postgres:16.9-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-framebits}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the environment or .env}
+      POSTGRES_DB: ${POSTGRES_DB:-framebits}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-framebits} -d $${POSTGRES_DB:-framebits}"]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    image: framebits-web:${GIT_SHA:-local}
+    restart: unless-stopped
+    expose:
+      - "3000"
+    networks:
+      - frontend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M

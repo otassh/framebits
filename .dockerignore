@@ -1,0 +1,21 @@
+# Root .dockerignore for api/web build contexts.
+# Keep contexts small and secret-free. The registry source itself is never
+# copied into images: the builder output is mounted into Caddy at runtime.
+node_modules/
+dist/
+dist-schemas/
+.turbo/
+coverage/
+playwright-report/
+test-results/
+.git/
+.gitignore
+.env
+.env.*.local
+*.local
+apps/web/.registry/
+apps/web/.registry-archive/
+apps/web/dist/
+apps/cli/.journal-tmp/
+packages/registry-env/.tmp/
+.pnpm-store/

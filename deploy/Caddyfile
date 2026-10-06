@@ -1,0 +1,90 @@
+# deploy/Caddyfile — production reverse proxy + static registry server (Task 6).
+# Domain is parameterized: `DOMAIN` env (default framebits.dev, still a
+# placeholder per docs/MASTER_PROMPT.md D16.1). Caddy issues/quicks automatic
+# HTTPS for the domain; /var/www is mounted read-only from the host.
+{
+  admin off
+
+  servers {
+    # Trust X-Forwarded-For only from the Docker/private networks; the API
+    # applies the same TRUSTED_PROXY_COUNT rule one hop down.
+    trusted_proxies static private_ranges
+  }
+
+  log {
+    output stdout
+    format json
+  }
+}
+
+{$DOMAIN:framebits.dev} {
+  encode zstd gzip
+
+  log {
+    output stdout
+    format json
+  }
+
+  # Security headers on every response.
+  header {
+    Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    X-Content-Type-Options "nosniff"
+    Referrer-Policy "strict-origin-when-cross-origin"
+    X-Frame-Options "SAMEORIGIN"
+    -Server
+  }
+
+  # Liveness for the container healthcheck (and uptime monitors).
+  handle /healthz {
+    respond "ok" 200
+  }
+
+  # Immutable versioned items: content-addressed by the builder, cached 1y.
+  # MUST come before the mutable /r/* handle (first match wins).
+  @immutable path_regexp ^/r/.+@[^/]+\.json$
+  handle @immutable {
+    root * /var/www/registry
+    header Access-Control-Allow-Origin "*"
+    header Content-Type "application/json; charset=utf-8"
+    header Cache-Control "public, max-age=31536000, immutable"
+    file_server
+  }
+
+  # Mutable registry reads: index + latest-item JSON (300s + SWR).
+  handle /r/* {
+    root * /var/www/registry
+    header Access-Control-Allow-Origin "*"
+    header Content-Type "application/json; charset=utf-8"
+    header Cache-Control "public, max-age=300, stale-while-revalidate=86400"
+    file_server
+  }
+
+  # Search index, schemas, and build manifest: public, mutable, same policy.
+  @registryStatic {
+    path /search-index.json /build-manifest.json /schema/*
+  }
+  handle @registryStatic {
+    root * /var/www/registry
+    header Access-Control-Allow-Origin "*"
+    header Content-Type "application/json; charset=utf-8"
+    header Cache-Control "public, max-age=300, stale-while-revalidate=86400"
+    file_server
+  }
+
+  # Dynamic API. Caddy forwards the real client IP; the API rate limiter
+  # must only trust X-Forwarded-For from this proxy (TRUSTED_PROXY_COUNT).
+  handle /api/* {
+    reverse_proxy api:3001 {
+      header_up X-Forwarded-Proto {scheme}
+      transport http {
+        dial_timeout 5s
+        response_header_timeout 30s
+      }
+    }
+  }
+
+  # Everything else goes to the static web frontend (SPA).
+  handle {
+    reverse_proxy web:3000
+  }
+}
