@@ -2,15 +2,16 @@
 /* global process, URL, setTimeout, clearTimeout */
 /**
  * Packaging smoke test (C1 + publishability): pnpm pack -> inspect the tarball
- * (file list must be package.json/README/dist only; the bundled dist/cli.js
+ * (file list must be package.json/README/LICENSE/dist only; the bundled dist/cli.js
  * must not reference @framebits/* at runtime) -> install the tarball into a
  * clean temp dir with npm -> run `framebits --version` and `--help` (direct
  * node invocation and npx-style) -> build a real registry with the builder,
  * serve it over local http, init a fixture project with the packed binary and
  * run `framebits add aurora-text --dry-run` (exit 0, project untouched).
  *
- * Still private: this script never publishes. It only packs and installs
- * locally. License choice is an open owner question (see docs/RELEASING.md).
+ * Public package since first-publish prep (MIT, version 0.1.0): this script
+ * never publishes. It only packs and installs locally. The LICENSE in the
+ * tarball is the generated copy staged by `prepack` (scripts/copy-license.mjs).
  */
 import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:http";
@@ -36,6 +37,20 @@ function quoteArg(arg) {
   return `"${arg.replace(/"/g, '\\"')}"`;
 }
 
+function childEnv(overrides = {}) {
+  const env = { ...process.env, ...overrides };
+  // The smoke intentionally performs REAL local side effects (pack to a temp
+  // dir, clean-room install) even when it runs inside `npm publish --dry-run`
+  // via `prepublishOnly`: npm exports `npm_config_dry_run=true` to lifecycle
+  // children, and npm/pnpm CLIs honor it (no tarball written, no install).
+  // Strip it so the smoke always exercises the real path. Nothing here
+  // publishes; the outer `--dry-run` still prevents the actual upload.
+  for (const key of Object.keys(env)) {
+    if (/^npm_config_dry[-_]run$/i.test(key)) delete env[key];
+  }
+  return env;
+}
+
 function runSh(command, args, options = {}) {
   // pnpm/npm resolve to .CMD/.ps1 shims on Windows, which cannot be spawned
   // directly (EINVAL/ENOENT); run them through the shell on every platform so
@@ -46,7 +61,7 @@ function runSh(command, args, options = {}) {
     timeout: 600000,
     ...options,
     shell: true,
-    env: { ...process.env, ...(options.env ?? {}) },
+    env: childEnv(options.env ?? {}),
   });
   const stdout = typeof result.stdout === "string" ? result.stdout : "";
   const stderr = typeof result.stderr === "string" ? result.stderr : "";
@@ -214,7 +229,7 @@ const projectDir = mkdtempSync(join(tmpdir(), "cli-smoke-project-"));
 let staticServer = undefined;
 
 try {
-  // 1. Pack the CLI (works while "private": true; pack is local only).
+  // 1. Pack the CLI (local only; never publishes).
   const packed = runSh("pnpm", ["pack", "--pack-destination", packDir], { cwd: root });
   process.stdout.write(`${packed.stdout}`);
   const tarballs = readdirSync(packDir).filter((f) => f.endsWith(".tgz"));

@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   checkReleaseVersion,
@@ -41,7 +44,7 @@ describe("checkReleaseVersion", () => {
 
   it("fails while the package is still private", () => {
     expect(() =>
-      checkReleaseVersion({ tag: "v0.0.0", version: "0.0.0", isPrivate: true }),
+      checkReleaseVersion({ tag: "v0.1.0", version: "0.1.0", isPrivate: true }),
     ).toThrow(/"private": true/);
   });
 
@@ -49,5 +52,22 @@ describe("checkReleaseVersion", () => {
     expect(() =>
       checkReleaseVersion({ tag: "framebits-v0.1.0", version: "0.1.0", isPrivate: false }),
     ).toThrow(/Invalid release tag/);
+  });
+
+  it("passes for the current repo state (live apps/cli/package.json)", () => {
+    // Guards the first-publish prep: the real package must be public and the
+    // guard must accept the tag matching its version. Built from the live
+    // version so this stays green on future bumps (v0.1.1, ...).
+    const repoRoot = fileURLToPath(new URL("../../../..", import.meta.url));
+    const pkg: { version: unknown; private?: unknown } = JSON.parse(
+      readFileSync(join(repoRoot, "apps", "cli", "package.json"), "utf8"),
+    ) as { version: unknown; private?: unknown };
+    expect(pkg.private).not.toBe(true);
+    expect(typeof pkg.version).toBe("string");
+    const version = pkg.version as string;
+    expect(checkReleaseVersion({ tag: `v${version}`, version, isPrivate: false })).toEqual({
+      tag: `v${version}`,
+      version,
+    });
   });
 });

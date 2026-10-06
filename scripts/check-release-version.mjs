@@ -16,10 +16,11 @@
  * for unit tests; the CLI wrapper below only runs when invoked directly.
  */
 
-// TODO(question): the repo is currently private and apps/cli is still
-// `"private": true` at version `0.0.0`, so this guard FAILS today by design.
-// Owner: flip `private` (and set version/license per docs/RELEASING.md) at
-// launch; until then every `release` workflow run stops here before publish.
+// First-publish prep (`chore/first-publish-prep`): apps/cli is now public at
+// version `0.1.0`, so this guard PASSES for tag `v0.1.0`. The `v0.1.0` tag must
+// still NEVER be pushed (0.1.0 is published once by hand from the owner
+// machine; npm refuses republish, so a CI run on that tag would fail at
+// `npm publish`). The first tag CI ever sees is `v0.1.1` (see docs/RELEASING.md).
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
