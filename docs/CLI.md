@@ -75,8 +75,9 @@ usage error naming the offending source; nothing is fetched or written.
 5. Rewrite `@/lib/`, `@/hooks/`, `@/components/ui/` prefixes to the
    configured aliases (statement-anchored, multi-line safe; comments/strings/
    JSX text untouched; leftovers warn with line numbers). Output is LF.
-6. Apply atomically (temp file + rename, dirs created as needed, journal +
-   rollback, symlink/escape refusal, config `installed` update last).
+6. Apply atomically (temp file + rename, dirs created as needed, an isolated
+   OS-temp journal + rollback, symlink/escape refusal, config `installed`
+   update last). Journal backups are removed after both success and failure.
 7. Print manual steps (5a; automated in 5b).
 
 ## Target mapping
