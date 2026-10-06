@@ -3,6 +3,7 @@
  * delegates to commands/init and commands/add.
  */
 import { Command } from "commander";
+import { realpathSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -290,8 +291,22 @@ export async function main(argv: readonly string[]): Promise<number> {
   }
 }
 
-const invokedAsScript = process.argv[1] !== undefined &&
-  resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+function invokedEntryPath(): string | undefined {
+  const raw = process.argv[1];
+  if (raw === undefined) return undefined;
+  // npm/npx bin shims are symlinks: resolve() is purely lexical and keeps the
+  // shim path, while import.meta.url is the real path. Compare real paths so
+  // an installed `framebits` actually runs instead of exiting 0 silently.
+  try {
+    return realpathSync(raw);
+  } catch {
+    return resolve(raw);
+  }
+}
+
+const invokedPath = invokedEntryPath();
+const invokedAsScript = invokedPath !== undefined &&
+  resolve(invokedPath) === fileURLToPath(import.meta.url);
 if (invokedAsScript) {
   main(process.argv.slice(2)).then(
     (code) => {

@@ -298,6 +298,16 @@ try {
   if (asCommand === undefined) throw new Error("no CLI target to invoke");
   run(asCommand, [...asArgs, "--version"]);
   run(asCommand, [...asArgs, "--help"]);
+  const versionOut = run(asCommand, [...asArgs, "--version"]);
+  if (versionOut.stdout.trim().length === 0) {
+    throw new Error(
+      `installed framebits --version printed nothing (argv[1]-vs-real-path shim bug?):\n${versionOut.stderr}`,
+    );
+  }
+  const helpOut = run(asCommand, [...asArgs, "--help"]);
+  if (!helpOut.stdout.includes("framebits") || !helpOut.stdout.includes("add")) {
+    throw new Error(`installed framebits --help looks wrong:\n${helpOut.stdout}\n${helpOut.stderr}`);
+  }
   runSh("npm", ["exec", "--yes", "--package", tarball, "--", "framebits", "--version"], {
     cwd: installDir,
   });
@@ -350,7 +360,9 @@ try {
       { cwd: projectDir },
     );
     if (!add.stdout.toLowerCase().includes("aurora-text")) {
-      throw new Error(`add --dry-run output does not mention aurora-text:\n${add.stdout}`);
+      throw new Error(
+        `add --dry-run output does not mention aurora-text:\nstdout:\n${add.stdout}\nstderr:\n${add.stderr}`,
+      );
     }
     if (!snapshotsEqual(before, snapshotDir(projectDir))) {
       throw new Error("add --dry-run modified the project directory (must write nothing)");
