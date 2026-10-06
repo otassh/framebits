@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  DescriptionSchema,
-  MetaSchema,
-  SlugSchema,
-  TagSchema,
-  TitleSchema,
-} from "./meta.js";
+import { DescriptionSchema, MetaSchema, SlugSchema, TagSchema, TitleSchema } from "./meta.js";
 
 export const validMeta = {
   slug: "aurora-text",
@@ -128,6 +122,12 @@ describe("MetaSchema", () => {
     ["bad semver range", { dependencies: { motion: "banana" } }],
     ["unbounded dependency range", { dependencies: { motion: "*" } }],
     ["open-ended dependency range", { dependencies: { motion: ">=0.0.0" } }],
+    ["dist-tag dependency range", { dependencies: { motion: "latest" } }],
+    ["url dependency range", { dependencies: { motion: "https://example.com/motion.tgz" } }],
+    ["git dependency range", { dependencies: { motion: "git+https://github.com/user/repo.git" } }],
+    ["file dependency range", { dependencies: { motion: "file:../foo" } }],
+    ["workspace dependency range", { dependencies: { motion: "workspace:*" } }],
+    ["npm-alias dependency range", { dependencies: { motion: "npm:motion@^14.0.0" } }],
     ["unknown registryDependency type", { registryDependencies: ["ok", 7] }],
     ["self reference", { registryDependencies: ["aurora-text"] }],
     ["duplicate registryDependencies", { registryDependencies: ["cn", "cn"] }],
