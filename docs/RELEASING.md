@@ -5,11 +5,18 @@
 > (`.github/workflows/release.yml`) via npm OIDC trusted publishing —
 > no npm tokens anywhere. Only the one-time bootstrap publish (§1) is done
 > by hand from the owner machine. Never publish from a feature branch, never
-> from a fork. The package is currently `private: true` at version `0.0.0`
-> and **NOT published**. `npm publish` refuses while `private` is set — that
-> is the guard against accidents. Keep it until the launch decision is made.
+> from a fork. Since first-publish prep, `apps/cli/package.json` is **public**
+> at version **`0.1.0`** (MIT, `publishConfig.access: "public"`) — but the
+> package is **NOT on npm yet**. Nothing is published until the owner runs §1.
+>
+> **Tag discipline:** `0.1.0` is published exactly once, by hand (§1). The
+> `v0.1.0` tag must NEVER be pushed — npm refuses to publish the same version
+> twice, so a CI run on that tag would fail at `npm publish`. The FIRST
+> CI-driven release is **`0.1.1`** (tag `v0.1.1`, §5). There is no GitHub
+> Release for 0.1.0 (its notes live in `CHANGELOG.md`); GitHub Releases
+> start at 0.1.1.
 
-Tag convention (reconciled): **`vX.Y.Z`** everywhere (e.g. `v0.1.0`).
+Tag convention (reconciled): **`vX.Y.Z`** everywhere (e.g. `v0.1.1`).
 The `release` workflow only runs on `v*.*.*` tags and the version guard
 (`scripts/check-release-version.mjs`) requires the tag to equal
 `apps/cli/package.json` `version` exactly. There is no `framebits-vX.Y.Z`
@@ -19,8 +26,10 @@ form — do not use it.
 
 - License is **MIT**: root `LICENSE` file added and `"license": "MIT"` set in
   `apps/cli/package.json` (and every other workspace `package.json` for
-  consistency). The field is intentionally present now; publishing an
-  unlicensed package is not acceptable.
+  consistency). DONE since first-publish prep. The packed tarball ships the
+  license via the `prepack` step (`apps/cli/scripts/copy-license.mjs` stages
+  the root `LICENSE` into `apps/cli/LICENSE`, gitignored so the copy cannot
+  drift; npm auto-includes `LICENSE` in the tarball despite `files: ["dist"]`).
 - TODO(question): confirm the copyright holder name (`Copyright (c) 2026
   otassh` in `LICENSE` — the login `otassh` is used because `gh api user`
   returned only the single-letter placeholder name "O", so "O" must not be
@@ -29,7 +38,9 @@ form — do not use it.
 - TODO(question): confirm the publish metadata added as placeholders:
   `"author": "otassh"` (name/org/email?), `repository`, `homepage`, `bugs`
   URLs (currently point at `github.com/otassh/framebits`), and `keywords`.
-- TODO(question): confirm the starting version (`0.1.0` below).
+- TODO(question): confirm the starting version (DONE in first-publish prep:
+  `apps/cli/package.json` is `"0.1.0"`, public; the bootstrap publishes
+  exactly this version, and the first CI-driven release is `0.1.1`).
 - TODO(question): confirm the production domain/registry URL if it changes
   any user-facing text (currently a placeholder, see
   `packages/shared/src/site.ts`).
@@ -54,6 +65,48 @@ package that already exists on the registry. The package must therefore be
 created once by hand before the OIDC flow can take over. After §1, the owner
 never publishes from a laptop again — all later releases go through §5.
 
+**Why 0.1.0 by hand, 0.1.1 via CI:** the hand publish below creates
+`framebits@0.1.0` on the registry, and npm refuses to publish the same
+version twice. Pushing tag `v0.1.0` afterwards would start a `release` run
+that fails at `npm publish` — so NEVER push `v0.1.0`, and let the first
+CI-driven release be `0.1.1` (§5).
+
+### Local checklist (copy-paste, clean `main`, clean tree)
+
+```sh
+git status --porcelain               # must print nothing
+pnpm install --frozen-lockfile
+pnpm --filter framebits build
+pnpm --filter framebits lint
+pnpm --filter framebits typecheck
+pnpm --filter framebits test
+node apps/cli/scripts/pack-smoke.mjs
+node scripts/check-release-version.mjs v0.1.0   # must print OK
+```
+
+All green required — do not proceed on red. `pack-smoke` fails if the packed
+tarball ships anything outside `package.json`/`README`/`LICENSE`/`dist`, or
+if `dist/cli.js` references `@framebits/*` at runtime. The guard passes only
+for tag `v0.1.0` against the public `0.1.0` package (CI must never run it —
+the tag is never pushed).
+
+### Dry-run the publish (from `apps/cli`, shows the file list, uploads nothing)
+
+```sh
+cd apps/cli
+npm publish --dry-run
+```
+
+This runs `prepublishOnly` (build + pack-smoke, no publish inside) and
+`prepack` (stages the root `LICENSE`) first, exactly as the real publish
+will. Confirm the file list is `package.json`, `README.md`, `LICENSE`,
+`dist/cli.js` only, and that the log shows the copy-license line.
+`--dry-run` never uploads. (The smoke strips the inherited
+`npm_config_dry_run` for its inner `pnpm`/`npm` calls so it still performs
+its real local pack + clean-room install; only the final upload is skipped.)
+
+### Publish 0.1.0 from the owner machine
+
 1. Choose/verify the name (do not rename an existing package):
    ```sh
    npm view framebits version dist-tags
@@ -64,52 +117,51 @@ never publishes from a laptop again — all later releases go through §5.
      `framebits-cli`) and wait for a decision. Name claim is an owner
      decision, not part of this guide.
 2. Log in as the owner (2FA on): `npm login`, then verify with `npm whoami`.
-3. Prepare `apps/cli/package.json`: `"version": "0.0.0"` → `"0.1.0"`,
-   delete the `"private": true` line, add the decided
-   `"license": "MIT"`. Keep `.env.example` current if any new env var is
-   introduced (none expected for a CLI-only release).
-4. Add a changelog entry in `CHANGELOG.md` (root) under a new `## [0.1.0]`
-   section. Per-release notes live in GitHub Releases (auto-generated, see
-   §5); the changelog holds the curated highlights.
-5. Verify publishability (from the repo root, must all be green):
-   ```sh
-   pnpm --filter framebits build
-   pnpm --filter framebits lint
-   pnpm --filter framebits typecheck
-   pnpm --filter framebits test
-   node apps/cli/scripts/pack-smoke.mjs
-   ```
-   `pack-smoke` fails if the packed tarball ships anything outside
-   `package.json`/`README`/`dist`, or if `dist/cli.js` references
-   `@framebits/*` at runtime. Do not proceed on red.
-6. Dry-run the publish (from `apps/cli`, shows the file list, uploads
-   nothing):
+3. Verify `apps/cli/package.json` (prepared by first-publish prep, already
+   committed): `"version": "0.1.0"`, no `"private"` field,
+   `"license": "MIT"`, `publishConfig` is `{ "access": "public" }` with NO
+   `provenance` key — local publish with provenance fails outside CI; the
+   workflow in §5 passes `--provenance` explicitly on its own command line.
+   `prepublishOnly` is `npm run build && node scripts/pack-smoke.mjs`
+   (tsup build + local smoke; neither calls publish, so no recursion under
+   `npm publish`), and `prepack` is `node scripts/copy-license.mjs`.
+4. Verify the `## [0.1.0]` entry in root `CHANGELOG.md`.
+5. Run the local checklist and the dry-run above (both green required).
+6. Publish 0.1.0 from the owner machine (2FA challenge in the terminal):
    ```sh
    cd apps/cli
-   npm publish --dry-run
-   ```
-   Confirm the file list is `package.json`, `README.md`, `dist/cli.js` only.
-7. Publish 0.1.0 from the owner machine (2FA challenge in the terminal):
-   ```sh
    npm publish --access public
    ```
-   (`publishConfig` already sets `access: public` and `provenance: true`;
-   local first publish does not use `--provenance` — provenance comes from
-   the workflow in §5.)
-8. Tag and push with the reconciled convention:
-   ```sh
-   git add apps/cli/package.json CHANGELOG.md
-   git commit -m "chore(cli): release framebits v0.1.0"
-   git tag v0.1.0
-   git push origin main
-   git push origin v0.1.0
-   ```
-9. Verify (clean temp dir, NOT the repo):
+   (`publishConfig` already sets `access: public`; the flag restates it.
+   No `--provenance` locally — provenance attestations come from the
+   workflow in §5.)
+7. Verify (clean temp dir, NOT the repo):
    ```sh
    npm view framebits version dist-tags
    npx -y framebits@0.1.0 --version
    ```
    If `npm view` is unreachable (network blocked), report NOT VERIFIED.
+8. Do NOT tag, do NOT push any tag:
+   ```sh
+   # NEVER run these for 0.1.0 (republish refused; the workflow would fail):
+   #   git tag v0.1.0
+   #   git push origin v0.1.0
+   git status --porcelain   # apps/cli/LICENSE must NOT appear (gitignored copy)
+   ```
+
+### Post-publish (still owner, before any CI release)
+
+1. Connect npm → GitHub trusted publisher per §2 with exactly:
+   owner `otassh`, repository `framebits`, workflow file `release.yml`,
+   environment `npm-publish`.
+2. Harden per §3: owner account 2FA on (already exercised above); NO tokens —
+   do not create any Classic or Granular Access Token, add no
+   `NODE_AUTH_TOKEN`/`NPM_TOKEN` anywhere, revoke any legacy automation token.
+3. GitHub side per §4: create the `npm-publish` environment with required
+   reviewers (the owner); optionally restrict deployment branches/tags to
+   `v*.*.*` and add tag protection for `v*`.
+4. Cut the first CI-driven release as **0.1.1** per §5 (bump version +
+   changelog, merge, push tag `v0.1.1`, approve the `npm-publish` run).
 
 ## 2. Connect npm to GitHub — trusted publisher (owner, npmjs.com)
 
@@ -159,6 +211,9 @@ Still on the package Settings page:
    required-reviewer gate in step 2 is the binding control.
 
 ## 5. Routine release — bump, tag, approve (owner)
+
+> The first routine release after the §1 bootstrap MUST be **0.1.1**
+> (never re-tag or re-push `v0.1.0`).
 
 1. In a PR, bump `"version"` in `apps/cli/package.json` (semver; CLI-only
    changes bump patch/minor, never rewrite a published version) and add the
@@ -219,6 +274,7 @@ below applies. Re-run with `dry_run` from the same tag to reproduce safely
 | Provenance / sigstore verification fails         | `repository.url` in `apps/cli/package.json` does not match the GitHub repo                                                                                | Keep `repository.url` as `git+https://github.com/otassh/framebits.git` (+ `directory: apps/cli`); never point it at a fork or placeholder                |
 | Version guard fails: tag/version mismatch        | Tag is not exactly `vX.Y.Z` or differs from `apps/cli` `version`                                                                                          | Set the package version to the tag version (or retag); manual dry-runs must be dispatched from a `v*.*.*` tag, not a branch                              |
 | Version guard fails: `private: true`             | Package still marked private                                                                                                                              | Remove `"private"` per §1 — only at launch, as an owner decision                                                                                         |
+| `npm publish` refuses: version already published | Pushed tag `v0.1.0` after the hand publish, or reused any published version                                                                               | NEVER push `v0.1.0`; never reuse a version number — cut a new version per §5 (§6 for the fallout)                                                         |
 | `gh release create` fails / release missing      | Tag ref mismatch or `contents: write` missing                                                                                                             | Push the exact tag first; keep `permissions: contents: write` on the publish job                                                                         |
 
 ## After the first release

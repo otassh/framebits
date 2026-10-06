@@ -5,7 +5,10 @@ name: release
 # this file: authentication uses the ambient OIDC token (`id-token: write`),
 # exchanged by the npm CLI (>= 11.5.1) on Node >= 22.14 (both enforced below).
 # Nothing is committed, no token is stored, nothing is flipped to public here:
-# the version guard fails while apps/cli is still `"private": true`.
+# the package is already public (`chore/first-publish-prep` removed
+# `"private"` and set version `0.1.0`); the version guard still fails any tag
+# that does not equal the `apps/cli` version (notably `v0.1.0`, which must
+# never be pushed — see docs/RELEASING.md).
 
 on:
   push:

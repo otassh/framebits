@@ -1,7 +1,6 @@
 {
   "name": "framebits",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "license": "MIT",
   "description": "Add curated animated React components to your project",
   "keywords": [
@@ -23,8 +22,7 @@
   },
   "author": "otassh",
   "publishConfig": {
-    "access": "public",
-    "provenance": true
+    "access": "public"
   },
   "type": "module",
   "bin": {
@@ -38,6 +36,8 @@
   ],
   "scripts": {
     "build": "tsup",
+    "prepack": "node scripts/copy-license.mjs",
+    "prepublishOnly": "npm run build && node scripts/pack-smoke.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "pnpm build && vitest run",
