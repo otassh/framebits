@@ -10,6 +10,7 @@ export const ALLOWED_DEPENDENCIES = [
   "framer-motion",
   "gsap",
   "three",
+  "@types/three",
   "@react-three/fiber",
   "@react-three/drei",
   "ogl",

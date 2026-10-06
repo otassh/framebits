@@ -82,13 +82,13 @@ async function buildSnapshot(projectRoot: string): Promise<{
   dirs: ReadonlySet<string>;
   contents: ReadonlyMap<string, string>;
   packageJson:
-  | {
-    dependencies?: Record<string, string> | undefined;
-    devDependencies?: Record<string, string> | undefined;
-    peerDependencies?: Record<string, string> | undefined;
-    packageManager?: string | undefined;
-  }
-  | undefined;
+    | {
+        dependencies?: Record<string, string> | undefined;
+        devDependencies?: Record<string, string> | undefined;
+        peerDependencies?: Record<string, string> | undefined;
+        packageManager?: string | undefined;
+      }
+    | undefined;
   tsconfigText: string | undefined;
   jsconfigText: string | undefined;
   isVite: boolean;
@@ -96,11 +96,11 @@ async function buildSnapshot(projectRoot: string): Promise<{
   const snapshot = await readProjectSnapshot(projectRoot);
   let packageJson:
     | {
-      dependencies?: Record<string, string> | undefined;
-      devDependencies?: Record<string, string> | undefined;
-      peerDependencies?: Record<string, string> | undefined;
-      packageManager?: string | undefined;
-    }
+        dependencies?: Record<string, string> | undefined;
+        devDependencies?: Record<string, string> | undefined;
+        peerDependencies?: Record<string, string> | undefined;
+        packageManager?: string | undefined;
+      }
     | undefined;
   const pkgText = snapshot.contents.get("package.json");
   if (pkgText !== undefined) {
@@ -130,7 +130,8 @@ async function buildSnapshot(projectRoot: string): Promise<{
     }
   }
   const viteFiles = ["vite.config.ts", "vite.config.js", "vite.config.mjs"];
-  const hasViteDep = packageJson?.dependencies?.["vite"] !== undefined ||
+  const hasViteDep =
+    packageJson?.dependencies?.["vite"] !== undefined ||
     packageJson?.devDependencies?.["vite"] !== undefined;
   return {
     files: snapshot.files,
@@ -149,7 +150,9 @@ const NEXT_APP_SRC: Record<string, string> = {
     dependencies: { next: "^15.0.0", react: "^19.0.0" },
     devDependencies: { typescript: "^5.0.0" },
   }),
-  "tsconfig.json": JSON.stringify({ compilerOptions: { baseUrl: ".", paths: { "@/*": ["./src/*"] } } }),
+  "tsconfig.json": JSON.stringify({
+    compilerOptions: { baseUrl: ".", paths: { "@/*": ["./src/*"] } },
+  }),
   "src/app/layout.tsx": "export default function Root(): null { return null; }\n",
   "src/app/globals.css": "@tailwind base;\n",
   "tailwind.config.ts": "export default {};\n",
@@ -194,7 +197,9 @@ const NO_TAILWIND: Record<string, string> = {
     dependencies: { react: "^19.0.0" },
     devDependencies: { typescript: "^5.0.0" },
   }),
-  "tsconfig.json": JSON.stringify({ compilerOptions: { baseUrl: ".", paths: { "@/*": ["./src/*"] } } }),
+  "tsconfig.json": JSON.stringify({
+    compilerOptions: { baseUrl: ".", paths: { "@/*": ["./src/*"] } },
+  }),
   "src/app/layout.tsx": "export default function Root(): null { return null; }\n",
   "pnpm-lock.yaml": "lockfileVersion: 9\n",
 };
@@ -205,7 +210,9 @@ const CSS_ENTRY_MISSING: Record<string, string> = {
     dependencies: { next: "^15.0.0", react: "^19.0.0" },
     devDependencies: { typescript: "^5.0.0" },
   }),
-  "tsconfig.json": JSON.stringify({ compilerOptions: { baseUrl: ".", paths: { "@/*": ["./src/*"] } } }),
+  "tsconfig.json": JSON.stringify({
+    compilerOptions: { baseUrl: ".", paths: { "@/*": ["./src/*"] } },
+  }),
   "src/app/layout.tsx": "export default function Root(): null { return null; }\n",
   "tailwind.config.ts": "export default {};\n",
   "pnpm-lock.yaml": "lockfileVersion: 9\n",
@@ -217,7 +224,9 @@ const CUSTOM_ALIAS: Record<string, string> = {
     dependencies: { react: "^19.0.0" },
     devDependencies: { typescript: "^5.0.0" },
   }),
-  "tsconfig.json": JSON.stringify({ compilerOptions: { baseUrl: ".", paths: { "~/*": ["./src/*"] } } }),
+  "tsconfig.json": JSON.stringify({
+    compilerOptions: { baseUrl: ".", paths: { "~/*": ["./src/*"] } },
+  }),
   "src/app/layout.tsx": "export default function Root(): null { return null; }\n",
 };
 
@@ -279,10 +288,13 @@ beforeAll(async () => {
     });
   });
   const address: unknown = server.address();
-  const port = typeof address === "object" && address !== null && "port" in address &&
-      typeof address.port === "number"
-    ? address.port
-    : 0;
+  const port =
+    typeof address === "object" &&
+    address !== null &&
+    "port" in address &&
+    typeof address.port === "number"
+      ? address.port
+      : 0;
   baseUrl = `http://127.0.0.1:${String(port)}/r`;
 }, 120000);
 
@@ -383,10 +395,16 @@ async function runAddIn(
         installer: {
           run: (command) => {
             installs.push(`${command.program} ${command.args.join(" ")}`);
-            if (failState !== undefined) failState.calls.push(`${command.program} ${command.args.join(" ")}`);
+            if (failState !== undefined)
+              failState.calls.push(`${command.program} ${command.args.join(" ")}`);
             if (failState?.failNext === true) {
               failState.failNext = false;
-              return Promise.resolve({ exitCode: 1, timedOut: false, stdout: "", stderr: "fake install boom" });
+              return Promise.resolve({
+                exitCode: 1,
+                timedOut: false,
+                stdout: "",
+                stderr: "fake install boom",
+              });
             }
             // Mimic a real installer: record the ranges in package.json.
             return readFile(join(dir, "package.json"), "utf8").then(
@@ -411,9 +429,23 @@ async function runAddIn(
                   deps[spec.slice(0, at)] = spec.slice(at + 1);
                 }
                 record["dependencies"] = deps;
-                return writeFile(join(dir, "package.json"), `${JSON.stringify(record, null, 2)}\n`, "utf8").then(
-                  () => ({ exitCode: 0 as const, timedOut: false as const, stdout: "", stderr: "" }),
-                  () => ({ exitCode: 0 as const, timedOut: false as const, stdout: "", stderr: "" }),
+                return writeFile(
+                  join(dir, "package.json"),
+                  `${JSON.stringify(record, null, 2)}\n`,
+                  "utf8",
+                ).then(
+                  () => ({
+                    exitCode: 0 as const,
+                    timedOut: false as const,
+                    stdout: "",
+                    stderr: "",
+                  }),
+                  () => ({
+                    exitCode: 0 as const,
+                    timedOut: false as const,
+                    stdout: "",
+                    stderr: "",
+                  }),
                 );
               },
               () => ({ exitCode: 0 as const, timedOut: false as const, stdout: "", stderr: "" }),
@@ -444,10 +476,13 @@ async function runAddIn(
     );
     return { code: 0, output, installs, error: "" };
   } catch (error) {
-    const code = typeof error === "object" && error !== null && "exitCode" in error &&
-        typeof error.exitCode === "number"
-      ? error.exitCode
-      : 1;
+    const code =
+      typeof error === "object" &&
+      error !== null &&
+      "exitCode" in error &&
+      typeof error.exitCode === "number"
+        ? error.exitCode
+        : 1;
     return {
       code,
       output,
@@ -558,7 +593,12 @@ describe("cli integration (real builder output)", () => {
         await runInit(
           { cwd: noAlias, yes: true, registryFlag: baseUrl },
           {
-            snapshot: { root: noAlias, files: snap.files, dirs: snap.dirs, contents: snap.contents },
+            snapshot: {
+              root: noAlias,
+              files: snap.files,
+              dirs: snap.dirs,
+              contents: snap.contents,
+            },
             packageJson: snap.packageJson,
             tsconfigText: snap.tsconfigText,
             jsconfigText: snap.jsconfigText,
@@ -598,7 +638,10 @@ describe("cli integration (real builder output)", () => {
       expect(first.code).toBe(0);
       expect(first.installs).toEqual(["pnpm add clsx@^2.0.0 motion@^14.0.0 tailwind-merge@^3.0.0"]);
       expect(first.output.out.join("")).toContain("done:");
-      const aurora = await readFile(join(dir, "src", "components", "ui", "aurora-text.tsx"), "utf8");
+      const aurora = await readFile(
+        join(dir, "src", "components", "ui", "aurora-text.tsx"),
+        "utf8",
+      );
       expect(aurora).toContain("AuroraText");
       const cn = await readFile(join(dir, "src", "lib", "cn.ts"), "utf8");
       expect(cn).toContain("cn");
@@ -614,6 +657,30 @@ describe("cli integration (real builder output)", () => {
       expect(second.output.out.join("")).toContain("already installed");
       expect(second.installs).toEqual([]);
       expect(snapshotsEqual(before, await snapshotDir(dir))).toBe(true);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 120000);
+
+  it("add framebits-logo-3d writes the WebGL component and installs its pinned dependencies", async () => {
+    const dir = await makeProject(NEXT_APP_SRC);
+    try {
+      await initProject(dir, baseUrl);
+      const result = await runAddIn(dir, ["framebits-logo-3d"]);
+      expect(result.code).toBe(0);
+      expect(result.installs).toEqual([
+        "pnpm add @react-three/fiber@9.8.1 @types/three@0.186.0 three@0.186.1",
+      ]);
+      const component = await readFile(
+        join(dir, "src", "components", "ui", "framebits-logo-3d.tsx"),
+        "utf8",
+      );
+      expect(component).toContain("export function FrameBitsLogo3D");
+      expect(component).toContain("prefers-reduced-motion");
+      const config = JSON.parse(await readFile(join(dir, "framebits.json"), "utf8")) as {
+        installed: Record<string, { version: string }>;
+      };
+      expect(config.installed["framebits-logo-3d"]?.version).toBe("1.0.0");
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -710,7 +777,10 @@ describe("cli integration (real builder output)", () => {
       expect(config.aliases.lib).toBe("~/lib");
       const result = await runAddIn(dir, ["aurora-text"]);
       expect(result.code).toBe(0);
-      const aurora = await readFile(join(dir, "src", "components", "ui", "aurora-text.tsx"), "utf8");
+      const aurora = await readFile(
+        join(dir, "src", "components", "ui", "aurora-text.tsx"),
+        "utf8",
+      );
       expect(aurora).toContain("~/lib/cn");
       expect(aurora).not.toContain("@/lib/cn");
     } finally {
@@ -826,7 +896,9 @@ describe("cli integration (real builder output)", () => {
       const result = await runAddIn(dir, ["aurora-text"], { noInstall: true });
       expect(result.code).toBe(0);
       expect(result.installs).toEqual([]);
-      expect(result.output.out.join("")).toContain("pnpm add clsx@^2.0.0 motion@^14.0.0 tailwind-merge@^3.0.0");
+      expect(result.output.out.join("")).toContain(
+        "pnpm add clsx@^2.0.0 motion@^14.0.0 tailwind-merge@^3.0.0",
+      );
       const css = await readFile(join(dir, "src", "app", "globals.css"), "utf8");
       expect(css).not.toContain("framebits:begin");
     } finally {
@@ -917,7 +989,10 @@ describe("cli integration (real builder output)", () => {
       expect(result.error).toContain("fake install boom");
       expect(await readFile(join(dir, "framebits.json"), "utf8")).toBe(configBefore);
       expect(await readFile(join(dir, "src", "app", "globals.css"), "utf8")).toBe(cssBefore);
-      const pkg = JSON.parse(await readFile(join(dir, "package.json"), "utf8")) as Record<string, unknown>;
+      const pkg = JSON.parse(await readFile(join(dir, "package.json"), "utf8")) as Record<
+        string,
+        unknown
+      >;
       expect("clsx" in ((pkg["dependencies"] ?? {}) as Record<string, unknown>)).toBe(false);
     } finally {
       await rm(dir, { recursive: true, force: true });

@@ -1,0 +1,18 @@
+{
+  "slug": "framebits-logo-3d",
+  "title": "FrameBits Logo 3D",
+  "type": "component",
+  "category": "3d",
+  "tags": ["3d", "logo", "webgl", "interactive", "three-js"],
+  "description": "Interactive 3D FrameBits emblem with responsive quality, reduced-motion support, and a vector fallback.",
+  "dependencies": {
+    "@react-three/fiber": "9.8.1",
+    "@types/three": "0.186.0",
+    "three": "0.186.1"
+  },
+  "registryDependencies": [],
+  "difficulty": "hard",
+  "performance": "heavy",
+  "status": "published",
+  "addedAt": "2026-10-06"
+}
