@@ -10,7 +10,6 @@ import {
   Package,
   Search,
   ShieldCheck,
-  Sparkles,
   Terminal,
   X,
   Zap,
@@ -45,6 +44,7 @@ import {
   type CategoryFilter,
 } from "./lib/catalog.js";
 import { createRegistryClient, type RegistryClient } from "./lib/registry.js";
+import { LiveDemo } from "./lib/live-demos.js";
 import { MAX_RENDER_CHARS, truncateForDisplay } from "./lib/code-view.js";
 import { navigate, useRoute } from "./lib/router.js";
 import brandMarkUrl from "./assets/framebits-mark.png";
@@ -86,7 +86,13 @@ function Magnetic({ children }: PropsWithChildren): React.JSX.Element {
 }
 
 /** Registry proof stat that counts up on first view (final value under reduced motion). */
-function ProofStat({ value, label }: { value: number | undefined; label: string }): React.JSX.Element {
+function ProofStat({
+  value,
+  label,
+}: {
+  value: number | undefined;
+  label: string;
+}): React.JSX.Element {
   const reduceMotion = useReducedMotion();
   const ref = useRef<HTMLElement>(null);
   const inView = useInView(ref, { once: true, margin: "-40px" });
@@ -477,10 +483,11 @@ function RegistryTicker({ state }: HeroProps): React.JSX.Element | null {
 
   return (
     <aside className="registry-ticker" aria-label="Live registry packages">
-      <p className="sr-only">
-        Live registry with {state.index.items.length} validated packages.
-      </p>
-      <div className={`ticker-track${reduceMotion ? " ticker-track-static" : ""}`} aria-hidden="true">
+      <p className="sr-only">Live registry with {state.index.items.length} validated packages.</p>
+      <div
+        className={`ticker-track${reduceMotion ? " ticker-track-static" : ""}`}
+        aria-hidden="true"
+      >
         <div className="ticker-set">{renderItems("primary")}</div>
         <div className="ticker-set">{renderItems("duplicate")}</div>
       </div>
@@ -526,7 +533,17 @@ function SectionHeading({
 }
 
 function PreviewArtwork({ item }: { item: RegistryIndexItem }): React.JSX.Element {
-  const reduceMotion = useReducedMotion();
+  const fallback = <PreviewStaticArt item={item} />;
+  if (item.type !== "component") return fallback;
+  return <LiveDemo slug={item.slug} fallback={fallback} />;
+}
+
+/**
+ * Static fallback behind live demos: the builder-generated screenshot, or a
+ * neutral empty frame when no screenshot exists. No mock artwork — invented
+ * visual stand-ins were removed once previews rendered real components.
+ */
+function PreviewStaticArt({ item }: { item: RegistryIndexItem }): React.JSX.Element {
   const [previewFailed, setPreviewFailed] = useState(false);
   if (item.previews !== undefined && !previewFailed) {
     return (
@@ -543,38 +560,7 @@ function PreviewArtwork({ item }: { item: RegistryIndexItem }): React.JSX.Elemen
       </div>
     );
   }
-  if (item.category === "text-animations") {
-    return (
-      <div className="preview-art preview-text" aria-hidden="true">
-        <motion.span
-          animate={reduceMotion ? false : { opacity: [0.65, 1, 0.65] }}
-          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-        >
-          Aurora
-        </motion.span>
-      </div>
-    );
-  }
-  if (item.category === "buttons") {
-    return (
-      <div className="preview-art preview-button" aria-hidden="true">
-        <motion.span
-          whileHover={reduceMotion ? {} : { scale: 1.04 }}
-          transition={{ type: "spring", stiffness: 340, damping: 24 }}
-        >
-          Hover the future <Sparkles size={15} />
-        </motion.span>
-      </div>
-    );
-  }
-  return (
-    <div className="preview-art preview-generic" aria-hidden="true">
-      <motion.span
-        animate={reduceMotion ? false : { rotate: [0, 120, 240, 360] }}
-        transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
-      />
-    </div>
-  );
+  return <div className="preview-art preview-empty" aria-hidden="true" />;
 }
 
 function ComponentCard({
@@ -592,14 +578,8 @@ function ComponentCard({
   const glow = (event: ReactPointerEvent<HTMLElement>): void => {
     if (reduceMotion || event.pointerType !== "mouse") return;
     const bounds = event.currentTarget.getBoundingClientRect();
-    event.currentTarget.style.setProperty(
-      "--card-x",
-      `${String(event.clientX - bounds.left)}px`,
-    );
-    event.currentTarget.style.setProperty(
-      "--card-y",
-      `${String(event.clientY - bounds.top)}px`,
-    );
+    event.currentTarget.style.setProperty("--card-x", `${String(event.clientX - bounds.left)}px`);
+    event.currentTarget.style.setProperty("--card-y", `${String(event.clientY - bounds.top)}px`);
   };
 
   const entrance = immediate
@@ -1041,13 +1021,13 @@ function DetailPage({
     state.status === "ready"
       ? (state.item.files.find((file) => file.path === selectedPath) ?? state.item.files[0])
       : undefined;
-  const display =
-    selectedFile === undefined ? undefined : truncateForDisplay(selectedFile.content);
+  const display = selectedFile === undefined ? undefined : truncateForDisplay(selectedFile.content);
 
   const stepFile = (direction: 1 | -1): void => {
     if (state.status !== "ready" || selectedFile === undefined) return;
     const current = state.item.files.findIndex((file) => file.path === selectedFile.path);
-    const next = state.item.files[(current + direction + state.item.files.length) % state.item.files.length];
+    const next =
+      state.item.files[(current + direction + state.item.files.length) % state.item.files.length];
     if (next !== undefined) setSelectedPath(next.path);
   };
 
@@ -1116,7 +1096,8 @@ function DetailPage({
                       {file.path.split("/").at(-1)}
                     </button>
                   ))}
-                  {selectedFile === undefined || display === undefined ? null : display.truncated ? (
+                  {selectedFile === undefined ||
+                  display === undefined ? null : display.truncated ? (
                     <span className="copy-code-disabled" title="File too large to preview fully">
                       Preview truncated — use the CLI
                     </span>
@@ -1139,10 +1120,10 @@ function DetailPage({
                 </AnimatePresence>
                 {selectedFile !== undefined && display?.truncated === true ? (
                   <p className="truncated-notice" role="note">
-                    This file ({display.totalChars} characters) is too large to preview
-                    fully — showing the first {MAX_RENDER_CHARS}. Install it with{" "}
-                    <code>npx @framebits/cli add {slug}</code> to inspect the complete
-                    source locally.
+                    This file ({display.totalChars} characters) is too large to preview fully —
+                    showing the first {MAX_RENDER_CHARS}. Install it with{" "}
+                    <code>npx @framebits/cli add {slug}</code> to inspect the complete source
+                    locally.
                   </p>
                 ) : null}
               </div>

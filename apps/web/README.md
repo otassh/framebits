@@ -4,6 +4,12 @@ The production Framebits frontend. It is a static React + Vite application
 that reads the builder's validated registry JSON; it does not contain mock
 components, invented statistics, or duplicated registry data.
 
+Component previews render the **real live demos** (`registry/.../demo.tsx`)
+bundled at site-build time via `import.meta.glob` (see
+`src/lib/live-demos.tsx`), each as its own lazily-loaded chunk. The generated
+WebP (`previews.image`) remains as the loading poster and error fallback, so a
+broken demo degrades to a static image instead of breaking the catalog.
+
 ## Commands
 
 ```sh
@@ -45,6 +51,14 @@ default is the same-origin `/r` path used in production.
 - The build manifest hash (`build-manifest.json`) is intentional: it binds
   the exact registry snapshot the site was built against. A manifest/content
   mismatch means the deployment — not the browser — must be re-built.
+- Live demos execute reviewed in-repo `registry/` sources only (the same
+  sources the builder validates and screenshots; no remote code is ever
+  loaded). Demos import the `@/lib|@/hooks|@/components/ui` aliases, which
+  `vite.config.ts` derives from the registry tree itself, plus bare
+  third-party deps rewritten to their ESM-resolved files. A demo whose
+  dependency is missing fails the build with the exact `pnpm add` hint —
+  that dependency must already be on the shared allowlist.
+  `vite dev` serves the sibling `registry/` dir via `server.fs.allow`.
 
 ## Dependency justification
 
@@ -53,6 +67,11 @@ default is the same-origin `/r` path used in production.
 - `motion`: purposeful route, reveal, hover, and ambient animations with
   reduced-motion support; already on the registry dependency allowlist.
 - `lucide-react`: accessible SVG interface icons; already on the allowlist.
+- `clsx` + `tailwind-merge`: runtime of the shared `cn` lib helper that live
+  demos import via `@/lib/cn`; pinned to the `registry-env` versions.
+- `three` + `@react-three/fiber`: runtime of the 3D component demos. They
+  ship only inside the lazily-loaded 3D demo chunk (the main bundle is
+  unaffected); pinned to the `registry-env` versions.
 - `zod`: validates every downloaded registry payload through schemas owned by
   `packages/shared`; already used across the workspace.
 - `vite`: static application bundler and development server. It already exists
