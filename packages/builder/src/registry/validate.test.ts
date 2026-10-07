@@ -7,6 +7,7 @@ import {
   checkRegistryDeps,
   parseItemMeta,
   parseItemStyles,
+  scanStylesValues,
   validateLayout,
 } from "./validate.js";
 import { metaJson } from "./test-helpers.js";
@@ -158,6 +159,81 @@ describe("validateLayout", () => {
     const unexpected: Diagnostic[] = [];
     validateLayout(item(dir, { ...base, "notes.txt": "x" }), m1, unexpected);
     expect(codes(unexpected)).toContain("UNEXPECTED_FILE");
+  });
+
+  it("still checks layout when meta.json is invalid (folder name stands in)", () => {
+    const dir = "components/buttons/ok";
+    // Invalid meta: layout falls back to folder-derived expectations.
+    const noSource: Diagnostic[] = [];
+    validateLayout(
+      item(dir, { "meta.json": "{bad", "demo.tsx": "x" }),
+      undefined,
+      noSource,
+    );
+    expect(codes(noSource)).toContain("MISSING_SOURCE");
+
+    const noDemo: Diagnostic[] = [];
+    validateLayout(item(dir, { "meta.json": "{bad", "ok.tsx": "x" }), undefined, noDemo);
+    expect(codes(noDemo)).toContain("MISSING_DEMO");
+
+    const unexpected: Diagnostic[] = [];
+    validateLayout(
+      item(dir, { "meta.json": "{bad", "ok.tsx": "x", "demo.tsx": "x", "notes.txt": "x" }),
+      undefined,
+      unexpected,
+    );
+    expect(codes(unexpected)).toContain("UNEXPECTED_FILE");
+
+    const lib: Diagnostic[] = [];
+    validateLayout(item("lib/cn", { "meta.json": "{bad" }), undefined, lib);
+    expect(codes(lib)).toContain("MISSING_SOURCE");
+
+    // Misplaced directories are still LAYOUT_INVALID without a meta.
+    const misplaced: Diagnostic[] = [];
+    validateLayout(item("random/place", { "meta.json": "{bad" }), undefined, misplaced);
+    expect(codes(misplaced)).toContain("LAYOUT_INVALID");
+  });
+});
+
+describe("scanStylesValues", () => {
+  it("accepts plain values", () => {
+    expect(
+      scanStylesValues({ cssVars: { light: { "--ok": "red" } } }),
+    ).toEqual([]);
+    expect(
+      scanStylesValues({ tailwind: { keyframes: { fade: { from: { opacity: "0" } } } } }),
+    ).toEqual([]);
+  });
+
+  it("rejects url/expression/javascript/data payloads and at-rules", () => {
+    expect(
+      scanStylesValues({ cssVars: { light: { "--bg": "url(https://evil.example/x.png)" } } }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      scanStylesValues({ cssVars: { light: { "--x": "expression(alert(1))" } } }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      scanStylesValues({ cssVars: { light: { "--x": "javascript:alert(1)" } } }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      scanStylesValues({ cssVars: { light: { "--x": "data:text/html,<b>hi</b>" } } }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      scanStylesValues({ tailwind: { keyframes: { "@media x": { from: { opacity: "0" } } } } }).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("surfaces STYLES_INVALID through parseItemStyles", () => {
+    const diagnostics: Diagnostic[] = [];
+    const styles = parseItemStyles(
+      item("components/buttons/ok", {
+        "meta.json": metaJson("ok"),
+        "styles.json": JSON.stringify({ cssVars: { light: { "--bg": "url(/x.png)" } } }),
+      }),
+      diagnostics,
+    );
+    expect(styles).toBeUndefined();
+    expect(codes(diagnostics)).toEqual(["STYLES_INVALID"]);
   });
 });
 

@@ -43,6 +43,12 @@ describe("RegistryIndexItemSchema", () => {
     const parsed = RegistryIndexItemSchema.parse({ ...validIndexItem });
     expect("deprecated" in parsed).toBe(false);
   });
+
+  it("rejects duplicate tags", () => {
+    expect(
+      RegistryIndexItemSchema.safeParse({ ...validIndexItem, tags: ["x", "x"] }).success,
+    ).toBe(false);
+  });
 });
 
 describe("RegistryIndexSchema", () => {

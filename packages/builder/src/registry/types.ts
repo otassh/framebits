@@ -53,6 +53,8 @@ export interface LoadRegistryResult {
   diagnostics: Diagnostic[];
   /** Totals over all parsed metas (drafts included); additive summary. */
   summary: RegistrySummary;
+  /** False when the type-check stage was skipped (`skipTypecheck: true`). */
+  typecheckRan: boolean;
 }
 
 export interface RegistrySummary {

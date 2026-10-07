@@ -92,6 +92,17 @@ describe("PopularQuerySchema", () => {
       expect(PopularQuerySchema.safeParse({ period }).success).toBe(true);
     }
     expect(PopularQuerySchema.parse({ limit: "5" }).limit).toBe(5);
+    expect(PopularQuerySchema.parse({ limit: 5 }).limit).toBe(5);
+  });
+
+  it("rejects non-string/non-number limits before coercion", () => {
+    for (const limit of [true, false, [5], ["5"], { value: 5 }, null]) {
+      expect(PopularQuerySchema.safeParse({ limit }).success).toBe(false);
+      expect(SearchQuerySchema.safeParse({ q: "x", limit }).success).toBe(false);
+    }
+    expect(PopularQuerySchema.safeParse({ limit: "abc" }).success).toBe(false);
+    expect(PopularQuerySchema.safeParse({ limit: "51" }).success).toBe(false);
+    expect(PopularQuerySchema.safeParse({ limit: "0" }).success).toBe(false);
   });
 
   it("rejects out-of-range limits and bad periods", () => {

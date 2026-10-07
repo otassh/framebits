@@ -3,6 +3,7 @@
  * LF, trailing newline, atomic temp+rename.
  */
 import { CliConfigSchema, type CliConfig } from "@framebits/shared";
+import { randomUUID } from "node:crypto";
 import { configError } from "../errors.js";
 
 export const CONFIG_FILE_NAME = "framebits.json";
@@ -11,6 +12,8 @@ export interface ConfigFs {
   readFile(path: string): Promise<string | undefined>;
   writeFile(path: string, content: string): Promise<void>;
   rename(from: string, to: string): Promise<void>;
+  statMode?(path: string): Promise<number | undefined>;
+  chmod?(path: string, mode: number): Promise<void>;
 }
 
 function joinPosix(dir: string, file: string): string {
@@ -62,8 +65,22 @@ export async function writeConfigAtomic(
 ): Promise<string> {
   const path = configPath(projectRoot);
   const content = serializeConfig(config).replace(/\r\n/g, "\n");
-  const staging = `${path}.tmp-${String(Date.now())}-${String(Math.floor(Math.random() * 1000000))}`;
+  // Preserve the existing file mode (e.g. 0600) across the atomic replace.
+  let existingMode: number | undefined;
+  try {
+    existingMode = await fs.statMode?.(path);
+  } catch {
+    existingMode = undefined;
+  }
+  const staging = `${path}.tmp-${randomUUID()}`;
   await fs.writeFile(staging, content);
+  if (existingMode !== undefined) {
+    try {
+      await fs.chmod?.(staging, existingMode);
+    } catch {
+      // Best-effort.
+    }
+  }
   await fs.rename(staging, path);
   return path;
 }

@@ -140,7 +140,7 @@ describe("planVersions decision table", () => {
       draftSlugs: new Set(),
       prune: new Set(["ghost"]),
     });
-    expect(pruned.diagnostics).toEqual([]);
+    expect(pruned.diagnostics.map((d) => d.code)).toEqual(["PRUNED_VERSION_ORPHANED"]);
     expect(plannedLock(withGhost, [], new Set(["ghost"])).components).toEqual({});
   });
 
@@ -203,6 +203,33 @@ describe("planVersions decision table", () => {
     });
     // Schema-validated locks cannot hold this, but a hand-built one must still fail loudly.
     expect(diagnostics.map((d) => d.code)).toContain("LOCK_INVALID");
+  });
+
+  it("invalid --bump levels error without scheduling any release", () => {
+    const { plans, diagnostics } = planVersions({
+      items: [model("ok", HASH_B)],
+      lock: lock({ ok: { version: "1.2.3", hash: HASH_A } }),
+      bumps: new Map([["ok", "banana"]]),
+      draftSlugs: new Set(),
+      prune: new Set(),
+    });
+    expect(diagnostics.map((d) => d.code)).toContain("BUMP_NOT_APPLICABLE");
+    // Fail-closed: no plan at all (never silently fall back to patch).
+    expect(plans).toEqual([]);
+  });
+
+  it("--prune warns that the version is orphaned (never reusable)", () => {
+    const { diagnostics } = planVersions({
+      items: [],
+      lock: lock({ ghost: { version: "2.0.0", hash: HASH_A } }),
+      bumps: new Map(),
+      draftSlugs: new Set(),
+      prune: new Set(["ghost"]),
+    });
+    const pruned = diagnostics.filter((d) => d.code === "PRUNED_VERSION_ORPHANED");
+    expect(pruned.length).toBe(1);
+    expect(pruned[0]?.severity).toBe("warning");
+    expect(pruned[0]?.message).toContain("2.0.0");
   });
 });
 

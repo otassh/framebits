@@ -26,6 +26,10 @@ services:
   caddy:
     image: caddy:2.10.2-alpine
     restart: unless-stopped
+    # Non-root: relies on Docker's default NET_BIND_SERVICE capability to bind
+    # 80/443. Named volumes below must be writable by this uid on first deploy
+    # (see deploy/README.md step 7).
+    user: "65532:65532"
     ports:
       - "80:80"
       - "443:443"
@@ -43,16 +47,18 @@ services:
       - frontend
       - backend
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:80/healthz || exit 1"]
+      # Caddy only serves {$DOMAIN}; plain localhost Host would 404/mismatch,
+      # so send the configured Host explicitly. $$ escapes Compose interpolation.
+      test: ["CMD-SHELL", "wget --header \"Host: $${DOMAIN:-framebits.dev}\" -qO- http://127.0.0.1:80/healthz || exit 1"]
       interval: 15s
       timeout: 5s
       start_period: 10s
       retries: 3
-    deploy:
-      resources:
-        limits:
-          cpus: "0.50"
-          memory: 256M
+    # Compose-native limits (deploy.resources.limits only applies in Swarm and
+    # is ignored by `docker compose up`). Reservations would need Swarm; the
+    # values below are limits only — see deploy/README.md.
+    mem_limit: 256m
+    cpus: 0.5
 
   api:
     build:
@@ -81,11 +87,9 @@ services:
       timeout: 5s
       start_period: 10s
       retries: 3
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 512M
+    # Compose-native limits (see caddy comment above re Swarm reservations).
+    mem_limit: 512m
+    cpus: 1.0
 
   postgres:
     image: postgres:16.9-bookworm
@@ -104,11 +108,9 @@ services:
       timeout: 5s
       start_period: 20s
       retries: 5
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 512M
+    # Compose-native limits (see caddy comment above re Swarm reservations).
+    mem_limit: 512m
+    cpus: 1.0
 
   web:
     build:
@@ -126,8 +128,6 @@ services:
       timeout: 5s
       start_period: 10s
       retries: 3
-    deploy:
-      resources:
-        limits:
-          cpus: "0.50"
-          memory: 256M
+    # Compose-native limits (see caddy comment above re Swarm reservations).
+    mem_limit: 256m
+    cpus: 0.5

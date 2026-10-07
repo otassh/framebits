@@ -62,10 +62,29 @@ export type NewsletterRequest = z.infer<typeof NewsletterRequestSchema>;
 /** `GET /api/stats/popular` query. Defaults are chosen (prompt is silent): week / 20. */
 export const PopularPeriodSchema = z.enum(["day", "week", "month", "all"]);
 
+/**
+ * Pagination-style limit shared by the query schemas. Accepts ONLY a number or
+ * its decimal string form (booleans, arrays, and objects are rejected BEFORE
+ * coercion — a bare `z.coerce.number()` would turn `true` into `1` and `[5]`
+ * into `5`). The string branch goes through `z.codec`, which stays
+ * representable in published JSON Schemas (unlike `transform`/`pipe`).
+ */
+const QueryLimitSchema = z.union([
+  z.number().int().min(1).max(50),
+  z.codec(
+    z.string().regex(/^\d+$/, "limit must be an integer string"),
+    z.number().int().min(1).max(50),
+    {
+      decode: (text) => Number(text),
+      encode: (limit) => String(limit),
+    },
+  ),
+]);
+
 export const PopularQuerySchema = z
   .object({
     period: PopularPeriodSchema.default("week"),
-    limit: z.coerce.number().int().min(1).max(50).default(20),
+    limit: QueryLimitSchema.default(20),
   })
   .strict();
 
@@ -76,7 +95,7 @@ export const SearchQuerySchema = z
   .object({
     q: z.string().min(1, "q must not be empty").max(100, "q must be at most 100 characters"),
     category: CategorySchema.optional(),
-    limit: z.coerce.number().int().min(1).max(50).default(20),
+    limit: QueryLimitSchema.default(20),
   })
   .strict();
 

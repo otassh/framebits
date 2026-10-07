@@ -1,9 +1,12 @@
-import { mkdtemp, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+import { randomUUID } from "node:crypto";
 import {
   RegistryIndexSchema,
   RegistryItemSchema,
   SearchIndexSchema,
+  canonicalizeSemverVersion,
+  isGreaterSemverVersion,
   jsonSchemaFor,
   verifyItemHash,
   type RegistryIndex,
@@ -290,7 +293,13 @@ export interface ArchiveSync {
 /**
  * Compare the archive (read-only part runs in --check too): every planned version
  * must exist byte-identical (IMMUTABILITY_VIOLATION otherwise); previous lock
- * versions absent from the archive warn (ARCHIVE_MISSING_VERSION).
+ * versions absent from the archive warn (ARCHIVE_MISSING_VERSION). Two extra
+ * fail-closed rules: a NEW slug whose archive already holds a HIGHER version is
+ * version reuse (VERSION_REUSE error — pruned versions stay retired); an
+ * UNCHANGED slug whose locked version is absent from an archive that DOES hold
+ * history for it errors (IMMUTABILITY_VIOLATION — the lock advanced beyond the
+ * archived history). An empty archive (fresh checkout, default dist/archive in
+ * CI) never errors here: there is no history to contradict.
  */
 export async function planArchive(
   archiveDir: string,
@@ -304,8 +313,30 @@ export async function planArchive(
   };
   const diagnostics: Diagnostic[] = [];
   const pending: Array<{ name: string; content: string }> = [];
+  const archivedBySlug = await listArchivedVersions(archiveDir);
 
   for (const plan of [...plans].sort((a, b) => (a.slug < b.slug ? -1 : 1))) {
+    const archived = archivedBySlug.get(plan.slug) ?? [];
+    if (plan.previousVersion === undefined) {
+      const higher = archived.filter((version) => isGreaterSemverVersion(version, plan.version));
+      if (higher.length > 0) {
+        diagnostics.push({
+          severity: "error",
+          code: "VERSION_REUSE",
+          file: `archive/${plan.slug}@${plan.version}.json`,
+          message: `version reuse: archive already holds higher version(s) of "${plan.slug}" (${higher.sort().join(", ")}); pruned versions must never be re-released as ${plan.version}`,
+        });
+      }
+    } else if (plan.previousVersion === plan.version) {
+      if (!archived.includes(plan.version) && archived.length > 0) {
+        diagnostics.push({
+          severity: "error",
+          code: "IMMUTABILITY_VIOLATION",
+          file: `archive/${plan.slug}@${plan.version}.json`,
+          message: `locked ${plan.slug}@${plan.version} is absent from the archive (which holds ${archived.sort().join(", ")}): the lock advanced beyond the archived history`,
+        });
+      }
+    }
     const name = `${plan.slug}@${plan.version}.json`;
     const content = tree.files.get(`r/${name}`);
     if (content === undefined) continue;
@@ -346,6 +377,30 @@ export async function planArchive(
   stats.reused.sort();
   stats.missing.sort();
   return { stats, diagnostics, pending };
+}
+
+/** Slug -> canonical archived versions found in the archive dir (missing dir = empty). */
+async function listArchivedVersions(archiveDir: string): Promise<Map<string, string[]>> {
+  const bySlug = new Map<string, string[]>();
+  let names: string[];
+  try {
+    names = await readdir(archiveDir);
+  } catch {
+    return bySlug;
+  }
+  for (const name of names.sort()) {
+    if (!name.endsWith(".json")) continue;
+    const stem = name.slice(0, -".json".length);
+    const at = stem.lastIndexOf("@");
+    if (at === -1) continue;
+    const slug = stem.slice(0, at);
+    const rawVersion = stem.slice(at + 1);
+    if (canonicalizeSemverVersion(rawVersion) === null) continue;
+    const versions = bySlug.get(slug) ?? [];
+    versions.push(rawVersion);
+    bySlug.set(slug, versions);
+  }
+  return bySlug;
 }
 
 /** Re-read a directory tree and verify it matches the in-memory tree exactly. */
@@ -399,6 +454,19 @@ export async function verifyWrittenTree(
       });
     }
   }
+  // Extra files: anything on disk that the tree does not account for fails.
+  const onDisk = await listTreeFiles(dirAbs);
+  const expected = new Set([...tree.files.keys(), ...binaryFiles.keys()]);
+  for (const rel of [...onDisk].sort()) {
+    if (!expected.has(rel)) {
+      diagnostics.push({
+        severity: "error",
+        code: "EMIT_VERIFY_FAILED",
+        file: rel,
+        message: `emitted tree contains unexpected extra file ${rel}`,
+      });
+    }
+  }
   // Schema + hash self-check on the round-tripped item files.
   for (const [rel, content] of [...tree.files].sort()) {
     if (!rel.startsWith("r/") || rel === "r/index.json" || rel.includes("@")) continue;
@@ -428,9 +496,99 @@ export async function verifyWrittenTree(
 }
 
 async function writeFileAtomic(absPath: string, content: string): Promise<void> {
-  const staging = `${absPath}.tmp-${String(Date.now())}-${String(Math.floor(Math.random() * 1_000_000))}`;
+  const staging = `${absPath}.tmp-${randomUUID()}`;
   await writeFile(staging, content, "utf8");
   await rename(staging, absPath);
+}
+
+/** Recursively list every file under a directory as POSIX relative paths. */
+async function listTreeFiles(dirAbs: string): Promise<string[]> {
+  const out: string[] = [];
+  async function walk(current: string, prefix: string): Promise<void> {
+    let entries: Array<{ name: string; isFile: boolean; isDirectory: boolean }>;
+    try {
+      const raw = await readdir(current, { withFileTypes: true });
+      entries = raw.map((entry) => ({
+        name: entry.name,
+        isFile: entry.isFile(),
+        isDirectory: entry.isDirectory(),
+      }));
+    } catch {
+      return;
+    }
+    for (const entry of entries.sort((a, b) => (a.name < b.name ? -1 : 1))) {
+      const rel = prefix === "" ? entry.name : `${prefix}/${entry.name}`;
+      if (entry.isDirectory) {
+        await walk(join(current, entry.name), rel);
+      } else if (entry.isFile) {
+        out.push(rel);
+      }
+    }
+  }
+  await walk(dirAbs, "");
+  return out;
+}
+
+/** Re-read freshly written archive files and compare them byte-for-byte. */
+export async function verifyArchiveFiles(
+  archiveDir: string,
+  pending: ReadonlyArray<{ name: string; content: string }>,
+): Promise<Diagnostic[]> {
+  const diagnostics: Diagnostic[] = [];
+  for (const entry of [...pending].sort((a, b) => (a.name < b.name ? -1 : 1))) {
+    let actual: string;
+    try {
+      actual = await readFile(join(archiveDir, entry.name), "utf8");
+    } catch {
+      diagnostics.push({
+        severity: "error",
+        code: "EMIT_VERIFY_FAILED",
+        file: `archive/${entry.name}`,
+        message: `archived file ${entry.name} is missing after write`,
+      });
+      continue;
+    }
+    if (actual !== entry.content) {
+      diagnostics.push({
+        severity: "error",
+        code: "EMIT_VERIFY_FAILED",
+        file: `archive/${entry.name}`,
+        message: `archived file ${entry.name} differs from the verified content`,
+      });
+    }
+  }
+  return diagnostics;
+}
+
+/** Re-read the written lock file and compare it byte-for-byte. */
+export async function verifyLockFile(
+  registryRootAbs: string,
+  expectedText: string,
+): Promise<Diagnostic[]> {
+  let actual: string;
+  try {
+    actual = await readFile(join(registryRootAbs, "registry.lock.json"), "utf8");
+  } catch {
+    return [
+      {
+        severity: "error",
+        code: "EMIT_VERIFY_FAILED",
+        file: "registry.lock.json",
+        message: "registry.lock.json is missing after write",
+      },
+    ];
+  }
+  if (actual !== expectedText) {
+    return [
+      {
+        severity: "error",
+        code: "EMIT_VERIFY_FAILED",
+        file: "registry.lock.json",
+        message: "registry.lock.json differs from the verified content after write",
+      },
+    ];
+  }
+  return [];
 }
 
 /**
@@ -468,7 +626,7 @@ export async function writeBuildTree(
     let backup: string | undefined;
     try {
       if (outExists) {
-        backup = join(resolve(outDirAbs, ".."), `.registry-old-${String(Date.now())}`);
+        backup = join(resolve(outDirAbs, ".."), `.registry-old-${randomUUID()}`);
         await rename(outDirAbs, backup);
       }
       await rename(staging, outDirAbs);

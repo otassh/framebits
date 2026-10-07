@@ -117,12 +117,15 @@ export function planVersions(input: PlanInput): { plans: VersionPlan[]; diagnost
     const rawLevel = input.bumps.get(item.slug);
     const level = rawLevel === "minor" || rawLevel === "major" ? rawLevel : "patch";
     if (rawLevel !== undefined && level === "patch" && rawLevel !== "patch") {
+      // Invalid level: record the error and schedule NOTHING for this slug
+      // (fail-closed — a typo must never silently become a patch release).
       diagnostics.push({
         severity: "error",
         code: "BUMP_NOT_APPLICABLE",
         file: LOCK_REL,
         message: `--bump ${item.slug} has invalid level "${rawLevel}" (expected minor|major)`,
       });
+      continue;
     }
     const next = bumpSemverVersion(entry.version, level);
     if (next === null || !isGreaterSemverVersion(next, entry.version)) {
@@ -146,7 +149,16 @@ export function planVersions(input: PlanInput): { plans: VersionPlan[]; diagnost
   // Row 4: lock entries with no registry item at all (prune or error).
   for (const slug of Object.keys(input.lock.components).sort()) {
     if (seen.has(slug) || input.draftSlugs.has(slug)) continue;
-    if (input.prune.has(slug)) continue;
+    if (input.prune.has(slug)) {
+      const entry = input.lock.components[slug];
+      diagnostics.push({
+        severity: "warning",
+        code: "PRUNED_VERSION_ORPHANED",
+        file: LOCK_REL,
+        message: `pruned lock entry "${slug}" (was ${entry?.version ?? "unknown"}): released bytes stay in the archive and the version must never be reused`,
+      });
+      continue;
+    }
     diagnostics.push({
       severity: "error",
       code: "LOCK_ENTRY_REMOVED",

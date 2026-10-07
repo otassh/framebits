@@ -21,6 +21,7 @@ const KEBAB_CASE_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 export const KebabCaseSchema = z
   .string()
+  .max(64, "must be at most 64 characters")
   .regex(KEBAB_CASE_PATTERN, "must be kebab-case (lowercase alphanumerics separated by single hyphens)");
 
 export const CategorySchema = z.enum(CATEGORIES);

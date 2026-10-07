@@ -1,8 +1,19 @@
 import { z } from "zod";
-import { HashableJsonValueSchema, Sha256HashSchema } from "./hashable-json.js";
+import {
+  HashableJsonValueSchema,
+  Sha256HashSchema,
+  guardedRecord,
+  rejectDangerousKeys,
+} from "./hashable-json.js";
 import { DependenciesSchema, ItemTypeSchema, SlugSchema, TitleSchema } from "./meta.js";
 import { RelativePathSchema } from "./paths.js";
 import { SemverVersionSchema } from "./semver.js";
+
+/** Max characters of a single `files[].content` string (DoS guard on registry blobs). */
+export const MAX_FILE_CONTENT_CHARS = 500_000;
+
+/** Max files per registry item (the CLI fetches every file before writing). */
+export const MAX_FILES_PER_ITEM = 50;
 
 /** Registry format version. The CLI refuses unknown future major versions. */
 export const SCHEMA_VERSION = 1 as const;
@@ -13,20 +24,28 @@ export const DEFAULT_VARIANT = "ts-tw" as const;
 /** Tailwind v3 config fragments the CLI merges (keyframes/animation). */
 export const TailwindFragmentSchema = z
   .object({
-    keyframes: z.record(z.string(), HashableJsonValueSchema).optional(),
-    animation: z.record(z.string(), HashableJsonValueSchema).optional(),
+    keyframes: guardedRecord(HashableJsonValueSchema).optional(),
+    animation: guardedRecord(HashableJsonValueSchema).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((fragment, ctx) => {
+    if (fragment.keyframes !== undefined) rejectDangerousKeys(fragment.keyframes, ctx);
+    if (fragment.animation !== undefined) rejectDangerousKeys(fragment.animation, ctx);
+  });
 
 export type TailwindFragment = z.infer<typeof TailwindFragmentSchema>;
 
 /** CSS variables for Tailwind v4 `@theme` blocks (light/dark). */
 export const CssVarsSchema = z
   .object({
-    light: z.record(z.string(), HashableJsonValueSchema).optional(),
-    dark: z.record(z.string(), HashableJsonValueSchema).optional(),
+    light: guardedRecord(HashableJsonValueSchema).optional(),
+    dark: guardedRecord(HashableJsonValueSchema).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((vars, ctx) => {
+    if (vars.light !== undefined) rejectDangerousKeys(vars.light, ctx);
+    if (vars.dark !== undefined) rejectDangerousKeys(vars.dark, ctx);
+  });
 
 export type CssVars = z.infer<typeof CssVarsSchema>;
 
@@ -46,7 +65,10 @@ export type ComponentStyles = z.infer<typeof ComponentStylesSchema>;
 export const RegistryFileSchema = z
   .object({
     path: RelativePathSchema,
-    content: z.string().min(1, "file content must not be empty"),
+    content: z
+      .string()
+      .min(1, "file content must not be empty")
+      .max(MAX_FILE_CONTENT_CHARS, `file content must be at most ${String(MAX_FILE_CONTENT_CHARS)} characters`),
     type: ItemTypeSchema,
     variant: z.string().min(1).max(32).default(DEFAULT_VARIANT),
   })
@@ -67,10 +89,11 @@ export const RegistryItemSchema = z
     version: SemverVersionSchema,
     hash: Sha256HashSchema,
     dependencies: DependenciesSchema.default({}),
-    registryDependencies: z.array(SlugSchema).default([]),
+    registryDependencies: z.array(SlugSchema).max(100).default([]),
     files: z
       .array(RegistryFileSchema)
       .min(1, "item must contain at least one file")
+      .max(MAX_FILES_PER_ITEM, `item must contain at most ${String(MAX_FILES_PER_ITEM)} files`)
       .refine(
         (files) => new Set(files.map((file) => file.path)).size === files.length,
         "file paths must be unique within one item",

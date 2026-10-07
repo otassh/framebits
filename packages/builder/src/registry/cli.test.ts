@@ -19,6 +19,7 @@ const tsxCli = join(repoRoot, "node_modules", "tsx", "dist", "cli.mjs");
 const script = join(repoRoot, "packages", "builder", "src", "cli.ts");
 
 let roots: string[] = [];
+let siblings: string[] = [];
 
 async function makeRoot(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "build-cli-"));
@@ -29,6 +30,8 @@ async function makeRoot(): Promise<string> {
 afterEach(async () => {
   await Promise.all(roots.map((root) => rm(root, { recursive: true, force: true })));
   roots = [];
+  await Promise.all(siblings.map((root) => rm(root, { recursive: true, force: true })));
+  siblings = [];
 });
 
 function runCli(args: string[]): { status: number | null; stdout: string; stderr: string } {
@@ -36,6 +39,24 @@ function runCli(args: string[]): { status: number | null; stdout: string; stderr
     throw new Error(`tsx CLI not found at ${tsxCli}`);
   }
   const result = spawnSync(process.execPath, [tsxCli, script, ...args], { encoding: "utf8" });
+  return {
+    status: result.status,
+    stdout: typeof result.stdout === "string" ? result.stdout : "",
+    stderr: typeof result.stderr === "string" ? result.stderr : "",
+  };
+}
+
+function runCliWithEnv(
+  args: string[],
+  env: Record<string, string>,
+): { status: number | null; stdout: string; stderr: string } {
+  if (!existsSync(tsxCli)) {
+    throw new Error(`tsx CLI not found at ${tsxCli}`);
+  }
+  const result = spawnSync(process.execPath, [tsxCli, script, ...args], {
+    encoding: "utf8",
+    env: { ...process.env, ...env },
+  });
   return {
     status: result.status,
     stdout: typeof result.stdout === "string" ? result.stdout : "",
@@ -51,15 +72,15 @@ function validComponent(): Record<string, string> {
   };
 }
 
-let dirCounter = 0;
-
-function dirs(root: string): { out: string; archive: string } {
-  // Sibling temp dirs: out/archive must NEVER live inside the registry root
-  // (emitted schema/meta.json files would be discovered as items).
-  dirCounter += 1;
-  const parent = join(root, "..");
-  const tag = String(dirCounter);
-  return { out: join(parent, `out-${tag}`), archive: join(parent, `arc-${tag}`) };
+async function dirs(): Promise<{ out: string; archive: string }> {
+  // Unique sibling temp dirs (never inside the registry root: emitted
+  // schema/meta.json files would be discovered as items). Fixed names caused
+  // cross-run pollution in the shared temp dir (stale archives failing
+  // immutability checks); mkdtemp avoids that entirely.
+  const out = await mkdtemp(join(tmpdir(), "build-cli-out-"));
+  const archive = await mkdtemp(join(tmpdir(), "build-cli-arc-"));
+  siblings.push(out, archive);
+  return { out, archive };
 }
 
 describe("packages/builder/src/cli.ts", () => {
@@ -75,7 +96,7 @@ describe("packages/builder/src/cli.ts", () => {
       join(previewDir, previewCacheName(item.slug, item.hash)),
       new TextEncoder().encode("RIFF0000WEBPVP8 "),
     );
-    const { out, archive } = dirs(root);
+    const { out, archive } = await dirs();
     try {
       const emit = runCli([
         "--write-lock",
@@ -137,7 +158,7 @@ describe("packages/builder/src/cli.ts", () => {
 
   it("usage errors exit 2; empty registries check clean", async () => {
     const root = await makeRoot();
-    const { out, archive } = dirs(root);
+    const { out, archive } = await dirs();
     // NOTE: bare `runCli([])` would emit into the real repo defaults — never run it.
     expect(runCli(["--bogus"]).status).toBe(2);
     expect(runCli(["--check", "--write-lock", "--registry-root", root]).status).toBe(2);
@@ -150,5 +171,46 @@ describe("packages/builder/src/cli.ts", () => {
     const empty = runCli(["--check", "--registry-root", root]);
     expect(empty.status).toBe(0);
     expect(empty.stdout).toContain("items: 0");
+  });
+
+  it("fails closed on an invalid lock (no 1.0.0 reset plans)", async () => {
+    const root = await makeRegistry(validComponent());
+    roots.push(root);
+    try {
+      await writeFile(join(root, "registry.lock.json"), "{bad json", "utf8");
+      const human = runCli(["--check", "--registry-root", root]);
+      expect(human.status).toBe(1);
+      expect(human.stderr).toContain("LOCK_INVALID");
+      // Fail-closed: the report must not schedule fresh 1.0.0 releases.
+      const machine = runCli(["--check", "--registry-root", root, "--json"]);
+      expect(machine.status).toBe(1);
+      const report = JSON.parse(machine.stdout) as {
+        counts: { new: number };
+        diagnostics: Array<{ code: string }>;
+      };
+      expect(report.diagnostics.map((d) => d.code)).toContain("LOCK_INVALID");
+      expect(report.counts.new).toBe(0);
+    } finally {
+      roots = roots.filter((r) => r !== root);
+      await rmRegistry(root);
+    }
+  });
+
+  it("rejects out-of-range SOURCE_DATE_EPOCH with exit 2", async () => {
+    const root = await makeRegistry(validComponent());
+    roots.push(root);
+    try {
+      const farFuture = runCliWithEnv(["--check", "--registry-root", root], {
+        SOURCE_DATE_EPOCH: "9999999999",
+      });
+      expect(farFuture.status).toBe(2);
+      const negative = runCliWithEnv(["--check", "--registry-root", root], {
+        SOURCE_DATE_EPOCH: "-1",
+      });
+      expect(negative.status).toBe(2);
+    } finally {
+      roots = roots.filter((r) => r !== root);
+      await rmRegistry(root);
+    }
   });
 });

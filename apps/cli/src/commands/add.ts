@@ -14,15 +14,23 @@ import {
   integrityError,
 } from "../errors.js";
 import { applyPlan, type ApplyFs } from "../apply/index.js";
-import { buildInstallCommand, renderCommand } from "../install/command.js";
+import {
+  IGNORE_SCRIPTS_HINT,
+  buildInstallCommand,
+  pmBinaryCaution,
+  renderCommand,
+} from "../install/command.js";
 import { computeMissing } from "../install/compute.js";
 import type { Installer } from "../install/run.js";
 import { buildPlan, type CssBlockPlan } from "../plan/index.js";
 import {
+  describeRegistrySource,
   fetchJsonText,
   indexUrl,
+  parseJsonGuarded,
   parseSlugArg,
-  resolveRegistryUrl,
+  redactUrl,
+  resolveRegistryUrlWithSource,
   resolveTimeoutMs,
   type FetchFn,
 } from "../registry-client/index.js";
@@ -108,6 +116,16 @@ function joinAbs(dir: string, rel: string): string {
   return `${dir.replace(/\\/g, "/").replace(/\/+$/, "")}/${rel}`;
 }
 
+function isInsideRoot(root: string, candidate: string): boolean {
+  const cleanRoot = root.replace(/\\/g, "/").replace(/\/+$/, "") || "/";
+  const cleanCandidate = candidate.replace(/\\/g, "/").replace(/\/+$/, "") || "/";
+  if (cleanCandidate === cleanRoot) return true;
+  if (process.platform === "win32") {
+    return cleanCandidate.toLowerCase().startsWith(`${cleanRoot.toLowerCase()}/`);
+  }
+  return cleanCandidate.startsWith(`${cleanRoot}/`);
+}
+
 export async function runAdd(options: AddOptions, deps: AddDeps): Promise<AddResult> {
   const projectRoot = options.cwd;
   if (options.slugs.length === 0) {
@@ -123,11 +141,16 @@ export async function runAdd(options: AddOptions, deps: AddDeps): Promise<AddRes
   const config = loaded.config;
 
   const explicit = options.slugs.map((arg) => parseSlugArg(arg));
-  const registry = resolveRegistryUrl({
+  const resolvedRegistry = resolveRegistryUrlWithSource({
     flag: options.registryFlag,
     env: process.env["FRAMEBITS_REGISTRY_URL"],
     config: config.registry,
   });
+  const registry = resolvedRegistry.url;
+  if (options.debug) {
+    // Debug-only source label (no URL value, no secret echo).
+    printLine(deps.output, describeRegistrySource(resolvedRegistry.source));
+  }
   const timeoutMs = resolveTimeoutMs({
     flag: options.timeoutFlag,
     env: process.env["FRAMEBITS_TIMEOUT"],
@@ -140,7 +163,7 @@ export async function runAdd(options: AddOptions, deps: AddDeps): Promise<AddRes
     if (indexCache.slugs !== undefined) return Promise.resolve(indexCache.slugs);
     return fetchJsonText(indexUrl(registry), fetchOptions).then(
       ({ text }) => {
-        const raw: unknown = JSON.parse(text);
+        const raw: unknown = parseJsonGuarded(text, "index.json");
         if (isIndexPayload(raw)) {
           const slugs: string[] = [];
           for (const entry of raw.items) {
@@ -166,6 +189,7 @@ export async function runAdd(options: AddOptions, deps: AddDeps): Promise<AddRes
     timeoutMs,
     indexSlugs,
   });
+  for (const warning of closure.warnings) printWarning(deps.output, warning);
   const items: RegistryItem[] = closure.items;
 
   const aliasFs = {
@@ -186,6 +210,17 @@ export async function runAdd(options: AddOptions, deps: AddDeps): Promise<AddRes
     fs: aliasFs,
     isVite: deps.snapshot.isVite,
   });
+  // Alias inside-root enforcement (defense in depth): resolved alias dirs
+  // must stay inside the project root even if tsconfig contains absolute
+  // paths — otherwise plan targets could escape via mapping.
+  for (const [label, dir] of Object.entries(resolved.dirs)) {
+    if (!isInsideRoot(projectRoot, dir)) {
+      throw configError(
+        `resolved alias "${label}" escapes the project root (${redactUrl(dir)})`,
+        "fix tsconfig paths so aliases point inside the project",
+      );
+    }
+  }
   const aliasPrefixes = {
     components: config.aliases.components,
     lib: config.aliases.lib,
@@ -330,6 +365,9 @@ export async function runAdd(options: AddOptions, deps: AddDeps): Promise<AddRes
     const built = buildInstallCommand(packageManager, toInstall);
     if (built !== undefined) {
       const display = renderCommand(built);
+      // PATH caution + lifecycle-scripts review hint on every install path.
+      printWarning(deps.output, pmBinaryCaution(built.program));
+      printHint(deps.output, IGNORE_SCRIPTS_HINT);
       if (options.noInstall) {
         installSkippedReason = "--no-install: not running the installer";
         printInstallManual(deps.output, display, installSkippedReason);

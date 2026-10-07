@@ -84,30 +84,43 @@ Tear down: `docker compose -f deploy/docker-compose.local.yml down`
 
 | Key | Required | Notes |
 | --- | -------- | ----- |
-| `POSTGRES_PASSWORD` | yes | Strong random value; compose fails fast if unset (prod). |
+| `POSTGRES_PASSWORD` | yes | Strong random value; compose fails fast if unset (prod). Generate with `openssl rand -base64 32`. |
 | `POSTGRES_USER` / `POSTGRES_DB` | no | Default `framebits`. |
 | `DOMAIN` | no | Default `framebits.dev` (placeholder, unconfirmed). |
-| `ADMIN_TOKEN` | Task 8/10 | Min 32 chars; unused until the API lands. |
+| `ADMIN_TOKEN` | Task 8/10 | Min 32 chars; unused until the API lands. Generate with `openssl rand -base64 48`. |
 | `DATABASE_URL` | Task 7/8 | Compose builds it from the `POSTGRES_*` vars for `api`. |
-| `LIKE_PEPPER`, `WEB_ORIGIN`, `TRUSTED_PROXY_COUNT`, `PORT`, `REGISTRY_URL`, `VITE_REGISTRY_URL` | see `.env.example` | API/web wiring for later tasks. |
-| `OFFSITE_DEST` / `OFFSITE_TOOL` | no | `backup.sh` offsite copy (`scp` default, or `rclone`). |
-| `REQUIRE_API=1` | no | Make `/api/health` deploy-blocking (default warn-only until Task 8). |
+| `LIKE_PEPPER`, `WEB_ORIGIN`, `TRUSTED_PROXY_COUNT`, `PORT`, `REGISTRY_URL`, `VITE_REGISTRY_URL` | see `.env.example` | API/web wiring for later tasks. `TRUSTED_PROXY_COUNT=1` direct on the VPS (Caddy -> api); `2` behind Cloudflare/CDN in front of Caddy (client -> CDN -> Caddy -> api). Never trust more hops than deployed. |
+| `OFFSITE_DEST` / `OFFSITE_TOOL` / `BACKUP_SSH_KEY` | no | `backup.sh` offsite copy (`scp` default, or `rclone`). `scp` always uses `-o BatchMode=yes -o StrictHostKeyChecking=yes`; set `BACKUP_SSH_KEY` for `-i <key>`. |
+| `REQUIRE_API=1` | no | `/api/health` deploy-blocking (default 1; pass `--allow-degraded` or `REQUIRE_API=0` to bypass). |
+
+Generate secrets with `openssl rand` (never reuse passwords across hosts);
+`chmod 600 .env` and `chmod 600 /var/backups/framebits/*.sql.gz` (backup.sh
+already creates dumps with `umask 077` + `chmod 600` and removes partial
+dumps on failure).
 
 ## 4. GitHub secrets for `deploy.yml`
 
 `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` (private deploy key), optional
-`VPS_REPO_DIR` (default `~/framebits`), `VPS_SSH_PORT` (default `22`).
-The workflow SSHes in and runs `bash deploy/deploy.sh $GITHUB_SHA`.
+`VPS_REPO_DIR` (default `~/framebits`), `VPS_SSH_PORT` (default `22`),
+`VPS_KNOWN_HOSTS` (output of `ssh-keyscan <host>`; pins host keys so CI uses
+`StrictHostKeyChecking=yes`. Until set, the workflow warns and falls back to
+`accept-new` TOFU).
+<!-- TODO(question): owner to add VPS_KNOWN_HOSTS and confirm the accept-new fallback can be removed. -->
+The workflow SSHes in and runs `bash deploy/deploy.sh $GITHUB_SHA` with all
+secrets quoted; the private key is removed via `trap` even on failure.
+Set required reviewers on the `production` environment so main never deploys
+without approval.
 
 ## 5. Day-to-day operations
 
-- Deploy: `bash deploy/deploy.sh [<sha>]` (default `origin/main`). Idempotent:
+- Deploy: `bash deploy/deploy.sh [--allow-degraded] [<sha>]` (default `origin/main`). Idempotent:
   re-running a live sha is a no-op after the checkout; releases are
   content-built in a temp dir and moved, the symlink flips atomically
-  (`ln -sfn` + `mv -T`), and the last 5 releases are kept.
+  (`ln -sfn` + `mv -T`), and the last 5 releases are kept (live release never
+  pruned). A `flock` guard refuses concurrent deploys.
 - Rollback: `bash deploy/rollback.sh` (previous release becomes live, api+web
-  restart on its image tags). Runs automatically if post-deploy health checks
-  fail.
+  restart on its image tags with `--build`). Runs automatically if post-deploy health checks
+  fail. DB is forward-only: migrations are never rolled back.
 - Backup: `bash deploy/backup.sh`. Restore:
   ```sh
   gunzip -c /var/backups/framebits/framebits-<ts>.sql.gz \
@@ -121,11 +134,14 @@ The workflow SSHes in and runs `bash deploy/deploy.sh $GITHUB_SHA`.
 - [ ] SSH key-only (`PasswordAuthentication no`), root login disabled.
 - [ ] fail2ban running (`fail2ban-client status sshd`).
 - [ ] Unattended security upgrades enabled.
-- [ ] Docker log rotation configured (section 2.5).
+- [ ] Docker log rotation configured (section 2.5) with retention sized for
+      the VPS disk (access logs contain IPs + Referer/User-Agent; rotate
+      locally only, never ship elsewhere; DB stores no raw IPs/emails/UAs).
 - [ ] Postgres reachable only on the `backend` compose network
       (no `ports:` on the service; verify with `ss -ltn`).
 - [ ] `.env` is 600 and never appears in `git status`, images, or CI logs.
-- [ ] Nightly `backup.sh` in cron + at least one tested restore.
+- [ ] Nightly `backup.sh` in cron + at least one tested restore; dumps are
+      600 (`umask 077`), partial dumps removed by `trap`.
 - [ ] `DOMAIN` DNS + `curl -sSI https://$DOMAIN/r/index.json` shows HSTS.
 
 ## 7. Pinned images
@@ -144,7 +160,8 @@ Bump pins deliberately (rebuild + re-run section 1) and keep this table truthful
 - `api` has no server yet (Task 8): the image builds, but the entrypoint
   parks the container and `/api/*` 502s until `dist/server.js` exists.
   The container stays up (no restart loop) and reports unhealthy honestly.
-  Set `REQUIRE_API=1` once Task 8 lands.
+  `REQUIRE_API=1` is now the default; pass `--allow-degraded` until Task 8
+  lands.
 - `pnpm db:migrate` / `pnpm db:sync` (Task 7): `deploy.sh` runs them when the
   `@framebits/db` scripts exist and warns otherwise. The steps run before the
   symlink flip, so a future migration failure can never publish a half-deploy.

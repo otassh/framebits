@@ -13,7 +13,15 @@ const PROPERTY_PATTERN = /^-{0,2}[a-z][a-zA-Z0-9-]*$/;
 const PERCENT_PATTERN = /^(\d+(\.\d+)?)%$/;
 
 const FORBIDDEN_VALUE_SUBSTRINGS = ["{", "}", ";", "\\", "/*", "*/", "@", "<"] as const;
-const FORBIDDEN_VALUE_CALLS = ["url(", "expression(", "image-set(", "javascript:"] as const;
+/** Whitespace-tolerant call/scheme denylist (case-insensitive). */
+const FORBIDDEN_VALUE_PATTERNS: RegExp[] = [
+  /url\s*\(/i,
+  /expression\s*\(/i,
+  /image-set\s*\(/i,
+  /-webkit-image-set\s*\(/i,
+  /javascript\s*:/i,
+  /data\s*:/i,
+];
 
 function fail(slug: string, detail: string): never {
   throw integrityError(
@@ -77,10 +85,9 @@ export function validateCssValue(slug: string, what: string, value: string): voi
       fail(slug, `${what} value contains forbidden ${JSON.stringify(forbidden)}`);
     }
   }
-  const lower = value.toLowerCase();
-  for (const forbidden of FORBIDDEN_VALUE_CALLS) {
-    if (lower.includes(forbidden)) {
-      fail(slug, `${what} value contains forbidden ${JSON.stringify(forbidden)}`);
+  for (const pattern of FORBIDDEN_VALUE_PATTERNS) {
+    if (pattern.test(value)) {
+      fail(slug, `${what} value contains forbidden ${String(pattern)}`);
     }
   }
 }

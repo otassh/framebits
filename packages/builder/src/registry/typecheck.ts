@@ -1,4 +1,5 @@
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { satisfiesSemverRange } from "@framebits/shared";
@@ -104,16 +105,21 @@ export async function runTypecheck(
     }
   }
 
-  const tmpBase = options.tmpBase ?? join(envDir(), ".tmp");
+  const tmpBase = options.tmpBase ?? tmpdir();
   await mkdir(tmpBase, { recursive: true });
-  const tmp = await mkdtemp(join(tmpBase, "typecheck-"));
+  const tmp = await mkdtemp(join(tmpBase, "framebits-typecheck-"));
   try {
+    // The temp project lives outside the package dir (os.tmpdir), so bare
+    // imports (react, motion, ...) resolve via a node_modules junction back to
+    // the pinned registry-env. A junction (not a symlink) works on Windows
+    // without elevated privileges.
+    await symlink(join(envDir(), "node_modules"), join(tmp, "node_modules"), "junction");
     await writeFile(join(tmp, "tsconfig.json"), JSON.stringify(TSCONFIG, null, 2), "utf8");
     const materialized: string[] = [];
     const reverse = new Map<string, string>();
     for (const item of items) {
       for (const [target, content] of Object.entries(item.files)) {
-        const abs = join(tmp, ...target.split("/"));
+        const abs = joinInto(tmp, target.split("/"));
         await mkdir(dirname(abs), { recursive: true });
         await writeFile(abs, content, "utf8");
         materialized.push(abs);
@@ -124,7 +130,7 @@ export async function runTypecheck(
         // specifier so it resolves to the materialized component (check scaffolding
         // only — demos are never shipped and emitted content is never rewritten).
         const rewritten = rewriteDemoImport(item.demoText, item.meta.slug);
-        const abs = join(tmp, "demos", `${item.meta.slug}.tsx`);
+        const abs = joinInto(tmp, ["demos", `${item.meta.slug}.tsx`]);
         await mkdir(dirname(abs), { recursive: true });
         await writeFile(abs, rewritten, "utf8");
         materialized.push(abs);
@@ -169,8 +175,27 @@ export async function runTypecheck(
 
 /** Rewrite the demo's own `"./<slug>"` import so it resolves to the component. */
 export function rewriteDemoImport(demoText: string, slug: string): string {
-  const pattern = new RegExp(`(["'])\\./${slug}(\\.tsx)?\\1`, "g");
+  const pattern = new RegExp(`(["'])\\./${escapeRegExp(slug)}(\\.tsx)?\\1`, "g");
   return demoText.replace(pattern, `"../components/ui/${slug}"`);
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Join untrusted path segments onto a base directory, refusing to escape it.
+ * Targets are builder-computed (never user input), so this is defense in depth:
+ * a violation throws instead of writing outside the temp project.
+ */
+function joinInto(base: string, segments: string[]): string {
+  const target = join(base, ...segments);
+  const root = resolve(base);
+  const resolved = resolve(target);
+  if (resolved !== root && !resolved.startsWith(root + sep)) {
+    throw new Error(`refusing to materialize outside the temp project: ${segments.join("/")}`);
+  }
+  return target;
 }
 
 /** Materialized target path -> original registry relPath. */

@@ -70,6 +70,11 @@ describe("DescriptionSchema", () => {
     expect(DescriptionSchema.safeParse("x".repeat(200)).success).toBe(true);
   });
 
+  it("trims surrounding whitespace before measuring", () => {
+    expect(DescriptionSchema.parse("  hello world  ")).toBe("hello world");
+    expect(DescriptionSchema.safeParse("  short  ").success).toBe(false);
+  });
+
   it("rejects 9 and 201 chars", () => {
     expect(DescriptionSchema.safeParse("x".repeat(9)).success).toBe(false);
     expect(DescriptionSchema.safeParse("x".repeat(201)).success).toBe(false);
@@ -108,6 +113,21 @@ describe("MetaSchema", () => {
 
   it("rejects unknown keys (.strict())", () => {
     expect(MetaSchema.safeParse({ ...validMeta, extra: 1 }).success).toBe(false);
+  });
+
+  it.each(["__proto__", "constructor", "prototype"])(
+    "rejects dangerous dependency key %s",
+    (key) => {
+      const dependencies = JSON.parse(`{"${key}": "^14.0.0"}`) as Record<string, unknown>;
+      expect(MetaSchema.safeParse({ ...validMeta, dependencies }).success).toBe(false);
+    },
+  );
+
+  it("rejects more than 100 registryDependencies", () => {
+    const deps = Array.from({ length: 101 }, (_, n) => `dep-${String(n)}`);
+    expect(
+      MetaSchema.safeParse({ ...validMeta, registryDependencies: deps }).success,
+    ).toBe(false);
   });
 
   it.each([

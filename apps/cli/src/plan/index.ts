@@ -3,6 +3,7 @@
  */
 import type { RegistryItem } from "@framebits/shared";
 import { integrityError } from "../errors.js";
+import { MAX_TOTAL_BYTES, MAX_TOTAL_FILES } from "../resolve/verify.js";
 import { rewriteImports, type AliasPrefixes } from "../rewrite/index.js";
 import { detectCollision, scanMarkers } from "../styles/patch.js";
 import { generateBlock, generateBlockInner, type TailwindMajor } from "../styles/generate.js";
@@ -125,14 +126,23 @@ export function mapRegistryPath(
   );
 }
 
+/**
+ * NOTE (snapshot freshness): `existing`/`existingPaths` are a point-in-time
+ * snapshot. The plan is complete before any write, but disk may change
+ * between planning and applying — applyPlan re-checks every target
+ * (create-must-still-be-absent, unchanged-must-still-match) and aborts on
+ * drift instead of clobbering.
+ */
 export function buildPlan(input: BuildPlanInput): BuildPlan {
   const seen = new Map<string, string>();
+  const seenLower = new Map<string, string>();
   const files: PlannedFile[] = [];
   const lowerIndex = new Map<string, string>();
   for (const existing of input.existingPaths) {
     const lower = existing.toLowerCase();
     if (!lowerIndex.has(lower)) lowerIndex.set(lower, existing);
   }
+  let totalBytes = 0;
 
   for (const item of input.items) {
     for (const file of [...item.files].sort((a, b) => (a.path < b.path ? -1 : 1))) {
@@ -144,11 +154,50 @@ export function buildPlan(input: BuildPlanInput): BuildPlan {
           "report the registry content",
         );
       }
+      // Case-insensitive duplicate detection across the whole plan (exit 4):
+      // on case-insensitive filesystems two targets differing only by case
+      // would clobber each other. This covers both two planned files and a
+      // planned file shadowing an earlier planned target via lowerIndex.
+      const lowerTarget = targetAbs.toLowerCase();
+      const priorOwner = seenLower.get(lowerTarget);
+      if (priorOwner !== undefined && priorOwner !== item.slug) {
+        throw integrityError(
+          `two items target the same path case-insensitively "${relativePosix(input.projectRoot, targetAbs)}" (${priorOwner} and ${item.slug})`,
+          "report the registry content; paths must differ beyond case",
+        );
+      }
+      const shadowedPlan = lowerIndex.get(lowerTarget);
+      if (
+        shadowedPlan !== undefined && shadowedPlan !== targetAbs &&
+        seen.has(shadowedPlan)
+      ) {
+        throw integrityError(
+          `two planned files collide case-insensitively "${relativePosix(input.projectRoot, targetAbs)}"`,
+          "report the registry content; paths must differ beyond case",
+        );
+      }
       seen.set(targetAbs, item.slug);
+      if (!seenLower.has(lowerTarget)) seenLower.set(lowerTarget, item.slug);
+      // Re-seed: later planned files must see earlier planned targets as
+      // occupied (case-insensitive), not just pre-existing disk paths.
+      if (!lowerIndex.has(lowerTarget)) lowerIndex.set(lowerTarget, targetAbs);
       const rewritten = rewriteImports(file.content, input.aliases);
       const content = normalizeLF(rewritten.content).endsWith("\n")
         ? normalizeLF(rewritten.content)
         : `${normalizeLF(rewritten.content)}\n`;
+      totalBytes += Buffer.byteLength(content, "utf8");
+      if (files.length + 1 > MAX_TOTAL_FILES) {
+        throw integrityError(
+          `plan exceeds ${String(MAX_TOTAL_FILES)} files total`,
+          "the dependency graph is too large; report it",
+        );
+      }
+      if (totalBytes > MAX_TOTAL_BYTES) {
+        throw integrityError(
+          `plan exceeds ${String(MAX_TOTAL_BYTES)} bytes total`,
+          "the registry response is too large; report it",
+        );
+      }
       const existing = input.existing.get(targetAbs);
       let action: FileAction;
       let caseCollisionWith: string | undefined;
@@ -288,6 +337,24 @@ function planStyles(input: BuildPlanInput): { plans: CssBlockPlan[]; malformed: 
     );
   }
 
+  // Total ≤500 declarations per CSS entry (exit 4): per-item caps (50) are
+  // enforced in validateStyles; this bounds the sum across all styled items
+  // targeting the same file.
+  const MAX_TOTAL_CSS_DECLARATIONS = 500;
+  let totalDeclarations = 0;
+  for (const item of styled) {
+    const entry = validated.get(item.slug);
+    if (entry !== undefined) {
+      totalDeclarations += entry.declarationCount;
+      if (totalDeclarations > MAX_TOTAL_CSS_DECLARATIONS) {
+        throw integrityError(
+          `styled items exceed ${String(MAX_TOTAL_CSS_DECLARATIONS)} declarations total for the CSS entry`,
+          "report the registry content; style data is too large",
+        );
+      }
+    }
+  }
+
   const context = input.styles;
   for (const item of styled) {
     const itemValidated = validated.get(item.slug) as ValidatedStyles;
@@ -373,7 +440,34 @@ function planStyles(input: BuildPlanInput): { plans: CssBlockPlan[]; malformed: 
       names,
       (haystack, kind, name) => definitionPresent(haystack, kind, name, itemValidated, version),
     );
-    if (collision !== undefined) {
+    // Cross-item collision within this same plan: two new blocks defining the
+    // same keyframe/animation name would both be "create" — search the blocks
+    // already planned in this run too (all blocks, not just disk).
+    let plannedCollision: string | undefined;
+    for (const planned of out) {
+      if (planned.action !== "create" && planned.action !== "conflict") continue;
+      const plannedValidated = validated.get(planned.slug);
+      if (plannedValidated === undefined) continue;
+      for (const name of names.keyframes) {
+        if (plannedValidated.keyframes.some((frame) => frame.name === name)) {
+          plannedCollision =
+            `keyframe "${name}" is also defined by "${planned.slug}" in this run (manual merge required)`;
+          break;
+        }
+      }
+      if (plannedCollision === undefined) {
+        for (const name of names.animations) {
+          if (plannedValidated.animations.some((anim) => anim.name === name)) {
+            plannedCollision =
+              `animation "${name}" is also defined by "${planned.slug}" in this run (manual merge required)`;
+            break;
+          }
+        }
+      }
+      if (plannedCollision !== undefined) break;
+    }
+    const effectiveCollision = collision ?? plannedCollision;
+    if (effectiveCollision !== undefined) {
       out.push({
         slug: item.slug,
         itemVersion: item.version,
@@ -382,7 +476,7 @@ function planStyles(input: BuildPlanInput): { plans: CssBlockPlan[]; malformed: 
         action: "skip",
         block,
         blockInner,
-        skipReason: collision,
+        skipReason: effectiveCollision,
         manualSnippet: block,
       });
       continue;

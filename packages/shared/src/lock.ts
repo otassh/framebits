@@ -1,7 +1,11 @@
 import { z } from "zod";
+import { guardedRecord, rejectDangerousKeys } from "./hashable-json.js";
 import { SlugSchema } from "./meta.js";
 import { SemverVersionSchema } from "./semver.js";
 import { Sha256HashSchema } from "./hashable-json.js";
+
+/** Max components tracked by the lock file (DoS guard on registry scale). */
+export const MAX_LOCK_COMPONENTS = 1000;
 
 /** `registry/registry.lock.json`: slug -> { version, hash } (MASTER_PROMPT Section 3). */
 export const LockEntrySchema = z
@@ -16,7 +20,14 @@ export type LockEntry = z.infer<typeof LockEntrySchema>;
 export const RegistryLockSchema = z
   .object({
     version: z.literal(1),
-    components: z.record(z.string(), LockEntrySchema).superRefine((components, ctx) => {
+    components: guardedRecord(LockEntrySchema).superRefine((components, ctx) => {
+      rejectDangerousKeys(components, ctx);
+      if (Object.keys(components).length > MAX_LOCK_COMPONENTS) {
+        ctx.addIssue({
+          code: "custom",
+          message: `lock must track at most ${String(MAX_LOCK_COMPONENTS)} components`,
+        });
+      }
       for (const slug of Object.keys(components)) {
         if (!SlugSchema.safeParse(slug).success) {
           ctx.addIssue({

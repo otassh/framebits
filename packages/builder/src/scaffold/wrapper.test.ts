@@ -93,4 +93,22 @@ describe("scripts/new-component.ts", () => {
     },
     30000,
   );
+
+  it(
+    "guards roots with metas but no lock file unless --allow-no-lock",
+    async () => {
+      const root = await makeRoot();
+      expect(
+        runWrapper(["first-one", "--category=buttons", "--registry-root", root]).status,
+      ).toBe(0);
+      const guarded = runWrapper(["second-one", "--category=buttons", "--registry-root", root]);
+      expect(guarded.status).toBe(1);
+      expect(guarded.stderr).toContain("registry.lock.json");
+      expect(
+        runWrapper(["second-one", "--category=buttons", "--registry-root", root, "--allow-no-lock"])
+          .status,
+      ).toBe(0);
+    },
+    60000,
+  );
 });

@@ -11,6 +11,8 @@ import {
   planArchive,
   planBuild,
   serializeCanonical,
+  verifyArchiveFiles,
+  verifyLockFile,
   verifyWrittenTree,
   writeBuildTree,
 } from "./emit.js";
@@ -34,7 +36,8 @@ async function loadModels(files: Record<string, string>): Promise<{
 }> {
   const root = await makeRegistry(files);
   const loaded = await loadRegistry({ registryRoot: root, skipTypecheck: true });
-  expect(loaded.diagnostics).toEqual([]);
+  expect(loaded.diagnostics.filter((d) => d.code !== "TYPECHECK_SKIPPED")).toEqual([]);
+  expect(loaded.typecheckRan).toBe(false);
   return { root, items: loaded.items };
 }
 
@@ -158,8 +161,7 @@ describe("buildTree determinism", () => {
 });
 
 describe("verifyWrittenTree", () => {
-  it("catches a deliberately corrupted item", async () => {
-    const { root, items } = await loadModels(componentFiles("aurora-text"));
+  it("catches a deliberately corrupted item", async () => {    const { root, items } = await loadModels(componentFiles("aurora-text"));
     try {
       const { plans } = (await import("./versions.js")).planVersions({
         items,
@@ -187,6 +189,64 @@ describe("verifyWrittenTree", () => {
       }
     } finally {
       await rmRegistry(root);
+    }
+  });
+});
+
+describe("verifyWrittenTree extra files", () => {
+  it("flags files on disk that the tree does not account for", async () => {
+    const { root, items } = await loadModels(componentFiles("aurora-text"));
+    try {
+      const { plans } = (await import("./versions.js")).planVersions({
+        items,
+        lock: { version: 1, components: {} },
+        bumps: new Map(),
+        draftSlugs: new Set(),
+        prune: new Set(),
+      });
+      const tree = buildTree(items, plans, GIT_SHA, GENERATED_AT, "0.0.0");
+      const dir = await mkdtemp(join(tmpdir(), "emit-extra-"));
+      try {
+        for (const [rel, content] of tree.files) {
+          const abs = join(dir, ...rel.split("/"));
+          await mkdir(join(abs, ".."), { recursive: true });
+          await writeFile(abs, content, "utf8");
+        }
+        await writeFile(join(dir, "stowaway.txt"), "smuggled", "utf8");
+        const diagnostics = await verifyWrittenTree(dir, tree);
+        expect(diagnostics.map((d) => d.code)).toContain("EMIT_VERIFY_FAILED");
+        expect(diagnostics.some((d) => d.file === "stowaway.txt")).toBe(true);
+      } finally {
+        await rm(dir, { recursive: true, force: true });
+      }
+    } finally {
+      await rmRegistry(root);
+    }
+  });
+});
+
+describe("verifyArchiveFiles and verifyLockFile", () => {
+  it("re-reads archive and lock bytes after writing", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "emit-postwrite-"));
+    try {
+      await writeFile(join(dir, "ok@1.0.0.json"), "{}", "utf8");
+      expect(await verifyArchiveFiles(dir, [{ name: "ok@1.0.0.json", content: "{}" }])).toEqual(
+        [],
+      );
+      const drifted = await verifyArchiveFiles(dir, [{ name: "ok@1.0.0.json", content: "{} " }]);
+      expect(drifted.map((d) => d.code)).toEqual(["EMIT_VERIFY_FAILED"]);
+      const missing = await verifyArchiveFiles(dir, [{ name: "ghost@1.0.0.json", content: "{}" }]);
+      expect(missing.map((d) => d.code)).toEqual(["EMIT_VERIFY_FAILED"]);
+
+      expect(await verifyLockFile(dir, "{\"version\":1}\n")).toEqual([
+        expect.objectContaining({ code: "EMIT_VERIFY_FAILED" }),
+      ]);
+      await writeFile(join(dir, "registry.lock.json"), "{\"version\":1}\n", "utf8");
+      expect(await verifyLockFile(dir, "{\"version\":1}\n")).toEqual([]);
+      const lockDrift = await verifyLockFile(dir, "{\"version\":1, \"x\": 1}\n");
+      expect(lockDrift.map((d) => d.code)).toEqual(["EMIT_VERIFY_FAILED"]);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
     }
   });
 });
@@ -221,6 +281,63 @@ describe("planArchive", () => {
         const sync2 = await planArchive(archive, bumped, tree2);
         expect(sync2.diagnostics.map((d) => d.code)).toContain("ARCHIVE_MISSING_VERSION");
         expect(sync2.pending.map((p) => p.name)).toContain("aurora-text@1.0.1.json");
+      } finally {
+        await rm(archive, { recursive: true, force: true });
+      }
+    } finally {
+      await rmRegistry(root);
+    }
+  });
+
+  it("refuses version reuse when the archive holds a higher version", async () => {
+    const { root, items } = await loadModels(componentFiles("aurora-text"));
+    try {
+      const { plans } = (await import("./versions.js")).planVersions({
+        items,
+        lock: { version: 1, components: {} },
+        bumps: new Map(),
+        draftSlugs: new Set(),
+        prune: new Set(),
+      });
+      const tree = buildTree(items, plans, GIT_SHA, GENERATED_AT, "0.0.0");
+      const archive = await mkdtemp(join(tmpdir(), "emit-reuse-"));
+      try {
+        // A retired 2.0.0 lingers in the archive: re-releasing as 1.0.0 is reuse.
+        await writeFile(join(archive, "aurora-text@2.0.0.json"), "{}\n", "utf8");
+        const sync = await planArchive(archive, plans, tree);
+        expect(sync.diagnostics.map((d) => d.code)).toContain("VERSION_REUSE");
+      } finally {
+        await rm(archive, { recursive: true, force: true });
+      }
+    } finally {
+      await rmRegistry(root);
+    }
+  });
+
+  it("errors when an unchanged locked version is absent from archive history", async () => {
+    const { root, items } = await loadModels(componentFiles("aurora-text"));
+    try {
+      const hash = items[0]?.hash as string;
+      const { plans } = (await import("./versions.js")).planVersions({
+        items,
+        lock: { version: 1, components: { "aurora-text": { version: "1.2.0", hash } } },
+        bumps: new Map(),
+        draftSlugs: new Set(),
+        prune: new Set(),
+      });
+      expect(plans[0]).toMatchObject({ version: "1.2.0", change: "unchanged" });
+      const tree = buildTree(items, plans, GIT_SHA, GENERATED_AT, "0.0.0");
+      const archive = await mkdtemp(join(tmpdir(), "emit-absent-"));
+      try {
+        // History exists (1.0.0) but the locked 1.2.0 was never archived: gap.
+        await writeFile(join(archive, "aurora-text@1.0.0.json"), "{}\n", "utf8");
+        const sync = await planArchive(archive, plans, tree);
+        expect(sync.diagnostics.map((d) => d.code)).toContain("IMMUTABILITY_VIOLATION");
+
+        // An empty archive (fresh checkout / default CI dir) never errors here.
+        await rm(join(archive, "aurora-text@1.0.0.json"), { force: true });
+        const fresh = await planArchive(archive, plans, tree);
+        expect(fresh.diagnostics.map((d) => d.code)).not.toContain("IMMUTABILITY_VIOLATION");
       } finally {
         await rm(archive, { recursive: true, force: true });
       }

@@ -24,7 +24,10 @@ export const RegistryIndexItemSchema = z
     type: ItemTypeSchema,
     title: TitleSchema,
     category: CategorySchema,
-    tags: z.array(TagSchema).max(8, "at most 8 tags"),
+    tags: z
+      .array(TagSchema)
+      .max(8, "at most 8 tags")
+      .refine((tags) => new Set(tags).size === tags.length, "tags must be unique"),
     description: DescriptionSchema,
     version: SemverVersionSchema,
     hash: Sha256HashSchema,

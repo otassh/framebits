@@ -2,20 +2,20 @@
   "version": 1,
   "components": {
     "aurora-text": {
-      "version": "1.0.1",
-      "hash": "sha256:ff322ae5d8fc9843e1c310344df50e19e3bf3c4166044870fcc8c977a6e07284"
+      "version": "1.0.2",
+      "hash": "sha256:67ddf2f999d5cbdd2bfe527f24399e468f4c85770334571b5d35ea17502687df"
     },
     "cn": {
-      "version": "1.0.0",
-      "hash": "sha256:c0cacc16e7e2e57e4e554a7dddfc714f9084c9ba4b53b24cfa9030c870920485"
+      "version": "1.0.1",
+      "hash": "sha256:5a3cddf7cc7113c57250124d8c655535eb8cb7fee7e35f639520e6d91b0f89d0"
     },
     "framebits-logo-3d": {
-      "version": "1.0.0",
-      "hash": "sha256:14719be014b87e54a28b543e61c51fc36fc1ba8765a4b2360f56925ba9780627"
+      "version": "1.0.1",
+      "hash": "sha256:cb13b50b391abf0404c9a10b9e7f714f5ecc81ce80886bc498a17b2c26f751f3"
     },
     "shimmer-button": {
-      "version": "1.0.1",
-      "hash": "sha256:58da6596fe14c62d2688ead4c9a750e89f7b1a4ae7b83303b3edfd6e7ebf20de"
+      "version": "1.0.2",
+      "hash": "sha256:3d49bb80e69772fd708333c828898ffceb82e30e65ee150a3c9d0435d8eca1d2"
     }
   }
 }

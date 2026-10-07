@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import prettier from "prettier";
@@ -21,6 +21,10 @@ afterEach(async () => {
 });
 
 const NOW = new Date("2026-10-05T12:34:56.789Z");
+
+async function writeLock(root: string): Promise<void> {
+  await writeFile(join(root, "registry.lock.json"), "{\"version\":1,\"components\":{}}\n", "utf8");
+}
 
 async function readTree(dir: string): Promise<Record<string, string>> {
   const out: Record<string, string> = {};
@@ -50,6 +54,7 @@ describe("scaffold", () => {
 
   it("generates lib and hook layouts", async () => {
     const root = await makeRoot();
+    await writeLock(root);
     const lib = await scaffold({ slug: "cn", type: "lib" }, root, NOW);
     expect(lib.dir).toBe(join(root, "lib", "cn"));
     expect(lib.files).toEqual(["cn.ts", "meta.json"]);
@@ -84,6 +89,7 @@ describe("scaffold", () => {
 
   it("all generated text files are LF-only, BOM-free, newline-terminated", async () => {
     const root = await makeRoot();
+    await writeLock(root);
     const requests = [
       { slug: "aurora-text", category: "text-animations" },
       { slug: "cn", type: "lib" },
@@ -168,6 +174,33 @@ describe("scaffold", () => {
     ).rejects.toThrow();
     // Only the blocker file exists; no scaffold dirs, no temp leftovers.
     expect(await readdir(root)).toEqual(["blocker"]);
+  });
+
+  it("claims the target directory exclusively (no check-then-act race)", async () => {
+    const root = await makeRoot();
+    // A stray pre-existing directory without a meta is still a conflict.
+    await mkdir(join(root, "components", "text-animations", "aurora-text"), { recursive: true });
+    await expect(
+      scaffold({ slug: "aurora-text", category: "text-animations" }, root, NOW),
+    ).rejects.toMatchObject({ code: "conflict" });
+  });
+
+  it("guards roots that hold metas but no lock file", async () => {
+    const root = await makeRoot();
+    await scaffold({ slug: "first-one", category: "buttons" }, root, NOW);
+    // Second slug, same root: metas exist but no lock -> refused.
+    await expect(scaffold({ slug: "second-one", category: "buttons" }, root, NOW)).rejects.toThrow(
+      /registry\.lock\.json/,
+    );
+    // Explicit opt-out proceeds.
+    const result = await scaffold({ slug: "second-one", category: "buttons" }, root, NOW, {
+      allowMissingLock: true,
+    });
+    expect(result.files).toEqual(["second-one.tsx", "demo.tsx", "meta.json"]);
+    // A lock-bearing root always passes.
+    await writeLock(root);
+    const third = await scaffold({ slug: "third-one", category: "buttons" }, root, NOW);
+    expect(third.files).toEqual(["third-one.tsx", "demo.tsx", "meta.json"]);
   });
 });
 

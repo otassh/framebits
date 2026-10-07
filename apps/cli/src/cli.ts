@@ -92,7 +92,12 @@ async function readSnapshotFor(root: string): Promise<{
 async function listExistingPaths(root: string): Promise<string[]> {
   const { readdir, lstat } = await import("node:fs/promises");
   const out: string[] = [];
+  // DoS guard: never walk more than 10k entries (large monorepos, runaway
+  // node_modules). Callers treat the truncated list as best-effort for
+  // case-collision detection; plan targets are still checked exactly.
+  const MAX_EXISTING_PATHS = 10000;
   async function walk(dir: string): Promise<void> {
+    if (out.length >= MAX_EXISTING_PATHS) return;
     let entries: string[];
     try {
       entries = await readdir(dir);
@@ -100,6 +105,7 @@ async function listExistingPaths(root: string): Promise<string[]> {
       return;
     }
     for (const entry of entries.sort()) {
+      if (out.length >= MAX_EXISTING_PATHS) return;
       if (entry === "node_modules" || entry === ".git") continue;
       const abs = join(dir, entry);
       try {

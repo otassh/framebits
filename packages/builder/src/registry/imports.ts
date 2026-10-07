@@ -8,7 +8,14 @@ import type { Diagnostic } from "./types.js";
  * `export ... from`, dynamic `import()`, and `require`.
  */
 
-export type ImportKind = "static" | "type" | "export-from" | "dynamic" | "require";
+export type ImportKind =
+  | "static"
+  | "type"
+  | "export-from"
+  | "dynamic"
+  | "require"
+  | "builtin-module"
+  | "url-construct";
 
 export interface ImportRef {
   kind: ImportKind;
@@ -60,6 +67,79 @@ export function analyzeSource(text: string, fileName = "file.tsx"): {
     return undefined;
   }
 
+  /**
+   * Strip parentheses (and `(0, x)` comma-sequence wrappers used to dodge
+   * direct-reference detection) down to the underlying expression.
+   */
+  function unwrap(expression: ts.Expression): ts.Expression {
+    let current = expression;
+    for (;;) {
+      if (ts.isParenthesizedExpression(current)) {
+        current = current.expression;
+        continue;
+      }
+      if (
+        ts.isBinaryExpression(current) &&
+        current.operatorToken.kind === ts.SyntaxKind.CommaToken
+      ) {
+        current = current.right;
+        continue;
+      }
+      return current;
+    }
+  }
+
+  function accessName(access: ts.PropertyAccessExpression | ts.ElementAccessExpression): {
+    object: string | undefined;
+    name: string;
+  } {
+    const object = ts.isIdentifier(access.expression) ? access.expression.text : undefined;
+    const name = ts.isPropertyAccessExpression(access)
+      ? access.name.text
+      : ts.isStringLiteralLike(access.argumentExpression)
+        ? access.argumentExpression.text
+        : "";
+    return { object, name };
+  }
+
+  /** Bare `require`/`createRequire` plus scoped forms (`globalThis.require`, ...). */
+  function isRequireCallee(callee: ts.Expression): boolean {
+    const target = unwrap(callee);
+    if (ts.isIdentifier(target)) {
+      return target.text === "require" || target.text === "createRequire";
+    }
+    if (ts.isPropertyAccessExpression(target) || ts.isElementAccessExpression(target)) {
+      const { object, name } = accessName(target);
+      if (object === undefined || name === "") return false;
+      if (name === "require" && (object === "globalThis" || object === "window" || object === "module")) {
+        return true;
+      }
+      if (name === "createRequire" && object === "module") return true;
+      if (name === "resolve" && object === "require") return true;
+    }
+    return false;
+  }
+
+  /** `process.getBuiltinModule(...)` — a Node builtin access by another name. */
+  function isGetBuiltinModule(callee: ts.Expression): boolean {
+    const target = unwrap(callee);
+    if (!ts.isPropertyAccessExpression(target) && !ts.isElementAccessExpression(target)) {
+      return false;
+    }
+    const { object, name } = accessName(target);
+    return object === "process" && name === "getBuiltinModule";
+  }
+
+  /** `import.meta.resolve(...)` — dynamic specifier resolution. */
+  function isImportMetaResolve(callee: ts.Expression): boolean {
+    const target = unwrap(callee);
+    return (
+      ts.isPropertyAccessExpression(target) &&
+      target.expression.kind === ts.SyntaxKind.MetaProperty &&
+      target.name.text === "resolve"
+    );
+  }
+
   function visit(node: ts.Node): void {
     if (ts.isImportDeclaration(node)) {
       const specifier = literalSpecifier(node.moduleSpecifier);
@@ -84,9 +164,29 @@ export function analyzeSource(text: string, fileName = "file.tsx"): {
         const first = node.arguments[0];
         const { line, column } = position(source, node.getStart(source));
         imports.push({ kind: "dynamic", specifier: literalSpecifier(first), line, column });
-      } else if (ts.isIdentifier(callee) && callee.text === "require") {
+      } else if (isImportMetaResolve(callee)) {
+        // import.meta.resolve("...") resolves exactly like a dynamic import.
+        const first = node.arguments[0];
+        const { line, column } = position(source, node.getStart(source));
+        imports.push({ kind: "dynamic", specifier: literalSpecifier(first), line, column });
+      } else if (isGetBuiltinModule(callee)) {
+        const first = node.arguments[0];
+        const { line, column } = position(source, node.getStart(source));
+        imports.push({ kind: "builtin-module", specifier: literalSpecifier(first), line, column });
+      } else if (isRequireCallee(callee)) {
         const { line, column } = position(source, node.getStart(source));
         imports.push({ kind: "require", specifier: undefined, line, column });
+      }
+    } else if (ts.isNewExpression(node)) {
+      const target = unwrap(node.expression);
+      if (ts.isCallExpression(target) && isRequireCallee(target.expression)) {
+        // new (require("ws"))(...) — require by another shape.
+        const { line, column } = position(source, node.getStart(source));
+        imports.push({ kind: "require", specifier: undefined, line, column });
+      } else if (ts.isIdentifier(target) && target.text === "URL") {
+        const first = node.arguments?.[0];
+        const { line, column } = position(source, node.getStart(source));
+        imports.push({ kind: "url-construct", specifier: literalSpecifier(first), line, column });
       }
     }
     ts.forEachChild(node, visit);
@@ -163,8 +263,53 @@ export function checkImports(
   for (const ref of refs) {
     if (ref.kind === "require") {
       diagnostics.push(
-        diag("error", "IMPORT_REQUIRE_FORBIDDEN", ctx, ref, "`require()` calls are forbidden; use static ESM imports."),
+        diag(
+          "error",
+          "IMPORT_REQUIRE_FORBIDDEN",
+          ctx,
+          ref,
+          "`require()` (including globalThis/window/module.require, createRequire, and require.resolve) is forbidden; use static ESM imports.",
+        ),
       );
+      continue;
+    }
+    if (ref.kind === "builtin-module") {
+      if (ref.specifier === undefined) {
+        diagnostics.push(
+          diag(
+            "error",
+            "IMPORT_DYNAMIC_NONLITERAL",
+            ctx,
+            ref,
+            "process.getBuiltinModule() with a non-literal argument is forbidden",
+            "Use a static import with a literal specifier.",
+          ),
+        );
+      } else {
+        diagnostics.push(
+          diag(
+            "error",
+            "IMPORT_NODE_BUILTIN",
+            ctx,
+            ref,
+            `process.getBuiltinModule("${ref.specifier}") is a forbidden Node builtin access in registry sources`,
+          ),
+        );
+      }
+      continue;
+    }
+    if (ref.kind === "url-construct") {
+      if (ref.specifier !== undefined && SCHEME_PATTERN.test(ref.specifier)) {
+        diagnostics.push(
+          diag(
+            "error",
+            "IMPORT_URL_FORBIDDEN",
+            ctx,
+            ref,
+            `new URL("${ref.specifier}") with an absolute URL is forbidden in registry sources`,
+          ),
+        );
+      }
       continue;
     }
     if (ref.specifier === undefined) {

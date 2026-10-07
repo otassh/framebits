@@ -2,12 +2,22 @@
 # Plain HTTP on :8080 (no ACME locally), registry root bind-mounted from
 # ./dist/registry at /srv/registry. All cache/CORS/security semantics mirror
 # production so `scripts/verify-registry-headers.sh` validates the real thing.
+# WARNING: local-only. Never use this file in production: no TLS, Postgres is
+# published, and dev credentials below are throwaway.
 {
   admin off
   auto_https off
 
   servers {
     trusted_proxies static private_ranges
+
+    # Mirror production: fail slow clients/proxies fast.
+    timeouts {
+      read_body 10s
+      read_header 10s
+      write_timeout 30s
+      idle_timeout 60s
+    }
   }
 
   log {
@@ -28,12 +38,17 @@
     X-Content-Type-Options "nosniff"
     Referrer-Policy "strict-origin-when-cross-origin"
     X-Frame-Options "SAMEORIGIN"
+    Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; upgrade-insecure-requests"
     -Server
   }
 
   handle /healthz {
+    log_skip
     respond "ok" 200
   }
+
+  # NOTE: Access-Control-Allow-Origin is intentionally scoped to registry
+  # reads only (immutable + /r/* + @registryStatic handles) — never global.
 
   @immutable path_regexp ^/r/.+@[^/]+\.json$
   handle @immutable {
@@ -65,6 +80,7 @@
 
   handle /api/* {
     reverse_proxy api:3001 {
+      header_up X-Forwarded-For {http.request.header.X-Forwarded-For}
       header_up X-Forwarded-Proto {scheme}
       transport http {
         dial_timeout 5s

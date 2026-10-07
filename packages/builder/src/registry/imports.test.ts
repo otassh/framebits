@@ -198,6 +198,65 @@ describe("checkImports rules (table)", () => {
       context: { declaredDeps: { motion: "^14.0.0" } },
       expectCode: "IMPORT_REQUIRE_FORBIDDEN",
     },
+    {
+      name: "globalThis.require errors",
+      code: `const x = globalThis.require("motion");\n`,
+      context: { declaredDeps: { motion: "^14.0.0" } },
+      expectCode: "IMPORT_REQUIRE_FORBIDDEN",
+    },
+    {
+      name: "window.require errors",
+      code: `const x = window.require("motion");\n`,
+      context: { declaredDeps: { motion: "^14.0.0" } },
+      expectCode: "IMPORT_REQUIRE_FORBIDDEN",
+    },
+    {
+      name: "module.require errors",
+      code: `const x = module.require("motion");\n`,
+      context: { declaredDeps: { motion: "^14.0.0" } },
+      expectCode: "IMPORT_REQUIRE_FORBIDDEN",
+    },
+    {
+      name: "createRequire errors",
+      code: `import { createRequire } from "node:module";\nconst r = createRequire(import.meta.url);\n`,
+      expectCode: "IMPORT_REQUIRE_FORBIDDEN",
+    },
+    {
+      name: "require.resolve errors",
+      code: `const p = require.resolve("motion");\n`,
+      context: { declaredDeps: { motion: "^14.0.0" } },
+      expectCode: "IMPORT_REQUIRE_FORBIDDEN",
+    },
+    {
+      name: "new (require()) errors",
+      code: `const w = new (require("ws"))("wss://x");\n`,
+      expectCode: "IMPORT_REQUIRE_FORBIDDEN",
+    },
+    {
+      name: "process.getBuiltinModule errors as a builtin",
+      code: `const fs = process.getBuiltinModule("fs");\n`,
+      expectCode: "IMPORT_NODE_BUILTIN",
+    },
+    {
+      name: "process.getBuiltinModule with non-literal errors",
+      code: `const m = process.getBuiltinModule(name);\n`,
+      expectCode: "IMPORT_DYNAMIC_NONLITERAL",
+    },
+    {
+      name: "import.meta.resolve follows package rules",
+      code: `await import.meta.resolve("gsap");\n`,
+      expectCode: "IMPORT_UNDECLARED_PACKAGE",
+    },
+    {
+      name: "new URL with https errors",
+      code: `const u = new URL("https://example.com/x");\n`,
+      expectCode: "IMPORT_URL_FORBIDDEN",
+    },
+    {
+      name: "new URL with a relative path passes",
+      code: `const u = new URL("./x", import.meta.url);\n`,
+      expectCode: undefined,
+    },
   ];
 
   it.each(cases)("$name", ({ code, context, expectCode }) => {

@@ -38,16 +38,18 @@ check_registry_file() {
   local path="$1" expected_cc="$2" label="$3"
   headers_of "$BASE$path"
   if [ "$STATUS" != "200" ]; then bad "$label: HTTP $STATUS (want 200)"; rm -f "$HEADERS_FILE"; return; fi
-  local cc ctype acao
+  local cc ctype acao etag
   cc="$(header_val cache-control)"
   ctype="$(header_val content-type)"
   acao="$(header_val access-control-allow-origin)"
+  etag="$(header_val etag)"
   if [ "$cc" = "$expected_cc" ]; then ok "$label cache-control"; else bad "$label cache-control: '$cc' (want '$expected_cc')"; fi
   case "$ctype" in
     application/json*charset=utf-8*) ok "$label content-type ($ctype)" ;;
     *) bad "$label content-type: '$ctype' (want application/json; charset=utf-8)" ;;
   esac
   if [ "$acao" = "*" ]; then ok "$label CORS open"; else bad "$label access-control-allow-origin: '$acao' (want *)"; fi
+  if [ -n "$etag" ]; then ok "$label ETag present ($etag)"; else bad "$label missing ETag (Caddy file_server must emit ETag)"; fi
   rm -f "$HEADERS_FILE"
 }
 

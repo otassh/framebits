@@ -24,6 +24,11 @@ describe("KebabCaseSchema", () => {
   it.each(["", "Foo", "a_b", "a--b", "-a", "a-", "a b", "A-B"])("rejects %s", (value) => {
     expect(KebabCaseSchema.safeParse(value).success).toBe(false);
   });
+
+  it("rejects strings over 64 characters", () => {
+    expect(KebabCaseSchema.safeParse("a".repeat(64)).success).toBe(true);
+    expect(KebabCaseSchema.safeParse("a".repeat(65)).success).toBe(false);
+  });
 });
 
 describe("CategorySchema", () => {

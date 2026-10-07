@@ -3,14 +3,17 @@
  * All path inputs are absolute; snapshot uses POSIX-relative keys.
  */
 import {
+  chmod,
   lstat,
   mkdir,
+  open,
   readdir,
   readFile,
   realpath,
   rename,
   rm,
   rmdir,
+  stat,
   writeFile,
 } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
@@ -194,6 +197,8 @@ export function nodeConfigFs(): {
   readFile(path: string): Promise<string | undefined>;
   writeFile(path: string, content: string): Promise<void>;
   rename(from: string, to: string): Promise<void>;
+  statMode(path: string): Promise<number | undefined>;
+  chmod(path: string, mode: number): Promise<void>;
 } {
   return {
     readFile(path: string): Promise<string | undefined> {
@@ -208,6 +213,15 @@ export function nodeConfigFs(): {
     rename(from: string, to: string): Promise<void> {
       return rename(from, to);
     },
+    statMode(path: string): Promise<number | undefined> {
+      return stat(path).then(
+        (st) => st.mode,
+        (): undefined => undefined,
+      );
+    },
+    chmod(path: string, mode: number): Promise<void> {
+      return chmod(path, mode);
+    },
   };
 }
 
@@ -221,6 +235,10 @@ export function nodeApplyFs(): {
   rm(path: string): Promise<void>;
   rmdirIfEmpty(path: string): Promise<boolean>;
   copyForBackup(from: string, to: string): Promise<void>;
+  statMode(path: string): Promise<number | undefined>;
+  chmod(path: string, mode: number): Promise<void>;
+  fsyncFile(path: string): Promise<void>;
+  fsyncDir(path: string): Promise<void>;
 } {
   return {
     lstat(path: string): Promise<{ isSymbolicLink: boolean; isDirectory: boolean } | undefined> {
@@ -267,6 +285,39 @@ export function nodeApplyFs(): {
     copyForBackup(from: string, to: string): Promise<void> {
       return readFile(from, "utf8").then((content) =>
         mkdir(dirname(to), { recursive: true }).then(() => writeFile(to, content, "utf8")),
+      );
+    },
+    statMode(path: string): Promise<number | undefined> {
+      return stat(path).then(
+        (st) => st.mode,
+        (): undefined => undefined,
+      );
+    },
+    chmod(path: string, mode: number): Promise<void> {
+      return chmod(path, mode);
+    },
+    fsyncFile(path: string): Promise<void> {
+      return open(path, "r").then((handle) =>
+        handle
+          .sync()
+          .then(() => handle.close())
+          .catch((error: unknown) =>
+            handle.close().then(() => {
+              throw error;
+            }),
+          ),
+      );
+    },
+    fsyncDir(path: string): Promise<void> {
+      return open(path, "r").then((handle) =>
+        handle
+          .sync()
+          .then(() => handle.close())
+          .catch((error: unknown) =>
+            handle.close().then(() => {
+              throw error;
+            }),
+          ),
       );
     },
   };

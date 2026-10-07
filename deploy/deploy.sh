@@ -1,26 +1,46 @@
 #!/bin/bash
 # deploy/deploy.sh — idempotent production deploy for the single VPS (Task 6).
-# Usage: bash deploy/deploy.sh [<target-sha>]  (default: origin/main)
+# Usage: bash deploy/deploy.sh [--allow-degraded] [<target-sha>]  (default: origin/main)
 # Must be run from the repo root on the VPS. Steps per docs/MASTER_PROMPT.md:
 # fetch -> build registry (temp dir, then move) -> rebuild/restart api+web ->
 # db migrate+sync -> atomic symlink switch -> health checks (auto-rollback on
 # failure) -> keep the last 5 releases.
 #
-# REQUIRE_API=1 makes /api/health mandatory (default 0 until Task 8 ships the
-# real server; the registry check is always mandatory).
+# REQUIRE_API=1 (default) makes /api/health mandatory. Pass --allow-degraded
+# (or REQUIRE_API=0 in the environment) to bypass the API gate when the API
+# is intentionally down; the registry check is always mandatory.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
-TARGET="${1:-origin/main}"
+ALLOW_DEGRADED="0"
+TARGET=""
+for arg in "$@"; do
+  case "$arg" in
+    --allow-degraded) ALLOW_DEGRADED="1" ;;
+    *) TARGET="$arg" ;;
+  esac
+done
+if [ -z "$TARGET" ]; then
+  TARGET="origin/main"
+fi
 RELEASES_DIR="/var/www/releases"
 CURRENT_LINK="/var/www/registry"
-REQUIRE_API="${REQUIRE_API:-0}"
-COMPOSE="docker compose -f deploy/docker-compose.yml"
+if [ "$ALLOW_DEGRADED" = "1" ]; then
+  REQUIRE_API="0"
+else
+  REQUIRE_API="${REQUIRE_API:-1}"
+fi
+COMPOSE_FILE="deploy/docker-compose.yml"
 
 log() { echo "[deploy] $*"; }
 fail() { echo "[deploy] ERROR: $*" >&2; exit 1; }
+
+# Single-deploy guard: fail fast when another deploy holds the lock.
+LOCK_FILE="/tmp/framebits-deploy.lock"
+exec 9>"$LOCK_FILE"
+flock -n 9 || fail "another deploy is running (lock $LOCK_FILE)"
 
 command -v docker >/dev/null || fail "docker is not installed"
 command -v node >/dev/null || fail "node is not installed"
@@ -28,7 +48,9 @@ command -v pnpm >/dev/null || fail "pnpm is not installed"
 
 log "fetching target $TARGET"
 git fetch origin --prune
-SHA="$(git rev-parse "$TARGET^{commit}")"
+# Fail closed: --verify refuses ambiguous/short SHAs instead of guessing.
+SHA="$(git rev-parse --verify "$TARGET^{commit}")"
+[ -n "$SHA" ] || fail "could not resolve target $TARGET to a commit"
 log "target sha: $SHA"
 export GIT_SHA="$SHA"
 
@@ -58,7 +80,7 @@ mv "$TMPDIR_OUT/registry" "$RELEASE_DIR/registry"
 trap - EXIT
 
 log "rebuilding and restarting api + web"
-$COMPOSE up -d --build api web
+docker compose -f "$COMPOSE_FILE" up -d --build api web
 
 # DB steps (Tasks 7/8): run when the package scripts exist, warn otherwise.
 if node -e "const s=require('./packages/db/package.json').scripts||{};process.exit(s['db:migrate']?0:1)" 2>/dev/null; then
@@ -93,28 +115,42 @@ wait_for() {
 DOMAIN="${DOMAIN:-framebits.dev}"
 if ! wait_for "https://$DOMAIN/r/index.json" "registry"; then
   log "registry health check failed; rolling back"
-  bash deploy/rollback.sh
+  bash "deploy/rollback.sh"
   fail "deploy failed health checks; rolled back"
 fi
 
 if [ "$REQUIRE_API" = "1" ]; then
   if ! wait_for "https://$DOMAIN/api/health" "api"; then
     log "api health check failed; rolling back"
-    bash deploy/rollback.sh
+    bash "deploy/rollback.sh"
     fail "deploy failed health checks; rolled back"
   fi
 else
   if curl -fsS --max-time 5 "https://$DOMAIN/api/health" >/dev/null 2>&1; then
-    log "api is healthy (bonus; not required until Task 8)"
+    log "api is healthy (bonus; degraded mode allowed it to be optional)"
   else
-    log "WARNING: /api/health not healthy (expected until Task 8); registry is live"
+    log "WARNING: /api/health not healthy (degraded mode via --allow-degraded or REQUIRE_API=0); registry is live"
   fi
 fi
 
-log "pruning old releases (keeping 5)"
-# shellcheck disable=SC2012
-ls -t "$RELEASES_DIR" | tail -n +6 | while read -r old; do
-  [ -n "$old" ] && rm -rf "$RELEASES_DIR/$old" && log "removed $old"
-done
+log "pruning old releases (keeping 5, never the live release)"
+LIVE_TARGET=""
+if [ -L "$CURRENT_LINK" ]; then
+  LIVE_TARGET="$(readlink "$CURRENT_LINK")"
+fi
+# Newest-first via mtime (no `ls -t` parsing); the live symlink target is
+# never deleted even when it is not among the newest 5.
+find "$RELEASES_DIR" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' \
+  | sort -rn \
+  | cut -d' ' -f2- \
+  | tail -n +6 \
+  | while IFS= read -r old; do
+    [ -n "$old" ] || continue
+    if [ -n "$LIVE_TARGET" ] && [ "$old/registry" = "$LIVE_TARGET" ]; then
+      log "keeping live release $old"
+      continue
+    fi
+    rm -rf "$old" && log "removed $old"
+  done
 
 log "deploy of $SHA complete"

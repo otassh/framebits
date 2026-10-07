@@ -20,6 +20,8 @@ import {
   hashTree,
   planArchive,
   planBuild,
+  verifyArchiveFiles,
+  verifyLockFile,
   writeArchiveFile,
   writeBuildTree,
   writeLockFile,
@@ -77,8 +79,11 @@ function readGeneratedAt(): string {
   const epoch = process.env["SOURCE_DATE_EPOCH"];
   if (epoch !== undefined && epoch !== "") {
     const seconds = Number(epoch);
-    if (!Number.isInteger(seconds) || seconds < 0) {
-      throw new Error(`invalid SOURCE_DATE_EPOCH: ${epoch}`);
+    const max = Math.floor(Date.now() / 1000) + 86400;
+    if (!Number.isInteger(seconds) || seconds < 0 || seconds > max) {
+      throw new Error(
+        `invalid SOURCE_DATE_EPOCH: ${epoch} (must be an integer number of seconds between 0 and now + 1 day)`,
+      );
     }
     return new Date(seconds * 1000).toISOString();
   }
@@ -192,10 +197,14 @@ export async function run(argv: readonly string[]): Promise<number> {
   } catch {
     lockText = undefined;
   }
+  // Fail closed on an invalid lock: plan NOTHING (no 1.0.0 reset plans from an
+  // empty fallback lock). The LOCK_INVALID diagnostic below is what exits.
+  let lockInvalid = false;
   if (lockText !== undefined) {
     const parsedLock = parseLockFile(lockText);
     if (!parsedLock.ok) {
       diagnostics.push(parsedLock.diagnostic);
+      lockInvalid = true;
     }
   }
   const currentLock = lockText === undefined ? { version: 1 as const, components: {} } : (() => {
@@ -204,7 +213,7 @@ export async function run(argv: readonly string[]): Promise<number> {
   })();
 
   const planned = planBuild({
-    items: loaded.items,
+    items: lockInvalid ? [] : loaded.items,
     draftSlugs: new Set(loaded.summary.draftSlugs),
     lock: currentLock,
     bumps,
@@ -384,8 +393,10 @@ export async function run(argv: readonly string[]): Promise<number> {
     for (const entry of archive.pending) {
       await writeArchiveFile(archiveDir, entry.name, entry.content);
     }
+    diagnostics.push(...(await verifyArchiveFiles(archiveDir, archive.pending)));
     if (writeLock) {
       await writeLockFile(registryRoot, planned.newLockText);
+      diagnostics.push(...(await verifyLockFile(registryRoot, planned.newLockText)));
     }
   } catch (error) {
     process.stderr.write(`error: emit failed: ${error instanceof Error ? error.message : String(error)}\n`);
