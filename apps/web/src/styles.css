@@ -957,6 +957,24 @@ a {
   display: none;
 }
 
+.preview-live::after {
+  display: none;
+}
+
+.preview-live,
+.preview-live-missing {
+  width: 100%;
+  height: 100%;
+  min-height: 270px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.preview-live-missing > * {
+  width: 100%;
+}
+
 .preview-generated img {
   width: 100%;
   height: 100%;
@@ -965,54 +983,8 @@ a {
   object-position: center;
 }
 
-.preview-text span {
-  z-index: 1;
-  color: transparent;
-  background: linear-gradient(90deg, #aeedff, #c884ff, #ff734d, #ffd56b, #aeedff);
-  background-size: 250% 100%;
-  background-clip: text;
-  font-size: clamp(2.6rem, 6vw, 5rem);
-  font-weight: 800;
-  letter-spacing: -0.08em;
-}
-
-.preview-button span {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.85rem 1.1rem;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 0.7rem;
-  color: #150803;
-  background: linear-gradient(105deg, #ff6b3d, #ffad66);
-  box-shadow: 0 15px 40px rgba(255, 99, 53, 0.22);
-  font-size: 0.78rem;
-  font-weight: 800;
-  overflow: hidden;
-}
-
-.preview-button span::after {
-  position: absolute;
-  top: -70%;
-  bottom: -70%;
-  left: -35%;
-  width: 22%;
-  content: "";
-  transform: rotate(18deg);
-  background: rgba(255, 255, 255, 0.5);
-  filter: blur(3px);
-  animation: button-sheen 3.6s 0.8s infinite cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.preview-generic span {
-  z-index: 1;
-  width: 100px;
-  height: 100px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 30% 70% 66% 34% / 42% 40% 60% 58%;
-  background: linear-gradient(135deg, rgba(255, 99, 53, 0.7), rgba(99, 69, 239, 0.55));
+.preview-empty {
+  min-height: 270px;
 }
 
 .card-body {
