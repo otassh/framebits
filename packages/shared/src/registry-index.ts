@@ -12,6 +12,7 @@ import {
 import { SCHEMA_VERSION } from "./registry-item.js";
 import { SemverVersionSchema } from "./semver.js";
 import { Sha256HashSchema } from "./hashable-json.js";
+import { RegistryPreviewsSchema } from "./preview.js";
 
 /**
  * One entry of `/r/index.json` (MASTER_PROMPT Section 4.3).
@@ -31,6 +32,7 @@ export const RegistryIndexItemSchema = z
     difficulty: DifficultySchema,
     addedAt: z.iso.date(),
     deprecated: z.boolean().optional(),
+    previews: RegistryPreviewsSchema.optional(),
   })
   .strict();
 

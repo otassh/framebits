@@ -16,12 +16,23 @@ export const validIndexItem = {
 
 describe("RegistryIndexItemSchema", () => {
   it("accepts a valid item", () => {
-    expect(RegistryIndexItemSchema.safeParse({ ...validIndexItem }).success).toBe(true);
+    expect(
+      RegistryIndexItemSchema.safeParse({
+        ...validIndexItem,
+        previews: { image: "/previews/aurora-text.webp" },
+      }).success,
+    ).toBe(true);
   });
 
   it("rejects bad items", () => {
     expect(
       RegistryIndexItemSchema.safeParse({ ...validIndexItem, performance: "ultra" }).success,
+    ).toBe(false);
+    expect(
+      RegistryIndexItemSchema.safeParse({
+        ...validIndexItem,
+        previews: { image: "../private.webp" },
+      }).success,
     ).toBe(false);
   });
 

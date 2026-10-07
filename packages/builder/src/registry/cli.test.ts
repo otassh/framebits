@@ -1,10 +1,12 @@
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
+import { loadRegistry } from "./index.js";
+import { previewCacheName } from "./previews.js";
 import { makeRegistry, metaJson, rmRegistry, demoTsx, SIMPLE_TSX } from "./test-helpers.js";
 
 /**
@@ -64,6 +66,15 @@ describe("packages/builder/src/cli.ts", () => {
   it("emits with --write-lock, then checks clean, then re-emits idempotently", async () => {
     const root = await makeRegistry(validComponent());
     roots.push(root);
+    const loaded = await loadRegistry({ registryRoot: root, skipTypecheck: true });
+    const item = loaded.items[0];
+    if (item === undefined) throw new Error("fixture component was not modeled");
+    const previewDir = join(root, "previews");
+    await mkdir(previewDir, { recursive: true });
+    await writeFile(
+      join(previewDir, previewCacheName(item.slug, item.hash)),
+      new TextEncoder().encode("RIFF0000WEBPVP8 "),
+    );
     const { out, archive } = dirs(root);
     try {
       const emit = runCli([

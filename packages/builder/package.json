@@ -9,6 +9,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",
     "build:registry": "tsx src/cli.ts",
+    "preview:install": "playwright install --no-shell chromium",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
@@ -21,7 +22,11 @@
   },
   "dependencies": {
     "@framebits/shared": "workspace:*",
+    "@tailwindcss/vite": "4.3.3",
     "minisearch": "^7.2.0",
-    "typescript": "^5.6.3"
+    "playwright": "1.63.0",
+    "tailwindcss": "4.3.3",
+    "typescript": "^5.6.3",
+    "vite": "7.3.6"
   }
 }

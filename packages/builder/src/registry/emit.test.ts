@@ -83,6 +83,9 @@ describe("buildTree determinism", () => {
       expect(tree.files.has("schema/meta.json")).toBe(true);
       const index: unknown = JSON.parse(tree.files.get("r/index.json") as string);
       expect(RegistryIndexSchema.safeParse(index).success).toBe(true);
+      expect(RegistryIndexSchema.parse(index).items[0]?.previews).toEqual({
+        image: "/previews/aurora-text.webp",
+      });
       expect(tree.bytes).toBeGreaterThan(0);
     } finally {
       await rmRegistry(root);

@@ -77,6 +77,13 @@ export {
 export type { RelativePath } from "./paths.js";
 
 export {
+  PreviewAssetPathSchema,
+  PreviewWebpSchema,
+  RegistryPreviewsSchema,
+} from "./preview.js";
+export type { RegistryPreviews } from "./preview.js";
+
+export {
   ComponentStylesSchema,
   CssVarsSchema,
   DEFAULT_VARIANT,

@@ -59,6 +59,8 @@ PR checklist:
 
 - [ ] Scaffold created only via `pnpm new-component` (no hand-made folders).
 - [ ] Placeholder description replaced; tags added where useful.
+- [ ] Run `pnpm preview:install` once per machine, then `pnpm generate:previews`;
+  commit the new hash-keyed file under `registry/previews/`.
 - [ ] `pnpm build:registry --check` passes (registry validation).
 - [ ] Reviewer read the full source of every new/changed component file (the security
   scan is a mistake-guard, not a boundary).
@@ -73,6 +75,9 @@ Releasing is owner-only, see [`docs/RELEASING.md`](docs/RELEASING.md).
 - After changing a component, run `pnpm build:registry --write-lock` and commit the
   lock with your PR. New slugs start at `1.0.0`; changed content bumps patch unless
   you pass `--bump <slug>=minor|major`.
+- Component previews are static build artifacts. `pnpm generate:previews` renders
+  trusted demos in an isolated temporary host; the production site only receives
+  the generated WebP and never executes registry source.
 - Never delete a component: set `status: "deprecated"` instead (stats must survive).
 - [ ] Checks green: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
 

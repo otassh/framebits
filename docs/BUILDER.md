@@ -61,6 +61,12 @@
    is needed). Sorted by slug; `loadRegistry` returns `{ items, diagnostics,
    summary }` (`summary` is an additive rollup: discovered/modeled counts plus
    by-type/by-status over all parsed metas).
+8. **Preview assets** (`registry/previews.ts`, Task 13): every non-draft component
+   has a hash-keyed cache entry at `registry/previews/<slug>@<hash>.webp`.
+   `--generate-previews` materializes validated model files and trusted demos in
+   a temporary Vite/Tailwind host, captures them with Playwright Chromium, then
+   deletes the host. Normal builds only validate/copy committed image bytes to
+   `r/previews/<slug>.webp`; the production site never executes registry source.
 
 All diagnostics are collected (never stop at the first) and sorted by
 (file, line, column, code). Diagnostic paths are POSIX, relative to the registry
@@ -108,6 +114,9 @@ root. Shipped target paths: component tsx â†’ `components/ui/<slug>.tsx`, css â†
 | LOCK_OUT_OF_DATE | error | lock would change; re-run with `--write-lock` |
 | IMMUTABILITY_VIOLATION | error | archived `<slug>@<version>.json` differs |
 | EMIT_VERIFY_FAILED | error | emitted file missing/different/invalid after write |
+| PREVIEW_MISSING | error | hash-keyed preview cache is absent; generate and commit it |
+| PREVIEW_INVALID | error | cached preview is not structurally valid WebP |
+| PREVIEW_GENERATION_FAILED | error | isolated Vite/Playwright capture failed |
 | ARCHIVE_MISSING_VERSION | warning | previous lock version absent from the archive |
 | SECURITY_EVAL | error | `eval`, `new Function`, string-arg timers |
 | SECURITY_COOKIE | error | `document.cookie` access |
@@ -128,12 +137,18 @@ error[IMPORT_UNDECLARED_PACKAGE] components/text-animations/foo/foo.tsx:3:20 imp
 `pnpm build:registry --check [--registry-root <dir>] [--json] [--strict]
 [--skip-typecheck] [--bump slug=level] [--prune slug]` validates everything in
 memory/temp and writes nothing. Emit mode (no `--check`) additionally takes
-`[--out <dir>] [--archive-dir <dir>] [--write-lock] [--git-sha <sha>]`: it builds
+`[--out <dir>] [--archive-dir <dir>] [--preview-cache-dir <dir>]
+[--generate-previews] [--write-lock] [--git-sha <sha>]`: it builds
 the tree, syncs the archive, swaps output atomically, and writes the lock file
 when asked. `--out`/`--archive-dir`/`--write-lock` cannot be combined with
 `--check`; emitting with `--skip-typecheck` is refused. `--out` and
 `--archive-dir` must live outside `--registry-root` (refused otherwise): emitted
 `schema/meta.json` files would be discovered as registry items.
+
+Run `pnpm preview:install` once to install the pinned Chromium build, then
+`pnpm generate:previews` after adding or changing component content. Generation
+only recaptures missing hash keys. Commit the resulting `registry/previews/*.webp`
+files so CI and production builds stay browser-free and deterministic.
 
 Exit 0 = ok (warnings allowed), 1 = errors (or warnings with `--strict`),
 2 = usage error. Empty registry is valid (exit 0, `items: 0`). `--json` prints
@@ -170,7 +185,8 @@ pick it up via `update`.
 
 Output tree under `<out>/` (`r/index.json` published+deprecated sorted
 `addedAt` desc then slug, `r/<slug>.json`, `r/<slug>@<version>.json`,
-`search-index.json`, `build-manifest.json`, `schema/*.json`): canonical
+`search-index.json`, `build-manifest.json`, `schema/*.json`, and
+`previews/<slug>.webp`): canonical
 serialization (sorted keys, compact, LF, trailing newline). Every emitted item is
 parsed and hash-verified before writing and re-read and re-verified after the
 final rename; any failure aborts leaving the previous output untouched. Output is

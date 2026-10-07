@@ -13,6 +13,8 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "build:registry": "pnpm --filter @framebits/builder build:registry",
+    "generate:previews": "pnpm --filter @framebits/builder build:registry --generate-previews",
+    "preview:install": "pnpm --filter @framebits/builder preview:install",
     "new-component": "tsx scripts/new-component.ts",
     "db:sync": "pnpm --filter @framebits/db db:sync",
     "db:migrate": "pnpm --filter @framebits/db db:migrate",
