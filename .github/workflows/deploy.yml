@@ -14,6 +14,9 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Protection: the `production` environment should have required reviewers
+    # (see deploy/README.md section 4) so pushes to main never deploy without
+    # an explicit approval.
     environment: production
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -24,6 +27,7 @@ jobs:
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
           VPS_SSH_PORT: ${{ secrets.VPS_SSH_PORT }}
           VPS_REPO_DIR: ${{ secrets.VPS_REPO_DIR }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
           DEPLOY_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
@@ -33,10 +37,22 @@ jobs:
           port="${VPS_SSH_PORT:-22}"
           repo_dir="${VPS_REPO_DIR:-~/framebits}"
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
           printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh -i ~/.ssh/deploy_key -p "$port" \
-            -o StrictHostKeyChecking=accept-new \
-            -o BatchMode=yes \
-            "$VPS_USER@$VPS_HOST" \
-            "cd $repo_dir && bash deploy/deploy.sh $DEPLOY_SHA"
+          # Always remove the private key, even when the SSH step fails.
+          trap 'rm -f ~/.ssh/deploy_key' EXIT
+          ssh_opts=(-i ~/.ssh/deploy_key -p "$port" -o BatchMode=yes)
+          if [ -n "${VPS_KNOWN_HOSTS:-}" ]; then
+            printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+            chmod 600 ~/.ssh/known_hosts
+            ssh_opts+=(-o StrictHostKeyChecking=yes)
+          else
+            # TODO(question): owner to add VPS_KNOWN_HOSTS secret (output of
+            # `ssh-keyscan <host>`) and switch this fallback off. Without
+            # pinned host keys the first connection trusts whatever the
+            # network returns (TOFU), which a network attacker can exploit.
+            echo "::warning::VPS_KNOWN_HOSTS is unset; falling back to accept-new (TOFU). Add the secret to enforce StrictHostKeyChecking=yes."
+            ssh_opts+=(-o StrictHostKeyChecking=accept-new)
+          fi
+          ssh "${ssh_opts[@]}" "$VPS_USER@$VPS_HOST" "cd \"$repo_dir\" && bash deploy/deploy.sh \"$DEPLOY_SHA\""

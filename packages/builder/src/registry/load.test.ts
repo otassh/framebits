@@ -182,17 +182,63 @@ describe("loadRegistry", () => {
       ...componentFiles("components/buttons", "zeta"),
       ...componentFiles("components/buttons", "alpha"),
     });
-    // Corrupt both metas so each yields META_INVALID; order must follow the file.
+    // Corrupt both metas so each yields META_INVALID (plus folder-derived layout
+    // diagnostics); order must follow the file.
     await writeFile(join(root, "components", "buttons", "zeta", "meta.json"), "{bad", "utf8");
     await writeFile(join(root, "components", "buttons", "alpha", "meta.json"), "{bad", "utf8");
     try {
       const { diagnostics } = await loadRegistry({ registryRoot: root });
-      expect(diagnostics.map((d) => d.file)).toEqual([
-        "components/buttons/alpha/meta.json",
-        "components/buttons/zeta/meta.json",
-      ]);
+      const files = diagnostics.map((d) => d.file);
+      expect(files.length).toBeGreaterThan(0);
+      expect(files).toEqual([...files].sort());
+      expect(files[0]?.startsWith("components/buttons/alpha/")).toBe(true);
+      expect(files[files.length - 1]?.startsWith("components/buttons/zeta/")).toBe(true);
     } finally {
       await rmRegistry(root);
+    }
+  });
+
+  it("reports DEMO_UNREADABLE for an unscannable demo and BUMP_IGNORED for meta.bump", async () => {
+    const root = await makeRegistry({
+      ...componentFiles("components/buttons", "ok"),
+      "components/buttons/ok/demo.tsx": `x${"y".repeat(300 * 1024)}`,
+      "components/buttons/bumped/meta.json": metaJson("bumped", { bump: "minor" }),
+      "components/buttons/bumped/bumped.tsx": SIMPLE_TSX,
+      "components/buttons/bumped/demo.tsx": demoTsx("bumped"),
+    });
+    try {
+      const { diagnostics } = await loadRegistry({ registryRoot: root, skipTypecheck: true });
+      const codes = diagnostics.map((d) => d.code);
+      expect(codes).toContain("FILE_TOO_LARGE");
+      expect(codes).toContain("DEMO_UNREADABLE");
+      const bumped = diagnostics.filter((d) => d.code === "BUMP_IGNORED");
+      expect(bumped.length).toBe(1);
+      expect(bumped[0]?.severity).toBe("warning");
+    } finally {
+      await rmRegistry(root);
+    }
+  });
+
+  it("flags dangerous CSS constructs and keeps clean CSS quiet", async () => {
+    const clean = await makeRegistry({
+      ...componentFiles("components/buttons", "ok"),
+      "components/buttons/ok/ok.css": ".ok { color: red; }\n",
+    });
+    try {
+      const { diagnostics } = await loadRegistry({ registryRoot: clean, skipTypecheck: true });
+      expect(diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+    } finally {
+      await rmRegistry(clean);
+    }
+    const dirty = await makeRegistry({
+      ...componentFiles("components/buttons", "ok"),
+      "components/buttons/ok/ok.css": "@import \"https://evil.example/x.css\";\n",
+    });
+    try {
+      const { diagnostics } = await loadRegistry({ registryRoot: dirty, skipTypecheck: true });
+      expect(diagnostics.map((d) => d.code)).toContain("SECURITY_CSS_IMPORT");
+    } finally {
+      await rmRegistry(dirty);
     }
   });
 });

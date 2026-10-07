@@ -22,6 +22,8 @@ export interface ScaffoldResult {
   dir: string;
   /** Paths relative to the item directory, in write order. */
   files: string[];
+  /** Non-fatal notes (e.g. skipped unreadable neighbor metas). */
+  warnings: string[];
 }
 
 export type ScaffoldErrorCode = "usage" | "validation" | "conflict";

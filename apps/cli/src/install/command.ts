@@ -37,6 +37,24 @@ export interface BuiltCommand {
   args: string[];
 }
 
+/**
+ * PATH caution: the package-manager binary resolves via PATH at spawn time.
+ * Callers must surface this warning before running the installer so a
+ * shadowed binary (e.g. a malicious `pnpm` earlier in PATH) is noticed.
+ */
+export function pmBinaryCaution(program: string): string {
+  return (
+    `package-manager binary "${program}" resolves via PATH — ` +
+    "verify it is the expected binary before confirming"
+  );
+}
+
+/** Review hint for lifecycle scripts (postinstall etc.) in installed packages. */
+export const IGNORE_SCRIPTS_HINT =
+  "review package lifecycle scripts before installing (untrusted postinstall " +
+  "scripts run with your user privileges; consider --ignore-scripts and " +
+  "installing manually after review)";
+
 export function buildInstallCommand(
   manager: PackageManager,
   installs: readonly InstallSpec[],

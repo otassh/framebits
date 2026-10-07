@@ -56,7 +56,7 @@ describe("listMetaFiles", () => {
 describe("assertSlugUnique", () => {
   it("passes in an empty registry", async () => {
     const root = await makeRoot();
-    await expect(assertSlugUnique(root, "fresh-slug")).resolves.toBeUndefined();
+    await expect(assertSlugUnique(root, "fresh-slug")).resolves.toEqual([]);
   });
 
   it("fails naming the existing path on collision", async () => {
@@ -71,12 +71,36 @@ describe("assertSlugUnique", () => {
     await expect(assertSlugUnique(root, "shared-slug")).rejects.toThrow(/already exists/);
   });
 
-  it("fails on invalid existing meta, naming the path", async () => {
+  it("skips invalid existing meta with a warning instead of failing", async () => {
     const root = await makeRoot();
     const dir = join(root, "components", "buttons", "broken");
     await mkdir(dir, { recursive: true });
     const file = join(dir, "meta.json");
     await writeFile(file, "{ not json", "utf8");
-    await expect(assertSlugUnique(root, "anything")).rejects.toThrow(file);
+    const warnings = await assertSlugUnique(root, "anything");
+    expect(warnings.length).toBe(1);
+    expect(warnings[0]).toContain(file);
+  });
+
+  it("skips oversized, undecodable, and NUL-containing metas with warnings", async () => {
+    const root = await makeRoot();
+    const cases: Array<{ sub: string; content: string | Uint8Array }> = [
+      { sub: "huge", content: `{"slug": "huge"}${"x".repeat(250 * 1024)}` },
+      { sub: "nul", content: '{"slug": "nul"}\0' },
+    ];
+    for (const { sub, content } of cases) {
+      const dir = join(root, "components", "buttons", sub);
+      await mkdir(dir, { recursive: true });
+      if (typeof content === "string") {
+        await writeFile(join(dir, "meta.json"), content, "utf8");
+      } else {
+        await writeFile(join(dir, "meta.json"), content);
+      }
+    }
+    const badDir = join(root, "components", "buttons", "badenc");
+    await mkdir(badDir, { recursive: true });
+    await writeFile(join(badDir, "meta.json"), new Uint8Array([0xff, 0xfe]));
+    const warnings = await assertSlugUnique(root, "fresh");
+    expect(warnings.length).toBe(3);
   });
 });

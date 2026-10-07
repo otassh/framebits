@@ -45,6 +45,7 @@ import {
   type CategoryFilter,
 } from "./lib/catalog.js";
 import { createRegistryClient, type RegistryClient } from "./lib/registry.js";
+import { MAX_RENDER_CHARS, truncateForDisplay } from "./lib/code-view.js";
 import { navigate, useRoute } from "./lib/router.js";
 import brandMarkUrl from "./assets/framebits-mark.png";
 
@@ -1040,6 +1041,8 @@ function DetailPage({
     state.status === "ready"
       ? (state.item.files.find((file) => file.path === selectedPath) ?? state.item.files[0])
       : undefined;
+  const display =
+    selectedFile === undefined ? undefined : truncateForDisplay(selectedFile.content);
 
   const stepFile = (direction: 1 | -1): void => {
     if (state.status !== "ready" || selectedFile === undefined) return;
@@ -1113,7 +1116,11 @@ function DetailPage({
                       {file.path.split("/").at(-1)}
                     </button>
                   ))}
-                  {selectedFile === undefined ? null : (
+                  {selectedFile === undefined || display === undefined ? null : display.truncated ? (
+                    <span className="copy-code-disabled" title="File too large to preview fully">
+                      Preview truncated — use the CLI
+                    </span>
+                  ) : (
                     <CopyCodeButton content={selectedFile.content} />
                   )}
                 </div>
@@ -1127,9 +1134,17 @@ function DetailPage({
                     exit={reduceMotion ? {} : { opacity: 0, y: -4 }}
                     transition={{ duration: 0.15, ease: EASE }}
                   >
-                    <code>{selectedFile?.content ?? ""}</code>
+                    <code>{display?.text ?? ""}</code>
                   </motion.pre>
                 </AnimatePresence>
+                {selectedFile !== undefined && display?.truncated === true ? (
+                  <p className="truncated-notice" role="note">
+                    This file ({display.totalChars} characters) is too large to preview
+                    fully — showing the first {MAX_RENDER_CHARS}. Install it with{" "}
+                    <code>npx @framebits/cli add {slug}</code> to inspect the complete
+                    source locally.
+                  </p>
+                ) : null}
               </div>
               <aside className="detail-sidebar">
                 <div className="info-card">

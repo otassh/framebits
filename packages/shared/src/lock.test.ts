@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { RegistryLockSchema } from "./lock.js";
+import { MAX_LOCK_COMPONENTS, RegistryLockSchema } from "./lock.js";
 
 describe("RegistryLockSchema", () => {
   it("accepts an empty lock", () => {
@@ -25,6 +25,21 @@ describe("RegistryLockSchema", () => {
     ["unknown key", { version: 1, components: {}, extra: 1 }],
   ])("rejects %s", (_rule, value) => {
     expect(RegistryLockSchema.safeParse(value).success).toBe(false);
+  });
+
+  it.each(["__proto__", "constructor", "prototype"])("rejects dangerous key %s", (key) => {
+    const components = JSON.parse(
+      `{"${key}": {"version": "1.0.0", "hash": "sha256:${"d".repeat(64)}"}}`,
+    ) as Record<string, unknown>;
+    expect(RegistryLockSchema.safeParse({ version: 1, components }).success).toBe(false);
+  });
+
+  it(`rejects more than ${String(MAX_LOCK_COMPONENTS)} components`, () => {
+    const components: Record<string, { version: string; hash: string }> = {};
+    for (let n = 0; n < MAX_LOCK_COMPONENTS + 1; n++) {
+      components[`pkg-${String(n)}`] = { version: "1.0.0", hash: `sha256:${"d".repeat(64)}` };
+    }
+    expect(RegistryLockSchema.safeParse({ version: 1, components }).success).toBe(false);
   });
 
   it("the committed registry/registry.lock.json validates", async () => {

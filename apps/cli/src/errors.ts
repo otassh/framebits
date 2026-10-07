@@ -73,23 +73,33 @@ export interface FormattedError {
   stack: string | undefined;
 }
 
+/** Scrub credentials from any URL embedded in a message/hint (no secret echo). */
+function scrubUrls(text: string): string {
+  return text.replace(/[a-zA-Z][a-zA-Z0-9+.-]*:\/\/[^/\s]*@/g, (match) => {
+    const schemeEnd = match.indexOf("://");
+    const scheme = schemeEnd === -1 ? "" : match.slice(0, schemeEnd + 3);
+    return `${scheme}***@`;
+  });
+}
+
 export function formatError(error: unknown, debug: boolean): FormattedError {
   if (error instanceof CliError) {
     return {
-      message: `${error.errorCode.toLowerCase()}[${error.errorCode}]: ${error.message}`,
-      hint: error.hint,
+      message: scrubUrls(`${error.errorCode.toLowerCase()}[${error.errorCode}]: ${error.message}`),
+      hint: error.hint === undefined ? undefined : scrubUrls(error.hint),
+      // Stacks only with --debug; otherwise concise + Hint.
       stack: debug ? (error.stack ?? undefined) : undefined,
     };
   }
   if (error instanceof Error) {
     return {
-      message: `error: ${error.message}`,
+      message: scrubUrls(`error: ${error.message}`),
       hint: undefined,
       stack: debug ? (error.stack ?? undefined) : undefined,
     };
   }
   return {
-    message: `error: ${String(error)}`,
+    message: scrubUrls(`error: ${String(error)}`),
     hint: undefined,
     stack: undefined,
   };

@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { canonicalize } from "./canonical.js";
 import {
+  MAX_FILE_CONTENT_BYTES,
+  MAX_TOTAL_CONTENT_BYTES,
+  PAYLOAD_VERSION,
   computeItemHash,
+  exceedsContentLimits,
   normalizeContent,
   normalizeItemForHash,
   verifyItemHash,
@@ -35,6 +39,18 @@ describe("normalizeContent", () => {
 
   it("strips a leading BOM", () => {
     expect(normalizeContent("\uFEFFconst x = 1;\n")).toBe("const x = 1;\n");
+  });
+
+  it("strips ALL leading BOMs, not just one", () => {
+    expect(normalizeContent("\uFEFF\uFEFF\uFEFFconst x = 1;\n")).toBe("const x = 1;\n");
+  });
+
+  it("keeps a BOM past the leading run (only the prefix is stripped)", () => {
+    expect(normalizeContent("a\uFEFFb\n")).toBe("a\uFEFFb\n");
+  });
+
+  it("normalizes NEL, LS, and PS to LF", () => {
+    expect(normalizeContent("a\u0085b\u2028c\u2029d\n")).toBe("a\nb\nc\nd\n");
   });
 
   it("ensures a trailing newline but keeps empty empty", () => {
@@ -177,12 +193,12 @@ describe("computeItemHash", () => {
  * GOLDEN VECTORS — hardcoded input -> canonical form -> hash triples that lock the algorithm.
  *
  * Derivation (independent of the test assertions): each canonical string below was
- * eyeball-verified field-by-field against the spec (sorted keys at every level,
- * LF-normalized content, materialized variant, absent optionals omitted), written to
- * exact bytes, and hashed with Windows certutil (independent SHA-256 implementation).
- * The `simple` vector additionally matched a hand-built node:crypto hash. All three
- * external hashes equal the hardcoded expectations. Changing any hash later must be
- * a conscious schemaVersion bump (see docs/CONTRACTS.md "Hash algorithm versioning").
+ * eyeball-verified field-by-field against the spec (schemaVersion first-block key,
+ * sorted keys at every level, LF-normalized content, materialized variant, absent
+ * optionals omitted), produced by the implementation, and hashed with node:crypto.
+ * Changing any hash later must be a conscious PAYLOAD_VERSION bump with a legacy
+ * verifier (see `verifyItemHash`): the `legacy fallback` test below pins that old
+ * blobs keep verifying.
  */
 describe("golden vectors", () => {
   const simple: ItemHashInput = {
@@ -198,7 +214,7 @@ describe("golden vectors", () => {
     ],
   };
   const SIMPLE_CANONICAL =
-    '{"dependencies":{"motion":"^11.0.0"},"files":[{"content":"export function AuroraText() {\\n  return null;\\n}\\n","path":"components/ui/aurora-text.tsx","type":"component","variant":"ts-tw"}],"registryDependencies":["cn"],"type":"component"}';
+    '{"dependencies":{"motion":"^11.0.0"},"files":[{"content":"export function AuroraText() {\\n  return null;\\n}\\n","path":"components/ui/aurora-text.tsx","type":"component","variant":"ts-tw"}],"registryDependencies":["cn"],"schemaVersion":1,"type":"component"}';
 
   const unicode: ItemHashInput = {
     type: "component",
@@ -214,7 +230,7 @@ describe("golden vectors", () => {
     ],
   };
   const UNICODE_CANONICAL =
-    '{"dependencies":{},"files":[{"content":"export const greeting = \\"Grüße ☃ — café\\";\\n","path":"components/ui/grusse.tsx","type":"component","variant":"ts-tw"}],"registryDependencies":[],"type":"component"}';
+    '{"dependencies":{},"files":[{"content":"export const greeting = \\"Grüße ☃ — café\\";\\n","path":"components/ui/grusse.tsx","type":"component","variant":"ts-tw"}],"registryDependencies":[],"schemaVersion":1,"type":"component"}';
 
   const styled: ItemHashInput = {
     type: "component",
@@ -234,7 +250,7 @@ describe("golden vectors", () => {
     cssVars: { light: { "--fade": "red" }, dark: { "--fade": "blue" } },
   };
   const STYLED_CANONICAL =
-    '{"cssVars":{"dark":{"--fade":"blue"},"light":{"--fade":"red"}},"dependencies":{"clsx":"^2.0.0","motion":"^11.0.0"},"files":[{"content":"export function FadeIn() {\\n  return null;\\n}\\n","path":"components/ui/fade-in.tsx","type":"component","variant":"ts-tw"}],"registryDependencies":["cn"],"tailwind":{"animation":{"fade":"fade 1s ease"},"keyframes":{"fade":{"from":{"opacity":"0"},"to":{"opacity":"1"}}}},"type":"component"}';
+    '{"cssVars":{"dark":{"--fade":"blue"},"light":{"--fade":"red"}},"dependencies":{"clsx":"^2.0.0","motion":"^11.0.0"},"files":[{"content":"export function FadeIn() {\\n  return null;\\n}\\n","path":"components/ui/fade-in.tsx","type":"component","variant":"ts-tw"}],"registryDependencies":["cn"],"schemaVersion":1,"tailwind":{"animation":{"fade":"fade 1s ease"},"keyframes":{"fade":{"from":{"opacity":"0"},"to":{"opacity":"1"}}}},"type":"component"}';
 
   const grin = String.fromCodePoint(0x1f600);
   const fullwidthTilde = String.fromCharCode(0xff5e);
@@ -252,13 +268,13 @@ describe("golden vectors", () => {
     tailwind: { keyframes: { [fullwidthTilde]: { from: { opacity: "0" } } } },
   };
   const ASTRAL_CANONICAL =
-    '{"dependencies":{},"files":[{"content":"export const smile = \\"😀\\";\\n","path":"components/ui/emoji.tsx","type":"component","variant":"ts-tw"}],"registryDependencies":[],"tailwind":{"keyframes":{"～":{"from":{"opacity":"0"}}}},"type":"component"}';
+    '{"dependencies":{},"files":[{"content":"export const smile = \\"😀\\";\\n","path":"components/ui/emoji.tsx","type":"component","variant":"ts-tw"}],"registryDependencies":[],"schemaVersion":1,"tailwind":{"keyframes":{"～":{"from":{"opacity":"0"}}}},"type":"component"}';
 
   const goldenCases: Array<{ name: string; input: ItemHashInput; canonical: string; hash: string }> = [
-    { name: "simple", input: simple, canonical: SIMPLE_CANONICAL, hash: "sha256:d0881be01768b5f4bed82053199810ede99cd512d25d52707e37ab9d76af45d7" },
-    { name: "unicode", input: unicode, canonical: UNICODE_CANONICAL, hash: "sha256:257aa23878409971523312b58bf0ffb3061874893b17f36e50b3974a2e872322" },
-    { name: "styled", input: styled, canonical: STYLED_CANONICAL, hash: "sha256:65c0b9606e0752d3313c981771da3aa38fef2d12e3f2110bf271d6e6354e8f12" },
-    { name: "astral", input: astral, canonical: ASTRAL_CANONICAL, hash: "sha256:4d948857df1c7b61ff28924547c7427a2f4f7809ce861169d9a00b740d857424" },
+    { name: "simple", input: simple, canonical: SIMPLE_CANONICAL, hash: "sha256:38ce73a4c973f3e7ca327879b27471852d44abf1a4ba81548d97674128cd8fd9" },
+    { name: "unicode", input: unicode, canonical: UNICODE_CANONICAL, hash: "sha256:073cbaa84b2b7685da0531eec4bf275ffd7a441c675ecb85150be443a34c8ef6" },
+    { name: "styled", input: styled, canonical: STYLED_CANONICAL, hash: "sha256:1a31accdc75a81081449ba62b9eb2caf30283864cd7a7b1159368d7464866acc" },
+    { name: "astral", input: astral, canonical: ASTRAL_CANONICAL, hash: "sha256:85015892c03d7c097c564ca4fd2528ccba57bcb1a06223f6cf01aaa7a716ad00" },
   ];
   it.each(goldenCases)("$name vector: canonical form and hash", ({ input, canonical, hash }) => {
     expect(canonicalize(normalizeItemForHash(input))).toBe(canonical);
@@ -277,5 +293,61 @@ describe("verifyItemHash", () => {
     expect(verifyItemHash(baseInput, `sha256:${"0".repeat(64)}`)).toBe(false);
     expect(verifyItemHash(baseInput, "not-a-hash")).toBe(false);
     expect(verifyItemHash(baseInput, good.toUpperCase())).toBe(false);
+  });
+
+  it("embeds PAYLOAD_VERSION as schemaVersion in the normalized payload", () => {
+    expect(PAYLOAD_VERSION).toBe(1);
+    expect(normalizeItemForHash(baseInput).schemaVersion).toBe(PAYLOAD_VERSION);
+  });
+
+  it("still verifies blobs hashed before schemaVersion existed (legacy fallback)", () => {
+    // Pre-hardening golden hash of the `simple` vector (payload without
+    // schemaVersion). Must keep verifying after the payload change.
+    const legacyInput: ItemHashInput = {
+      type: "component",
+      dependencies: { motion: "^11.0.0" },
+      registryDependencies: ["cn"],
+      files: [
+        {
+          path: "components/ui/aurora-text.tsx",
+          content: "export function AuroraText() {\n  return null;\n}\n",
+          type: "component",
+        },
+      ],
+    };
+    const legacyHash =
+      "sha256:d0881be01768b5f4bed82053199810ede99cd512d25d52707e37ab9d76af45d7";
+    expect(computeItemHash(legacyInput)).not.toBe(legacyHash);
+    expect(verifyItemHash(legacyInput, legacyHash)).toBe(true);
+  });
+
+  it("returns false without hashing when content exceeds the size caps", () => {
+    const oversizeFile = {
+      path: "big.ts",
+      content: "x\n".padStart(MAX_FILE_CONTENT_BYTES + 8, "x"),
+      type: "component",
+    } as const;
+    const oversize: ItemHashInput = { ...baseInput, files: [oversizeFile] };
+    expect(exceedsContentLimits(oversize)).toBe(true);
+    expect(verifyItemHash(oversize, computeItemHash(baseInput))).toBe(false);
+
+    const each = "y\n".repeat(400_000);
+    const total: ItemHashInput = {
+      ...baseInput,
+      files: [0, 1, 2, 3, 4, 5, 6, 7].map((n) => ({
+        path: `f${String(n)}.ts`,
+        content: each,
+        type: "component" as const,
+      })),
+    };
+    expect(each.length).toBeLessThan(MAX_FILE_CONTENT_BYTES);
+    expect(each.length * 8).toBeGreaterThan(MAX_TOTAL_CONTENT_BYTES);
+    expect(exceedsContentLimits(total)).toBe(true);
+    expect(verifyItemHash(total, computeItemHash(baseInput))).toBe(false);
+  });
+
+  it("accepts content within the size caps", () => {
+    expect(exceedsContentLimits(baseInput)).toBe(false);
+    expect(verifyItemHash(baseInput, computeItemHash(baseInput))).toBe(true);
   });
 });

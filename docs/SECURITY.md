@@ -97,3 +97,53 @@ change. The following options are for the owner to choose from.
 host detectable without freezing the registry update cadence, and it needs no
 new runtime dependency (`node:crypto` is stdlib). Options B/C are documented
 as fallbacks if key management is deemed too heavy.
+
+## Web frontend trust notes (`apps/web`)
+
+- `VITE_REGISTRY_URL` is a build-time trust decision (baked into the static
+  bundle): same-origin `/r` by default, otherwise `https://` only.
+  `http://` is accepted only for `localhost`/`127.0.0.1`/`::1`;
+  `javascript:`/`data:`, credentials in the URL, whitespace/backslashes, and
+  `//host` paths are rejected. Failures redact userinfo (`redactUrl`); error
+  UI never echoes secrets.
+- Every item loaded via `loadItem` is hash-verified in the browser (WebCrypto
+  SHA-256 over the same canonical form as shared `computeItemHash`, including
+  the legacy pre-`schemaVersion` payload and the 1 MiB/file + 5 MiB/total
+  fail-closed caps) before rendering. Mismatch renders nothing (integrity
+  error). The shared `verifyItemHash` itself is not imported because
+  `packages/shared/src/hash.ts` pulls in `node:crypto`/`Buffer`, which cannot
+  ship in the SPA bundle — parity is pinned by `registry.test.ts`.
+- Payloads are capped at 2 MB (`MAX_JSON_BYTES`: `content-length` header plus
+  streamed-byte and decoded-text length checks before `JSON.parse`) with a
+  10 s per-request timeout (`AbortSignal.timeout`).
+- Registry content renders only as React text nodes (never `innerHTML`);
+  files over 500 KB render truncated with a "use the CLI" notice and are
+  never fully mounted in the DOM nor copied to the clipboard.
+- Static hardening: `Content-Security-Policy` is served as an nginx header
+  (`apps/web/nginx.conf`) plus a `<meta http-equiv>` fallback in
+  `apps/web/index.html`; the outer Caddy layer sends the same policy.
+
+## Deploy trust notes
+
+- TLS is terminated by Caddy with automatic HTTPS; `upgrade-insecure-requests`
+  is part of the CSP. `TRUSTED_PROXY_COUNT=1` direct on the VPS (Caddy ->
+  api, one hop); set `TRUSTED_PROXY_COUNT=2` when a CDN (e.g. Cloudflare) sits
+  in front of Caddy (client -> CDN -> Caddy -> api). Never trust more hops
+  than the deployment actually has. Caddy sends an explicit
+  `X-Forwarded-For` and trusts only private ranges (`trusted_proxies static
+  private_ranges`).
+- Access logs contain client IPs + Referer/User-Agent: retain via Docker log
+  rotation only (`deploy/README.md`), never ship or store elsewhere. The DB
+  stores no raw IPs, emails, or user agents.
+- `deploy.sh` is fail-closed (`git rev-parse --verify`, `flock` single-deploy
+  guard, `REQUIRE_API=1` by default with `--allow-degraded` bypass) and never
+  deletes the live release (prune excludes the `readlink` target, newest-first
+  via `find -printf` mtime sort). `rollback.sh` is code-only: the DB is
+  forward-only and migrations are never rolled back.
+- `backup.sh` creates dumps with `umask 077` + `chmod 600`, removes partial
+  dumps on failure (`trap`), and copies offsite only with `scp -o
+  BatchMode=yes -o StrictHostKeyChecking=yes -i <key>` (or `rclone`).
+- CI deploy (`deploy.yml`) pins host keys via `VPS_KNOWN_HOSTS`
+  (`StrictHostKeyChecking=yes`); without the secret it falls back to
+  `accept-new` with a warning.
+  <!-- TODO(question): owner to add VPS_KNOWN_HOSTS secret and confirm whether the accept-new fallback should be removed entirely once pinned. -->

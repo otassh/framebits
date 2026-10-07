@@ -18,11 +18,84 @@ export const FETCH_TIMEOUT_MS = 10000;
 export const TIMEOUT_MIN_S = 1;
 export const TIMEOUT_MAX_S = 300;
 export const TIMEOUT_ENV_VAR = "FRAMEBITS_TIMEOUT";
+export const REGISTRY_ENV_VAR = "FRAMEBITS_REGISTRY_URL";
 export const FETCH_MAX_RETRIES = 2;
 export const FETCH_MAX_BYTES = 2 * 1024 * 1024;
 export const RETRY_AFTER_CAP_MS = 10000;
+/** Retry-After / backoff floor: never sleep less than 500 ms on 429/5xx. */
+export const RETRY_AFTER_MIN_MS = 500;
+/** Max manual redirect hops (same-origin only). */
+export const MAX_REDIRECTS = 3;
 
 export type FetchFn = (url: string, init: RequestInit) => Promise<Response>;
+
+export type RegistrySource = "flag" | "env" | "config" | "default";
+
+/**
+ * Redact credentials from a URL for logs/errors/hints. Never echo userinfo.
+ * Unparseable input is scrubbed with a regex fallback (no secret echo).
+ */
+export function redactUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (parsed.username !== "" || parsed.password !== "") {
+      parsed.username = "***";
+      parsed.password = "";
+      return parsed.toString();
+    }
+    return parsed.toString();
+  } catch {
+    return url.replace(/:\/\/[^@/]*@/, "://***@");
+  }
+}
+
+function isLocalHostname(hostname: string): boolean {
+  const bare = hostname.toLowerCase().replace(/^\[/, "").replace(/\]$/, "");
+  return bare === "localhost" || bare === "127.0.0.1" || bare === "::1";
+}
+
+/** Parse + validate a registry base URL. Throws usageError (exit 2) on violation. */
+function validateRegistryUrl(raw: string, what: string): string {
+  const trimmed = raw.replace(/\/+$/, "");
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    throw usageError(
+      `${what} is not a valid URL (${redactUrl(trimmed)})`,
+      "pass --registry https://... or set FRAMEBITS_REGISTRY_URL",
+    );
+  }
+  const hasUserinfo = parsed.username !== "" || parsed.password !== "";
+  if (parsed.protocol === "https:") {
+    if (hasUserinfo) {
+      throw usageError(
+        `${what} must not contain credentials (${redactUrl(trimmed)})`,
+        "remove userinfo from the registry URL",
+      );
+    }
+    return trimmed;
+  }
+  if (parsed.protocol === "http:") {
+    if (!isLocalHostname(parsed.hostname)) {
+      throw usageError(
+        `${what} must be https:// (http://localhost, 127.0.0.1 and [::1] are allowed for development)`,
+        "pass --registry https://... or set FRAMEBITS_REGISTRY_URL",
+      );
+    }
+    if (hasUserinfo) {
+      throw usageError(
+        `${what} must not contain credentials (${redactUrl(trimmed)})`,
+        "remove userinfo from the registry URL",
+      );
+    }
+    return trimmed;
+  }
+  throw usageError(
+    `${what} must be https:// (http://localhost, 127.0.0.1 and [::1] are allowed for development)`,
+    "pass --registry https://... or set FRAMEBITS_REGISTRY_URL",
+  );
+}
 
 export interface RegistryUrlInput {
   flag: string | undefined;
@@ -30,20 +103,57 @@ export interface RegistryUrlInput {
   config: string | undefined;
 }
 
-export function resolveRegistryUrl(input: RegistryUrlInput): string {
-  const raw = input.flag ?? input.env ?? input.config ?? DEFAULT_REGISTRY_URL;
-  return raw.replace(/\/+$/, "");
+export function resolveRegistryUrlWithSource(input: RegistryUrlInput): {
+  url: string;
+  source: RegistrySource;
+} {
+  let raw: string;
+  let source: RegistrySource;
+  let what: string;
+  if (input.flag !== undefined) {
+    raw = input.flag;
+    source = "flag";
+    what = "--registry";
+  } else if (input.env !== undefined) {
+    raw = input.env;
+    source = "env";
+    what = REGISTRY_ENV_VAR;
+  } else if (input.config !== undefined) {
+    raw = input.config;
+    source = "config";
+    what = "registry in framebits.json";
+  } else {
+    raw = DEFAULT_REGISTRY_URL;
+    source = "default";
+    what = "default registry";
+  }
+  return { url: validateRegistryUrl(raw, what), source };
 }
 
-const LOCALHOST_PATTERNS = [
-  /^http:\/\/localhost(?::\d+)?(\/|$)/,
-  /^http:\/\/127\.0\.0\.1(?::\d+)?(\/|$)/,
-  /^http:\/\/\[::1\](?::\d+)?(\/|$)/,
-];
+export function resolveRegistryUrl(input: RegistryUrlInput): string {
+  return resolveRegistryUrlWithSource(input).url;
+}
+
+/**
+ * Debug-only label for the effective registry source. Returns the source
+ * name only (never the URL value) so no secret is ever echoed. Callers must
+ * only print this when `--debug` is set.
+ */
+export function describeRegistrySource(source: RegistrySource): string {
+  return `registry source: ${source}`;
+}
 
 export function isAllowedRegistryUrl(url: string): boolean {
-  if (url.startsWith("https://")) return true;
-  return LOCALHOST_PATTERNS.some((pattern) => pattern.test(url));
+  try {
+    const parsed = new URL(url);
+    const hasUserinfo = parsed.username !== "" || parsed.password !== "";
+    if (hasUserinfo) return false;
+    if (parsed.protocol === "https:") return true;
+    if (parsed.protocol === "http:") return isLocalHostname(parsed.hostname);
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 export function assertAllowedRegistryUrl(url: string, what: string): void {
@@ -92,13 +202,20 @@ function retryAfterMs(header: string | null): number | undefined {
   if (header === null || header === "") return undefined;
   const seconds = Number(header);
   if (Number.isFinite(seconds)) {
-    return Math.min(Math.max(seconds * 1000, 0), RETRY_AFTER_CAP_MS);
+    return Math.min(Math.max(seconds * 1000, RETRY_AFTER_MIN_MS), RETRY_AFTER_CAP_MS);
   }
   const date = Date.parse(header);
   if (!Number.isNaN(date)) {
-    return Math.min(Math.max(date - Date.now(), 0), RETRY_AFTER_CAP_MS);
+    return Math.min(Math.max(date - Date.now(), RETRY_AFTER_MIN_MS), RETRY_AFTER_CAP_MS);
   }
   return undefined;
+}
+
+/** Jittered backoff for 5xx/network retries, clamped 500 ms..10 s. */
+export function backoffMs(attempt: number): number {
+  const base = 500 * (attempt + 1);
+  const jittered = base * (0.5 + Math.random() * 0.5);
+  return Math.min(Math.max(Math.round(jittered), RETRY_AFTER_MIN_MS), RETRY_AFTER_CAP_MS);
 }
 
 export interface FetchJsonOptions {
@@ -235,19 +352,40 @@ export function fetchJsonText(
 ): Promise<{ text: string; finalUrl: string }> {
   assertAllowedRegistryUrl(url, "registry URL");
   const timeoutMs = options.timeoutMs ?? FETCH_TIMEOUT_MS;
+  // Global deadline across retries + redirect hops: per-attempt timeout is
+  // bounded by the remaining budget so retries cannot extend forever.
+  const deadline = Date.now() + timeoutMs * (FETCH_MAX_RETRIES + 1);
   let attempt = 0;
   let lastError: unknown;
-  const run = (): Promise<{ text: string; finalUrl: string }> => {
+  const remainingMs = (): number => Math.max(deadline - Date.now(), 0);
+
+  const run = (currentUrl: string, redirects: number): Promise<{ text: string; finalUrl: string }> => {
+    const budget = remainingMs();
+    if (budget <= 0) {
+      throw networkError(
+        `network error fetching ${redactUrl(currentUrl)}: timed out after ${formatTimeoutMs(timeoutMs)} (global deadline)`,
+        "check your connection and retry",
+      );
+    }
+    const perAttempt = Math.min(timeoutMs, budget);
     return options
-      .fetchFn(url, {
+      .fetchFn(currentUrl, {
         headers: {
           Accept: "application/json",
           "User-Agent": `framebits/${CLI_VERSION}`,
         },
-        signal: AbortSignal.timeout(timeoutMs),
-        redirect: "follow",
+        signal: AbortSignal.timeout(perAttempt),
+        // Automatic following disabled (redirect:"error" semantics): we follow
+        // same-origin hops manually below so every hop is re-validated. The
+        // "manual" mode exposes the 3xx Location for inspection; "error" would
+        // reject without it. Either way no cross-origin auto-follow happens.
+        redirect: "manual",
       })
-      .then((response) => handleResponse(response, url, attempt, options, run))
+      .then((response) =>
+        handleResponse(response, currentUrl, redirects, attempt, options, (next, nextRedirects) =>
+          run(next, nextRedirects),
+        ),
+      )
       .catch((error: unknown): Promise<{ text: string; finalUrl: string }> => {
         if (isHttpStatusError(error)) throw error;
         if (isCliLike(error)) throw error;
@@ -258,51 +396,133 @@ export function fetchJsonText(
             message,
           );
         if (retryable && attempt < FETCH_MAX_RETRIES) {
+          const waitBudget = remainingMs();
+          if (waitBudget <= 0) {
+            throw networkError(
+              `network error fetching ${redactUrl(currentUrl)}: timed out after ${formatTimeoutMs(timeoutMs)} (global deadline)`,
+              "check your connection and retry",
+            );
+          }
           attempt += 1;
-          return options.sleep(500 * attempt).then(() => run());
+          const wait = Math.min(backoffMs(attempt), waitBudget);
+          return options.sleep(wait).then(() => run(currentUrl, redirects));
         }
         throw networkError(
-          `network error fetching ${url}: ${classifyNetworkError(error, timeoutMs)}`,
+          `network error fetching ${redactUrl(currentUrl)}: ${classifyNetworkError(error, timeoutMs)}`,
           "check your connection and retry",
         );
       });
   };
-  return run().catch((error: unknown): Promise<{ text: string; finalUrl: string }> => {
+  return run(url, 0).catch((error: unknown): Promise<{ text: string; finalUrl: string }> => {
     if (isHttpStatusError(error) || isCliLike(error)) throw error;
     throw networkError(
-      `network error fetching ${url}: ${classifyNetworkError(lastError ?? error, timeoutMs)}`,
+      `network error fetching ${redactUrl(url)}: ${classifyNetworkError(lastError ?? error, timeoutMs)}`,
       "check your connection and retry",
     );
   });
 }
 
+function isRedirectStatus(status: number): boolean {
+  return status === 301 || status === 302 || status === 303 || status === 307 || status === 308;
+}
+
+function isSameOrigin(a: string, b: string): boolean {
+  try {
+    return new URL(a).origin === new URL(b).origin;
+  } catch {
+    return false;
+  }
+}
+
 function handleResponse(
   response: Response,
   url: string,
+  redirects: number,
   attempt: number,
   options: FetchJsonOptions,
-  retry: () => Promise<{ text: string; finalUrl: string }>,
+  retry: (next: string, nextRedirects: number) => Promise<{ text: string; finalUrl: string }>,
 ): Promise<{ text: string; finalUrl: string }> {
+  // Manual same-origin redirect follow (max MAX_REDIRECTS, re-validate each hop).
+  if (isRedirectStatus(response.status)) {
+    const location = response.headers.get("location");
+    if (location === null || location === "") {
+      throw integrityError(
+        `registry redirect at ${redactUrl(url)} missing a Location header`,
+        "registries must stay on https:// (localhost allowed for development)",
+      );
+    }
+    let next: string;
+    try {
+      next = new URL(location, url).toString();
+    } catch {
+      throw integrityError(
+        `registry redirect at ${redactUrl(url)} has an invalid Location`,
+        "registries must stay on https:// (localhost allowed for development)",
+      );
+    }
+    if (!isAllowedRegistryUrl(next)) {
+      throw integrityError(
+        `registry redirected to disallowed URL ${redactUrl(next)}`,
+        "registries must stay on https:// (localhost allowed for development)",
+      );
+    }
+    if (!isSameOrigin(url, next)) {
+      throw integrityError(
+        `registry redirected cross-origin to ${redactUrl(next)} (only same-origin redirects are followed)`,
+        "registries must stay on the same origin; report it if this persists",
+      );
+    }
+    // Downgrade guard: https must never fall back to http.
+    try {
+      const from = new URL(url);
+      const to = new URL(next);
+      if (from.protocol === "https:" && to.protocol !== "https:") {
+        throw integrityError(
+          `registry redirect downgrades https to ${to.protocol} at ${redactUrl(next)}`,
+          "registries must stay on https://",
+        );
+      }
+    } catch (error) {
+      if (isCliLike(error)) throw error;
+    }
+    if (redirects >= MAX_REDIRECTS) {
+      throw integrityError(
+        `registry redirected too many times at ${redactUrl(url)} (max ${String(MAX_REDIRECTS)})`,
+        "report it if this persists",
+      );
+    }
+    return retry(next, redirects + 1);
+  }
   const finalUrl = response.url !== "" ? response.url : url;
   if (!isAllowedRegistryUrl(finalUrl)) {
     throw integrityError(
-      `registry redirected to disallowed URL ${finalUrl}`,
+      `registry redirected to disallowed URL ${redactUrl(finalUrl)}`,
       "registries must stay on https:// (localhost allowed for development)",
     );
   }
+  if (finalUrl !== url && !isSameOrigin(url, finalUrl)) {
+    throw integrityError(
+      `registry redirected cross-origin to ${redactUrl(finalUrl)} (only same-origin redirects are followed)`,
+      "registries must stay on the same origin; report it if this persists",
+    );
+  }
   if (response.status === 429) {
-    const wait = retryAfterMs(response.headers.get("retry-after")) ?? 1000 * (attempt + 1);
+    const wait = retryAfterMs(response.headers.get("retry-after")) ??
+      backoffMs(attempt + 1);
     if (attempt < FETCH_MAX_RETRIES) {
-      return options.sleep(wait).then(() => retry());
+      return options.sleep(wait).then(() => retry(url, redirects));
     }
-    throw networkError(`registry rate-limited us (429) at ${url}`, "wait a minute and retry");
+    throw networkError(
+      `registry rate-limited us (429) at ${redactUrl(url)}`,
+      "wait a minute and retry",
+    );
   }
   if (response.status >= 500 && response.status <= 599) {
     if (attempt < FETCH_MAX_RETRIES) {
-      return options.sleep(500 * (attempt + 1)).then(() => retry());
+      return options.sleep(backoffMs(attempt + 1)).then(() => retry(url, redirects));
     }
     throw networkError(
-      `registry error ${String(response.status)} at ${url}`,
+      `registry error ${String(response.status)} at ${redactUrl(url)}`,
       "retry later; if it persists the registry may be down",
     );
   }
@@ -327,16 +547,16 @@ function handleResponse(
 }
 
 function readWithCap(response: Response, cap: number): Promise<string> {
+  // Streaming-only 2 MB cap: a null body (already-buffered response) is
+  // rejected instead of falling back to response.text(), which would buffer
+  // unboundedly. The byte count below is post-decompression (fetch
+  // decompresses gzip/deflate before exposing the stream), so it bounds the
+  // actual JSON we parse.
   if (response.body === null) {
-    return response.text().then((text) => {
-      if (Buffer.byteLength(text, "utf8") > cap) {
-        throw integrityError(
-          "registry response exceeds the 2 MB cap",
-          "the registry response is too large",
-        );
-      }
-      return text;
-    });
+    throw integrityError(
+      "registry response has no streaming body (refusing to buffer blindly)",
+      "the registry response is too large or malformed; retry, and report it if it persists",
+    );
   }
   const reader = response.body.getReader();
   const chunks: Uint8Array[] = [];
@@ -392,24 +612,39 @@ function isSlugEntry(entry: unknown): entry is { slug: string } {
     typeof entry.slug === "string";
 }
 
+/**
+ * Parse JSON with an integrity guard (exit 4). The streaming cap above bounds
+ * the decompressed bytes; this guard turns any malformed payload into a
+ * clear integrity error instead of an uncaught SyntaxError.
+ */
+export function parseJsonGuarded(text: string, what: string): unknown {
+  try {
+    return JSON.parse(text) as unknown;
+  } catch (error) {
+    throw integrityError(
+      `registry returned invalid JSON for ${what}`,
+      error instanceof Error ? error.message : "the registry response is not valid JSON",
+    );
+  }
+}
+
 export function fetchIndexSlugs(
   registry: string,
   options: FetchJsonOptions,
 ): Promise<string[]> {
   return fetchJsonText(indexUrl(registry), options).then(({ text }) => {
-    try {
-      const raw: unknown = JSON.parse(text);
-      if (isIndexPayload(raw)) {
-        const slugs: string[] = [];
-        for (const entry of raw.items) {
-          if (isSlugEntry(entry)) slugs.push(entry.slug);
-        }
-        return slugs;
+    const raw: unknown = parseJsonGuarded(text, "index.json");
+    if (isIndexPayload(raw)) {
+      const slugs: string[] = [];
+      for (const entry of raw.items) {
+        if (isSlugEntry(entry)) slugs.push(entry.slug);
       }
-      return [];
-    } catch {
-      return [];
+      return slugs;
     }
+    throw integrityError(
+      `registry index at ${redactUrl(registry)} has an unexpected shape`,
+      "the registry response is malformed; report it if it persists",
+    );
   });
 }
 
@@ -421,6 +656,6 @@ export function notFoundError(
   const suggestion = didYouMean(slug, candidates);
   const hint = suggestion !== undefined
     ? `did you mean "${suggestion}"?`
-    : `check the slug spelling or browse ${registry}`;
+    : `check the slug spelling or browse ${redactUrl(registry)}`;
   return conflictError(`component not found: ${slug}`, hint);
 }

@@ -60,7 +60,7 @@ export function rewriteImports(raw: string, configured: AliasPrefixes): RewriteR
 }
 
 const STATEMENT_PATTERN =
-  /(from\s*(?:\/\*[\s\S]*?\*\/|\/\/[^\n]*\n|\s)*["']([^"']+)["'])|(import\s*(?:type\s+)?(?:\/\*[\s\S]*?\*\/|\s)*(["']([^"']+)["']))|(export\s+[^;]*?\sfrom\s*(?:\/\*[\s\S]*?\*\/|\s)*["']([^"']+)["'])|(import\s*\(\s*(?:\/\*[\s\S]*?\*\/|\s)*["']([^"']+)["']\s*\))/g;
+  /(from\s*(?:\/\*[\s\S]*?\*\/|\/\/[^\n]*\n|\s)*["']([^"']+)["'])|(import\s*(?:type\s+)?(?:\/\*[\s\S]*?\*\/|\s)*(["']([^"']+)["']))|(export\s+[^;]*?\sfrom\s*(?:\/\*[\s\S]*?\*\/|\s)*["']([^"']+)["'])|(import\s*\(\s*(?:\/\*[\s\S]*?\*\/|\s)*["']([^"']+)["']\s*\))|(require\s*\(\s*["']([^"']+)["']\s*\))|(require\s*\.\s*resolve\s*\(\s*["']([^"']+)["']\s*\))|(jest\s*\.\s*mock\s*\(\s*["']([^"']+)["'])/g;
 
 interface CommentRange {
   start: number;
@@ -112,8 +112,57 @@ function inRanges(index: number, ranges: CommentRange[]): boolean {
   return ranges.some((range) => index >= range.start && index < range.end);
 }
 
+/**
+ * String-literal ranges (single/double/template, escape-aware). A
+ * statement-looking substring inside a plain string (e.g.
+ * `const s = "require(\"@/lib/x\")"`) must never be rewritten — only
+ * statement-anchored import/export/from/require/jest.mock positions qualify.
+ */
+function findStringRanges(content: string): CommentRange[] {
+  const ranges: CommentRange[] = [];
+  let i = 0;
+  let quote: "'" | '"' | "`" | undefined;
+  let start = -1;
+  while (i < content.length) {
+    const char = content[i];
+    if (quote === undefined) {
+      // Skip comments: //... and /*...*/ are not strings.
+      if (char === "/" && content[i + 1] === "/") {
+        const end = content.indexOf("\n", i);
+        i = end === -1 ? content.length : end + 1;
+        continue;
+      }
+      if (char === "/" && content[i + 1] === "*") {
+        const end = content.indexOf("*/", i + 2);
+        i = end === -1 ? content.length : end + 2;
+        continue;
+      }
+      if (char === "'" || char === '"' || char === "`") {
+        quote = char;
+        start = i;
+        i += 1;
+        continue;
+      }
+      i += 1;
+      continue;
+    }
+    if (char === "\\") {
+      i += 2;
+      continue;
+    }
+    if (char === quote) {
+      ranges.push({ start, end: i + 1 });
+      quote = undefined;
+      start = -1;
+    }
+    i += 1;
+  }
+  return ranges;
+}
+
 function rewriteStatements(content: string, configured: AliasPrefixes): string {
   const comments = findCommentRanges(content);
+  const strings = findStringRanges(content);
   let result = "";
   let cursor = 0;
   STATEMENT_PATTERN.lastIndex = 0;
@@ -126,9 +175,15 @@ function rewriteStatements(content: string, configured: AliasPrefixes): string {
     const sideSpecifier: string | undefined = match[5];
     const exportSpecifier: string | undefined = match[7];
     const dynamicSpecifier: string | undefined = match[9];
-    const specifier = fromSpecifier ?? sideSpecifier ?? exportSpecifier ?? dynamicSpecifier;
+    const requireSpecifier: string | undefined = match[11];
+    const requireResolveSpecifier: string | undefined = match[13];
+    const jestMockSpecifier: string | undefined = match[15];
+    const specifier = fromSpecifier ?? sideSpecifier ?? exportSpecifier ?? dynamicSpecifier ??
+      requireSpecifier ?? requireResolveSpecifier ?? jestMockSpecifier;
     result += content.slice(cursor, index);
-    if (specifier === undefined || inRanges(index, comments)) {
+    if (
+      specifier === undefined || inRanges(index, comments) || inRanges(index, strings)
+    ) {
       result += full;
     } else {
       const prefix = shippedPrefixFor(specifier);

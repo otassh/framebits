@@ -116,8 +116,9 @@ export interface CollisionNames {
 
 /**
  * E2 name collision: a keyframe / --animate-<name> / .animate-<name> already
- * exists outside our markers, or inside another slug's block with a different
- * definition. Returns a human-readable reason or undefined.
+ * exists outside our markers, or inside ANY other slug's block with a
+ * different definition (all blocks are searched, comments stripped first).
+ * Returns a human-readable reason or undefined.
  */
 export function detectCollision(
   current: string,
@@ -177,6 +178,8 @@ export interface PatchInput {
 /**
  * Compute the next CSS content. Returns the action taken; conflicts must be
  * resolved by the caller (C12) before writing.
+ * Malformed markers are an error (never append blindly): throws instead of
+ * producing output so the caller can fail without touching the file.
  */
 export function computePatched(input: PatchInput): { next: string; action: CssAction; eol: Eol } {
   const eol = detectEol(input.current);
@@ -184,18 +187,19 @@ export function computePatched(input: PatchInput): { next: string; action: CssAc
   const begin = beginMarker(input.slug);
   const end = endMarker(input.slug);
   const scan = scanMarkers(input.current);
-  if (scan.malformed === undefined) {
-    const existing = scan.blocks.find((block) => block.slug === input.slug);
-    if (existing !== undefined) {
-      if (normalizeEol(existing.inner) === `\n${normalizeEol(input.blockInner)}\n`) {
-        return { next: input.current, action: "unchanged", eol };
-      }
-      if (!input.overwrite) {
-        return { next: input.current, action: "conflict", eol };
-      }
-      const next = `${input.current.slice(0, existing.start + begin.length)}\n${toEol(input.blockInner)}\n${input.current.slice(existing.end - end.length)}`;
-      return { next, action: "conflict", eol };
+  if (scan.malformed !== undefined) {
+    throw new Error(`refusing to patch CSS with malformed markers: ${scan.malformed}`);
+  }
+  const existing = scan.blocks.find((block) => block.slug === input.slug);
+  if (existing !== undefined) {
+    if (normalizeEol(existing.inner) === `\n${normalizeEol(input.blockInner)}\n`) {
+      return { next: input.current, action: "unchanged", eol };
     }
+    if (!input.overwrite) {
+      return { next: input.current, action: "conflict", eol };
+    }
+    const next = `${input.current.slice(0, existing.start + begin.length)}\n${toEol(input.blockInner)}\n${input.current.slice(existing.end - end.length)}`;
+    return { next, action: "conflict", eol };
   }
   const full = `${begin}\n${input.blockInner}\n${end}`;
   return { next: appendBlock(input.current, full, eol), action: "create", eol };

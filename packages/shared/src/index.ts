@@ -29,28 +29,42 @@ export type {
   SearchQuery,
 } from "./api.js";
 
-export { CanonicalizeError, canonicalize } from "./canonical.js";
+export { CanonicalizeError, MAX_DEPTH, canonicalize } from "./canonical.js";
 
 export { CATEGORIES, CategorySchema, KebabCaseSchema } from "./categories.js";
 export type { Category } from "./categories.js";
 
-export { CliConfigSchema, InstalledEntrySchema } from "./cli-config.js";
+export { CliConfigSchema, InstalledEntrySchema, MAX_INSTALLED_ENTRIES } from "./cli-config.js";
 export type { CliConfig, InstalledEntry } from "./cli-config.js";
 
 export {
+  MAX_FILE_CONTENT_BYTES,
+  MAX_TOTAL_CONTENT_BYTES,
+  PAYLOAD_VERSION,
   computeItemHash,
+  exceedsContentLimits,
   normalizeContent,
   normalizeItemForHash,
   verifyItemHash,
 } from "./hash.js";
 export type { ItemHashInput, ItemHashInputFile } from "./hash.js";
 
-export { HashableJsonValueSchema, Sha256HashSchema } from "./hashable-json.js";
+export {
+  DANGEROUS_KEYS,
+  HashableJsonValueSchema,
+  RawDangerousKeysGuard,
+  Sha256HashSchema,
+  containsDangerousKey,
+  findDangerousKey,
+  guardedRecord,
+  isDangerousKey,
+  rejectDangerousKeys,
+} from "./hashable-json.js";
 export type { HashableJsonValue, Sha256Hash } from "./hashable-json.js";
 
 export { JSON_SCHEMA_NAMES, JSON_SCHEMA_SOURCES, jsonSchemaFor } from "./json-schemas.js";
 
-export { LockEntrySchema, RegistryLockSchema } from "./lock.js";
+export { LockEntrySchema, MAX_LOCK_COMPONENTS, RegistryLockSchema } from "./lock.js";
 export type { LockEntry, RegistryLock } from "./lock.js";
 
 export {
@@ -87,6 +101,8 @@ export {
   ComponentStylesSchema,
   CssVarsSchema,
   DEFAULT_VARIANT,
+  MAX_FILES_PER_ITEM,
+  MAX_FILE_CONTENT_CHARS,
   RegistryFileSchema,
   RegistryItemSchema,
   SCHEMA_VERSION,
@@ -97,15 +113,22 @@ export type { ComponentStyles, CssVars, RegistryFile, RegistryItem, TailwindFrag
 export { RegistryIndexItemSchema, RegistryIndexSchema } from "./registry-index.js";
 export type { RegistryIndex, RegistryIndexItem } from "./registry-index.js";
 
-export { SearchIndexDocSchema, SearchIndexSchema } from "./search-index.js";
+export {
+  MAX_SEARCH_INDEX_KEYS,
+  SearchIndexDocSchema,
+  SearchIndexSchema,
+} from "./search-index.js";
 export type { SearchIndex, SearchIndexDoc } from "./search-index.js";
 
 export {
+  MAX_SEMVER_LENGTH,
   SemverRangeSchema,
   SemverVersionSchema,
   bumpSemverVersion,
+  canonicalizeSemverVersion,
   doSemverRangesIntersect,
   isGreaterSemverVersion,
+  isPrereleaseSemverRange,
   isSemverSubset,
   satisfiesSemverRange,
 } from "./semver.js";

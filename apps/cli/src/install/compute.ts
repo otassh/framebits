@@ -75,6 +75,17 @@ export function computeMissing(input: ComputeInput): {
     }
     if (isSemverSubset(declaredRange, range)) {
       decisions.push({ name, action: "skip", reason: `declared ${declaredRange} is within needed ${range}` });
+    } else if (!doSemverRangesIntersect(declaredRange, range)) {
+      // No intersection at all: declared and needed accept disjoint sets —
+      // warn loudly and leave untouched with a manual command.
+      warnings.push(
+        `package "${name}" declared as ${JSON.stringify(declaredRange)} does not intersect needed ${JSON.stringify(range)}; leaving untouched`,
+      );
+      decisions.push({
+        name,
+        action: "warn-manual",
+        detail: `declared ${declaredRange} does not intersect needed ${range}; left untouched`,
+      });
     } else {
       decisions.push({
         name,

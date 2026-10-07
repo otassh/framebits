@@ -108,6 +108,31 @@ describe("rewriteDemoImport", () => {
       "import { Y } from \"./other\";\n",
     );
   });
+
+  it("escapes regex metacharacters in the slug", () => {
+    // A slug cannot contain these, but the rewrite must never treat them as
+    // patterns (fail-closed string handling).
+    expect(rewriteDemoImport("import { X } from \"./a+b\";\n", "a+b")).toBe(
+      "import { X } from \"../components/ui/a+b\";\n",
+    );
+    expect(rewriteDemoImport("import { X } from \"./axb\";\n", "a+b")).toBe(
+      "import { X } from \"./axb\";\n",
+    );
+  });
+});
+
+describe("runTypecheck traversal guard", () => {
+  it("refuses materialized paths that escape the temp project", async () => {
+    await expect(
+      runTypecheck([
+        {
+          meta: meta("ok"),
+          files: { "../evil.ts": "export const x = 1;\n" },
+          demoText: undefined,
+        },
+      ]),
+    ).rejects.toThrow(/outside the temp project/);
+  });
 });
 
 describe("loadRegistry typecheck wiring", () => {
@@ -120,9 +145,12 @@ describe("loadRegistry typecheck wiring", () => {
     });
     try {
       const full = await loadRegistry({ registryRoot: root });
+      expect(full.typecheckRan).toBe(true);
       expect(full.diagnostics.map((d) => d.code)).toContain("TYPECHECK_ERROR");
       const skipped = await loadRegistry({ registryRoot: root, skipTypecheck: true });
+      expect(skipped.typecheckRan).toBe(false);
       expect(skipped.diagnostics.map((d) => d.code)).not.toContain("TYPECHECK_ERROR");
+      expect(skipped.diagnostics.map((d) => d.code)).toContain("TYPECHECK_SKIPPED");
     } finally {
       await rmRegistry(root);
     }

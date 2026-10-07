@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -23,6 +23,8 @@ describe("generator into pipeline", () => {
     roots.push(root);
     const now = new Date("2026-10-05T00:00:00.000Z");
 
+    // The scaffold guard requires a lock file once metas exist.
+    await writeFile(join(root, "registry.lock.json"), "{\"version\":1,\"components\":{}}\n", "utf8");
     await scaffold({ slug: "e2e-text", category: "text-animations" }, root, now);
     await scaffold({ slug: "e2e-util", type: "lib" }, root, now);
     await scaffold({ slug: "e2e-flag", type: "hook" }, root, now);

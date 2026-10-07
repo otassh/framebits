@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CanonicalizeError, canonicalize } from "./canonical.js";
+import { CanonicalizeError, MAX_DEPTH, canonicalize } from "./canonical.js";
 
 describe("canonicalize", () => {
   it("serializes primitives", () => {
@@ -75,5 +75,28 @@ describe("canonicalize", () => {
   it("throws for undefined nested inside containers", () => {
     expect(() => canonicalize({ a: undefined })).toThrow(CanonicalizeError);
     expect(() => canonicalize([undefined])).toThrow(CanonicalizeError);
+  });
+
+  it("rejects prototype-pollution keys", () => {
+    // NOTE: `{ __proto__: 1 }` as a literal sets no own key (non-object
+    // __proto__ is ignored), so attacker-shaped input arrives via JSON.parse,
+    // which DOES create own "__proto__" data properties.
+    expect(() => canonicalize(JSON.parse('{"__proto__": 1}'))).toThrow(CanonicalizeError);
+    expect(() => canonicalize(JSON.parse('{"constructor": 1}'))).toThrow(CanonicalizeError);
+    expect(() => canonicalize(JSON.parse('{"prototype": 1}'))).toThrow(CanonicalizeError);
+    expect(() => canonicalize(JSON.parse('{"nested": {"__proto__": 1}}'))).toThrow(
+      CanonicalizeError,
+    );
+    expect(() => canonicalize(JSON.parse('[{"constructor": 1}]'))).toThrow(CanonicalizeError);
+  });
+
+  it("stops hostile nesting at MAX_DEPTH instead of overflowing the stack", () => {
+    expect(MAX_DEPTH).toBe(100);
+    let deep: unknown = 0;
+    for (let i = 0; i < MAX_DEPTH + 1; i++) deep = [deep];
+    expect(() => canonicalize(deep)).toThrow(CanonicalizeError);
+    let shallow: unknown = 0;
+    for (let i = 0; i < MAX_DEPTH; i++) shallow = [shallow];
+    expect(() => canonicalize(shallow)).not.toThrow();
   });
 });

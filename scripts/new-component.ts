@@ -30,6 +30,8 @@ const USAGE = `usage: new-component <slug> [--category=<cat>] [--title="..."] [-
   --category     required for components; defaults to "utilities" for lib/hook
   --type         component (default), lib, or hook
   --registry-root  override the registry directory (test only)
+  --allow-no-lock  scaffold into a root that holds meta.json files but no
+                 registry.lock.json (the guard refuses this by default)
 `;
 
 function defaultRegistryRoot(): string {
@@ -63,6 +65,7 @@ export async function run(argv: readonly string[], writers: RunWriters = {}): Pr
         description: { type: "string" },
         type: { type: "string" },
         "registry-root": { type: "string" },
+        "allow-no-lock": { type: "boolean", default: false },
       },
     });
   } catch (error) {
@@ -90,11 +93,15 @@ export async function run(argv: readonly string[], writers: RunWriters = {}): Pr
       },
       registryRoot,
       new Date(),
+      { allowMissingLock: parsed.values["allow-no-lock"] === true },
     );
     const display = relative(resolve(), result.dir);
     out(`created ${display}/\n`);
     for (const file of result.files) {
       out(`  ${file}\n`);
+    }
+    for (const warning of result.warnings) {
+      err(`warning: ${warning}\n`);
     }
     out("next steps:\n");
     out("  1. Edit the generated files.\n");

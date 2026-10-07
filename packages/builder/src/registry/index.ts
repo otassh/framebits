@@ -1,6 +1,7 @@
 import ts from "typescript";
 import type { ComponentStyles, Meta } from "@framebits/shared";
 import { discoverRegistry, type DiscoveredItem } from "./discover.js";
+import { scanCssSecurity } from "./css.js";
 import { analyzeSource, checkImports, type ImportCheckContext } from "./imports.js";
 import { buildItemModel } from "./model.js";
 import { scanSecurity } from "./security.js";
@@ -54,6 +55,15 @@ export async function loadRegistry(options: LoadRegistryOptions): Promise<LoadRe
     const { meta } = parseItemMeta(item, diagnostics);
     validateLayout(item, meta, diagnostics);
     const styles = parseItemStyles(item, diagnostics);
+    if (meta?.bump !== undefined) {
+      diagnostics.push({
+        severity: "warning",
+        code: "BUMP_IGNORED",
+        file: `${item.dirRel}/meta.json`,
+        message: `meta.json "bump" is ignored (bump levels are a builder CLI argument, not a meta field)`,
+        hint: "Remove the field; re-run with --bump <slug>=minor|major instead.",
+      });
+    }
     return { item, meta, styles };
   });
 
@@ -93,6 +103,13 @@ export async function loadRegistry(options: LoadRegistryOptions): Promise<LoadRe
     }
     const typed = await runTypecheck(tcItems);
     diagnostics.push(...typed.diagnostics);
+  } else {
+    diagnostics.push({
+      severity: "warning",
+      code: "TYPECHECK_SKIPPED",
+      file: "",
+      message: "type-check stage was skipped (--skip-typecheck; never use in CI)",
+    });
   }
 
   items.sort((a, b) => (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0));
@@ -111,7 +128,7 @@ export async function loadRegistry(options: LoadRegistryOptions): Promise<LoadRe
     if (meta.status === "draft") summary.draftSlugs.push(meta.slug);
   }
   summary.draftSlugs.sort();
-  return { registryRoot, items, diagnostics, summary };
+  return { registryRoot, items, diagnostics, summary, typecheckRan: options.skipTypecheck !== true };
 }
 
 function hasErrors(dirRel: string, diagnostics: Diagnostic[]): boolean {
@@ -184,7 +201,16 @@ function checkItemContent(
   checkFile(sourceName, false);
   if (meta.type === "component") {
     const demo = byName.get("demo.tsx");
-    if (demo?.text !== undefined) {
+    if (demo === undefined) {
+      // Absent demo files are reported by validateLayout (MISSING_DEMO).
+    } else if (demo.text === undefined) {
+      diagnostics.push({
+        severity: "error",
+        code: "DEMO_UNREADABLE",
+        file: demo.relPath,
+        message: "demo.tsx exists but its content could not be scanned (see the discovery error above)",
+      });
+    } else {
       checkFile("demo.tsx", true);
       if (!hasDefaultExport(demo.text)) {
         diagnostics.push({
@@ -192,6 +218,19 @@ function checkItemContent(
           code: "DEMO_NO_DEFAULT_EXPORT",
           file: demo.relPath,
           message: "demo.tsx must have a default export",
+        });
+      }
+    }
+    const css = byName.get(`${meta.slug}.css`);
+    if (css?.text !== undefined) {
+      for (const issue of scanCssSecurity(css.text)) {
+        diagnostics.push({
+          severity: issue.severity,
+          code: issue.code,
+          file: css.relPath,
+          line: issue.line,
+          column: issue.column,
+          message: issue.message,
         });
       }
     }

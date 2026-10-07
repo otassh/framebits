@@ -24,4 +24,15 @@ describe("ComponentStylesSchema", () => {
   ])("rejects %s", (_rule, value) => {
     expect(ComponentStylesSchema.safeParse(value).success).toBe(false);
   });
+
+  it.each(["__proto__", "constructor", "prototype"])("rejects dangerous key %s", (key) => {
+    expect(
+      ComponentStylesSchema.safeParse(JSON.parse(`{"tailwind": {"keyframes": {"${key}": "x"}}}`))
+        .success,
+    ).toBe(false);
+    expect(
+      ComponentStylesSchema.safeParse(JSON.parse(`{"cssVars": {"dark": {"${key}": "x"}}}`))
+        .success,
+    ).toBe(false);
+  });
 });

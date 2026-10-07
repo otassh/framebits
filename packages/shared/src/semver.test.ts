@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  MAX_SEMVER_LENGTH,
   SemverRangeSchema,
   SemverVersionSchema,
   bumpSemverVersion,
+  canonicalizeSemverVersion,
   doSemverRangesIntersect,
   isBoundedSemverRange,
   isGreaterSemverVersion,
+  isPrereleaseSemverRange,
   isSemverSubset,
   isValidSemverRange,
   isValidSemverVersion,
@@ -13,7 +16,10 @@ import {
 } from "./semver.js";
 
 describe("isValidSemverRange", () => {
-  it.each(["^11.0.0", "~1.2.3", ">=1.0.0 <2.0.0", "1.2.3", "*", ">=1", "1.x", "^1.0.0-beta.1"])(
+  // Strict: non-empty AND syntactically valid AND bounded (both ends per ||
+  // branch) AND prerelease-free. `*`, `x`, `latest`, lone floors/ceilings, and
+  // prerelease ranges are all rejected here (not just in the schema).
+  it.each(["^11.0.0", "~1.2.3", ">=1.0.0 <2.0.0", "1.2.3", "1.x", "1.2.3 - 2.3.4"])(
     "accepts %s",
     (range) => {
       expect(isValidSemverRange(range)).toBe(true);
@@ -24,6 +30,13 @@ describe("isValidSemverRange", () => {
   it.each(["not a version!!!", "^^1", "1.2.3.4.5"])("rejects %s", (range) => {
     expect(isValidSemverRange(range)).toBe(false);
   });
+
+  it.each(["*", "x", ">=0.0.0", ">0", ">=1", ">=1.0.0", "<2.0.0", "^1.0.0-beta.1", ""])(
+    "rejects unbounded-or-prerelease %s",
+    (range) => {
+      expect(isValidSemverRange(range)).toBe(false);
+    },
+  );
 
   it.each([
     "latest",
@@ -45,17 +58,75 @@ describe("isValidSemverRange", () => {
 });
 
 describe("isBoundedSemverRange", () => {
-  it.each(["^11.0.0", "~1.2.3", "1.2.3", ">=1.0.0 <2.0.0", "1.x", "<2.0.0", "1.2.3 - 2.3.4"])(
+  it.each(["^11.0.0", "~1.2.3", "1.2.3", ">=1.0.0 <2.0.0", "1.x", "1.2.3 - 2.3.4"])(
     "accepts bounded %s",
     (range) => {
       expect(isBoundedSemverRange(range)).toBe(true);
     },
   );
 
-  it.each(["*", "x", ">=0.0.0", ">0", ">=1", ">=1.0.0 || >=3.0.0", ""])(
-    "rejects unbounded %s",
+  it.each([
+    "*",
+    "x",
+    ">=0.0.0",
+    ">0",
+    ">=1",
+    ">=1.0.0",
+    ">1.0.0",
+    "<2.0.0",
+    "<=2.0.0",
+    ">=1.0.0 || >=3.0.0",
+    ">=1.0.0 <2.0.0 || <5.0.0",
+    ">=1.0.0 <2.0.0 || >5.0.0",
+    "",
+  ])("rejects unbounded %s", (range) => {
+    expect(isBoundedSemverRange(range)).toBe(false);
+  });
+});
+
+describe("isPrereleaseSemverRange", () => {
+  it.each(["^1.0.0-beta.1", ">=1.0.0-alpha <2.0.0", "1.0.0-0", "~2.0.0-rc.1"])(
+    "flags prerelease %s",
     (range) => {
-      expect(isBoundedSemverRange(range)).toBe(false);
+      expect(isPrereleaseSemverRange(range)).toBe(true);
+    },
+  );
+
+  it.each([
+    "^11.0.0",
+    "~1.2.3",
+    "1.2.3",
+    ">=1.0.0 <2.0.0",
+    "1.x",
+    "1.2.3 - 2.3.4",
+    "*",
+    "banana",
+  ])("does not flag %s", (range) => {
+    expect(isPrereleaseSemverRange(range)).toBe(false);
+  });
+
+  it("does not mistake desugared caret/tilde upper bounds for prereleases", () => {
+    // semver expands ^11.0.0 to `>=11.0.0 <12.0.0-0` internally; the raw string
+    // has no prerelease marker, so it must not be flagged.
+    expect(isPrereleaseSemverRange("^11.0.0")).toBe(false);
+    expect(isPrereleaseSemverRange("~1.2.3")).toBe(false);
+  });
+});
+
+describe("canonicalizeSemverVersion", () => {
+  it.each([
+    ["1.0.0", "1.0.0"],
+    ["v1.0.0", "1.0.0"],
+    ["  1.0.0  ", "1.0.0"],
+    ["1.0.0-beta.1", "1.0.0-beta.1"],
+  ])("canonicalizes %s -> %s", (input, expected) => {
+    expect(canonicalizeSemverVersion(input)).toBe(expected);
+  });
+
+  it.each(["", "=1.0.0", "^1.0.0", "*", "1.2", "latest", "banana"])(
+    "returns null for %s",
+    (input) => {
+      expect(canonicalizeSemverVersion(input)).toBeNull();
     },
   );
 });
@@ -71,12 +142,36 @@ describe("isValidSemverVersion", () => {
 });
 
 describe("SemverRangeSchema", () => {
-  it.each(["^11.0.0", "~1.2.3", "1.2.3", ">=1.0.0 <2.0.0"])("accepts %s", (range) => {
-    expect(SemverRangeSchema.safeParse(range).success).toBe(true);
+  it.each(["^11.0.0", "~1.2.3", "1.2.3", ">=1.0.0 <2.0.0", "1.x", "1.2.3 - 2.3.4"])(
+    "accepts %s",
+    (range) => {
+      expect(SemverRangeSchema.safeParse(range).success).toBe(true);
+    },
+  );
+
+  it.each([
+    "",
+    "*",
+    "x",
+    "latest",
+    "banana",
+    ">=0.0.0",
+    ">0",
+    ">=1",
+    "<2.0.0",
+    ">1.0.0",
+    ">=1.0.0 || >=3.0.0",
+    ">=1.0.0 <2.0.0 || <5.0.0",
+    "^1.0.0-beta.1",
+    ">=1.0.0-alpha <2.0.0",
+  ])("rejects %s", (range) => {
+    expect(SemverRangeSchema.safeParse(range).success).toBe(false);
   });
 
-  it.each(["", "*", "x", "latest", "banana", ">=0.0.0", ">0", ">=1"])("rejects %s", (range) => {
-    expect(SemverRangeSchema.safeParse(range).success).toBe(false);
+  it(`rejects strings over ${String(MAX_SEMVER_LENGTH)} characters`, () => {
+    const longRange = `>=1.0.0 <${"9".repeat(MAX_SEMVER_LENGTH)}.0.0`;
+    expect(longRange.length).toBeGreaterThan(MAX_SEMVER_LENGTH);
+    expect(SemverRangeSchema.safeParse(longRange).success).toBe(false);
   });
 
   it.each([
@@ -147,6 +242,17 @@ describe("satisfiesSemverRange", () => {
 describe("SemverVersionSchema", () => {
   it("accepts exact versions", () => {
     expect(SemverVersionSchema.safeParse("1.0.0").success).toBe(true);
+    expect(SemverVersionSchema.safeParse("2.3.4-beta.1").success).toBe(true);
+  });
+
+  it("trims surrounding whitespace", () => {
+    expect(SemverVersionSchema.parse("  1.0.0  ")).toBe("1.0.0");
+  });
+
+  it(`rejects strings over ${String(MAX_SEMVER_LENGTH)} characters`, () => {
+    expect(SemverVersionSchema.safeParse(`1.0.0-${"a".repeat(MAX_SEMVER_LENGTH)}`).success).toBe(
+      false,
+    );
   });
 
   it("rejects ranges and tags", () => {

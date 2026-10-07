@@ -14,6 +14,13 @@ export class CanonicalizeError extends Error {
   }
 }
 
+/**
+ * Maximum nesting depth for `canonicalize` (objects/arrays combined).
+ * Iterative-guard: deeper input throws `CanonicalizeError` instead of
+ * overflowing the call stack on hostile payloads.
+ */
+export const MAX_DEPTH = 100;
+
 function compareKeys(a: string, b: string): number {
   // UTF-16 code unit order (plain JS relational semantics, no locale, no code-point
   // collation). This is what RFC 8785 requires for key sorting.
@@ -28,6 +35,15 @@ function isPlainObject(value: object): boolean {
 }
 
 export function canonicalize(value: unknown): string {
+  return canonicalizeAtDepth(value, 0);
+}
+
+function canonicalizeAtDepth(value: unknown, depth: number): string {
+  if (depth > MAX_DEPTH) {
+    throw new CanonicalizeError(
+      `cannot canonicalize: nesting depth exceeds ${String(MAX_DEPTH)}`,
+    );
+  }
   if (value === null) return "null";
   if (value === true) return "true";
   if (value === false) return "false";
@@ -39,7 +55,7 @@ export function canonicalize(value: unknown): string {
     return JSON.stringify(value);
   }
   if (Array.isArray(value)) {
-    return `[${value.map((entry) => canonicalize(entry)).join(",")}]`;
+    return `[${value.map((entry) => canonicalizeAtDepth(entry, depth + 1)).join(",")}]`;
   }
   if (typeof value === "object") {
     if (!isPlainObject(value)) {
@@ -48,8 +64,13 @@ export function canonicalize(value: unknown): string {
       );
     }
     const entries = Object.entries(value).sort(([a], [b]) => compareKeys(a, b));
+    for (const [key] of entries) {
+      if (key === "__proto__" || key === "constructor" || key === "prototype") {
+        throw new CanonicalizeError(`cannot canonicalize dangerous key "${key}"`);
+      }
+    }
     const body = entries
-      .map(([key, entryValue]) => `${JSON.stringify(key)}:${canonicalize(entryValue)}`)
+      .map(([key, entryValue]) => `${JSON.stringify(key)}:${canonicalizeAtDepth(entryValue, depth + 1)}`)
       .join(",");
     return `{${body}}`;
   }

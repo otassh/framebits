@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   CssVarsSchema,
+  MAX_FILES_PER_ITEM,
+  MAX_FILE_CONTENT_CHARS,
   RegistryFileSchema,
   RegistryItemSchema,
   TailwindFragmentSchema,
@@ -44,6 +46,15 @@ describe("RegistryFileSchema", () => {
   ])("rejects %s", (_rule, override) => {
     expect(RegistryFileSchema.safeParse({ ...validFile, ...override }).success).toBe(false);
   });
+
+  it(`rejects content over ${String(MAX_FILE_CONTENT_CHARS)} characters`, () => {
+    const big = `x\n`.padStart(MAX_FILE_CONTENT_CHARS + 8, "x");
+    expect(big.length).toBeGreaterThan(MAX_FILE_CONTENT_CHARS);
+    expect(RegistryFileSchema.safeParse({ ...validFile, content: big }).success).toBe(false);
+    expect(
+      RegistryFileSchema.safeParse({ ...validFile, content: "x".repeat(100) }).success,
+    ).toBe(true);
+  });
 });
 
 describe("TailwindFragmentSchema / CssVarsSchema", () => {
@@ -70,6 +81,18 @@ describe("TailwindFragmentSchema / CssVarsSchema", () => {
     ).toBe(false);
     expect(TailwindFragmentSchema.safeParse({ keyframes: {}, bogus: 1 }).success).toBe(false);
   });
+
+  it.each(["__proto__", "constructor", "prototype"])(
+    "rejects dangerous key %s in tailwind/cssVars records",
+    (key) => {
+      expect(
+        TailwindFragmentSchema.safeParse(JSON.parse(`{"keyframes": {"${key}": "x"}}`)).success,
+      ).toBe(false);
+      expect(
+        CssVarsSchema.safeParse(JSON.parse(`{"light": {"${key}": "x"}}`)).success,
+      ).toBe(false);
+    },
+  );
 });
 
 describe("RegistryItemSchema", () => {
@@ -101,8 +124,8 @@ describe("RegistryItemSchema", () => {
       "unicode-normalization duplicate paths",
       {
         files: [
-          { ...validFile, path: "components/ui/Caf\u00e9.tsx" },
-          { ...validFile, path: "components/ui/Cafe\u0301.tsx" },
+          { ...validFile, path: "components/ui/Café.tsx" },
+          { ...validFile, path: "components/ui/Café.tsx" },
         ],
       },
     ],
@@ -113,5 +136,26 @@ describe("RegistryItemSchema", () => {
     ["bad file inside", { files: [{ ...validFile, path: "../x.ts" }] }],
   ])("rejects %s", (_rule, override) => {
     expect(RegistryItemSchema.safeParse({ ...validItem, ...override }).success).toBe(false);
+  });
+
+  it(`rejects more than ${String(MAX_FILES_PER_ITEM)} files`, () => {
+    const files = Array.from({ length: MAX_FILES_PER_ITEM + 1 }, (_, n) => ({
+      ...validFile,
+      path: `components/ui/file-${String(n)}.tsx`,
+    }));
+    expect(RegistryItemSchema.safeParse({ ...validItem, files }).success).toBe(false);
+    expect(
+      RegistryItemSchema.safeParse({
+        ...validItem,
+        files: files.slice(0, MAX_FILES_PER_ITEM),
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects more than 100 registryDependencies", () => {
+    const deps = Array.from({ length: 101 }, (_, n) => `dep-${String(n)}`);
+    expect(
+      RegistryItemSchema.safeParse({ ...validItem, registryDependencies: deps }).success,
+    ).toBe(false);
   });
 });

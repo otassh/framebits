@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { chmod, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -16,6 +16,13 @@ export async function withTemporaryJournal<T>(
   tempRoot: string = tmpdir(),
 ): Promise<T> {
   const journalDir = await mkdtemp(join(tempRoot, "framebits-journal-"));
+  // Journal holds backups of user files: restrict to owner-only (0700,
+  // best-effort on Windows where chmod is a no-op for ACLs).
+  try {
+    await chmod(journalDir, 0o700);
+  } catch {
+    // Best-effort.
+  }
   let outcome: { ok: true; value: T } | { ok: false; error: unknown };
   try {
     outcome = { ok: true, value: await operation(journalDir) };

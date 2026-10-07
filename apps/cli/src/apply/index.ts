@@ -9,6 +9,7 @@
  * while leaving the config untouched.
  */
 import type { CliConfig } from "@framebits/shared";
+import { randomUUID } from "node:crypto";
 import type { PlannedFile } from "../plan/index.js";
 import { computePatched } from "../styles/patch.js";
 import { tailLines, INSTALL_TAIL_LINES, type InstallOutcome } from "../install/run.js";
@@ -23,6 +24,11 @@ export interface ApplyFs {
   rm(path: string): Promise<void>;
   rmdirIfEmpty(path: string): Promise<boolean>;
   copyForBackup(from: string, to: string): Promise<void>;
+  /** Best-effort durability + mode preservation (optional in tests). */
+  statMode?(path: string): Promise<number | undefined>;
+  chmod?(path: string, mode: number): Promise<void>;
+  fsyncFile?(path: string): Promise<void>;
+  fsyncDir?(path: string): Promise<void>;
 }
 
 export interface CssApplyPatch {
@@ -108,6 +114,22 @@ export async function assertSafeTarget(
   if (targetStat !== undefined && targetStat.isSymbolicLink) {
     throw new Error(`refusing to write through symlink: ${targetAbs}`);
   }
+  // Refuse symlink directories in any intermediate component (lstat, no
+  // follow): writing through a symlinked dir would escape the project.
+  let cursor = posixDirname(targetAbs.replace(/\\/g, "/"));
+  const rootClean = normalizeForCompare(_projectRoot);
+  while (
+    normalizeForCompare(cursor) !== rootClean &&
+    normalizeForCompare(cursor).startsWith(`${rootClean}/`)
+  ) {
+    const stat = await fs.lstat(cursor);
+    if (stat !== undefined && stat.isSymbolicLink) {
+      throw new Error(`refusing to write through symlinked directory: ${cursor}`);
+    }
+    const parent = posixDirname(cursor);
+    if (parent === cursor) break;
+    cursor = parent;
+  }
   const ancestor = await nearestExistingAncestor(fs, targetAbs);
   const ancestorReal = await fs.realpath(ancestor);
   if (!isInside(projectRootReal, ancestorReal)) {
@@ -176,6 +198,9 @@ export async function applyPlan(
       normalizeForCompare(cursor).startsWith(`${rootClean}/`)
     ) {
       const stat = await fs.lstat(cursor);
+      if (stat !== undefined && stat.isSymbolicLink) {
+        throw new Error(`refusing to write through symlinked directory: ${cursor}`);
+      }
       if (stat === undefined) {
         await fs.mkdir(cursor);
         createdDirs.unshift(cursor);
@@ -184,15 +209,47 @@ export async function applyPlan(
       if (parent === cursor) break;
       cursor = parent;
     }
+    // Re-assert realpath after mkdir (TOCTOU): intermediates may have changed.
+    const reAncestor = await nearestExistingAncestor(fs, target);
+    const reAncestorReal = await fs.realpath(reAncestor);
+    if (!isInside(projectRootReal, reAncestorReal)) {
+      throw new Error(`refusing to write outside the project root: ${target}`);
+    }
     const existing = await fs.readFile(target);
     let backup: string | undefined;
+    let existingMode: number | undefined;
     if (existing !== undefined) {
-      backup = `${journalDir}/backup-${String(journal.length)}`;
+      backup = `${journalDir}/backup-${randomUUID()}`;
       await fs.copyForBackup(target, backup);
+      try {
+        existingMode = await fs.statMode?.(target);
+      } catch {
+        existingMode = undefined;
+      }
     }
-    const staging = `${target}.tmp-${String(Date.now())}-${String(journal.length)}`;
+    const staging = `${target}.tmp-${randomUUID()}`;
     await fs.writeFile(staging, content);
+    if (existingMode !== undefined) {
+      try {
+        await fs.chmod?.(staging, existingMode);
+      } catch {
+        // Best-effort: mode preservation must not fail the install.
+      }
+    }
+    // Best-effort durability: flush the staging file before rename.
+    try {
+      await fs.fsyncFile?.(staging);
+    } catch {
+      // Best-effort.
+    }
+    // Re-assert immediately before rename (final TOCTOU check).
+    await assertSafeTarget(fs, input.projectRoot, projectRootReal, target);
     await fs.rename(staging, target);
+    try {
+      await fs.fsyncDir?.(posixDirname(target.replace(/\\/g, "/")));
+    } catch {
+      // Best-effort.
+    }
     journal.push({ target, backup, created: existing === undefined, createdDirs });
   }
 
@@ -202,8 +259,25 @@ export async function applyPlan(
         skipped.push(file.targetAbs);
         continue;
       }
+      // Snapshot freshness + conflict recheck (plan was built from a
+      // point-in-time snapshot; disk may have drifted — abort, don't clobber).
       if (file.action === "unchanged") {
+        const current = await fs.readFile(file.targetAbs);
+        const normalized = (current ?? "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+        if (current === undefined || normalized !== file.content) {
+          throw new Error(
+            `conflict at ${file.targetRel} (snapshot changed since planning; re-run)`,
+          );
+        }
         continue;
+      }
+      if (file.action === "create") {
+        const current = await fs.readFile(file.targetAbs);
+        if (current !== undefined) {
+          throw new Error(
+            `conflict at ${file.targetRel} (file appeared since planning; re-run)`,
+          );
+        }
       }
       if (file.action === "conflict" && !input.overwrite) {
         throw new Error(`conflict at ${file.targetRel} (use --overwrite)`);

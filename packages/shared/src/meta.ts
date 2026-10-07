@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { isAllowedDependency } from "./allowed-dependencies.js";
 import { CategorySchema } from "./categories.js";
+import { guardedRecord, rejectDangerousKeys } from "./hashable-json.js";
 import { SemverRangeSchema } from "./semver.js";
 
 /** `/^[a-z0-9]+(-[a-z0-9]+)*$/`, 2-64 chars, unique across components and lib. */
@@ -36,16 +37,17 @@ function unique(items: readonly unknown[]): boolean {
 /** Non-empty; max 120 chars is a chosen bound (prompt is silent). Surrounding space is trimmed. */
 export const TitleSchema = z.string().trim().min(1, "title must not be empty").max(120);
 
-/** 10-200 chars (prompt-specified). */
+/** 10-200 chars (prompt-specified). Surrounding space is trimmed. */
 export const DescriptionSchema = z
   .string()
+  .trim()
   .min(10, "description must be at least 10 characters")
   .max(200, "description must be at most 200 characters");
 
 /** npm package -> semver range. Every key must be allowlisted; `{}` (no deps) is valid. */
-export const DependenciesSchema = z
-  .record(z.string(), SemverRangeSchema)
-  .superRefine((dependencies, ctx) => {
+export const DependenciesSchema = guardedRecord(SemverRangeSchema).superRefine(
+  (dependencies, ctx) => {
+    rejectDangerousKeys(dependencies, ctx);
     for (const name of Object.keys(dependencies)) {
       if (!isAllowedDependency(name)) {
         ctx.addIssue({
@@ -55,9 +57,10 @@ export const DependenciesSchema = z
         });
       }
     }
-  });
+  },
+);
 
-export const RegistryDependenciesSchema = z.array(SlugSchema).default([]);
+export const RegistryDependenciesSchema = z.array(SlugSchema).max(100).default([]);
 
 export const DifficultySchema = z.enum(["easy", "medium", "hard"]);
 export const PerformanceSchema = z.enum(["light", "medium", "heavy"]);

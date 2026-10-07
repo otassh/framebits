@@ -70,4 +70,55 @@ describe("RelativePathSchema", () => {
       expect(result.error.issues.length).toBeGreaterThan(0);
     }
   });
+
+  describe("hardening: encoding, unicode, and device-name confusables", () => {
+    const attacks = [
+      "a/%00b.tsx",
+      "a/b%00.tsx",
+      "a/%2eb.tsx",
+      "a/%2Eb.tsx",
+      "%2e%2e/evil.ts",
+      "a/%2fb.tsx",
+      "a/%2Fb.tsx",
+      "a/%5cb.tsx",
+      "a/%5Cb.tsx",
+      "a/%252e.tsx",
+      "a/%252Fb.tsx",
+      "%25/evil.ts",
+      "a/%e0%a4%a.tsx",
+      "a/100%.tsx",
+      "a/\uFF0Etsx",
+      "a\uFF0Fb.tsx",
+      "a/b.tsx\u0085",
+      "a/\u200Bb.tsx",
+      "a/b\u202Ac.tsx",
+      "a/b\u202Cc.tsx",
+      "a/b.tsx\uFEFF",
+      "a/\u2028/b.tsx",
+      "a/\u2029/b.tsx",
+      "a/\u2060b.tsx",
+      "CON~1.tsx",
+      "a/COM1~2.ts",
+      "con~9",
+      "a/ CON.tsx",
+      "a/CON .tsx",
+      "a/NUL .txt",
+      "a/nul .tsx",
+    ];
+    it.each(attacks)("rejects attack %s", (value) => {
+      expect(RelativePathSchema.safeParse(value).success).toBe(false);
+    });
+
+    it.each(["a/b%20c.tsx"])("accepts harmless escapes %s", (value) => {
+      expect(RelativePathSchema.safeParse(value).success).toBe(true);
+    });
+
+    it("accepts canonically-equivalent NFC spellings", () => {
+      expect(RelativePathSchema.safeParse("components/ui/Cafe\u0301.tsx").success).toBe(true);
+    });
+
+    it("accepts non-reserved 8.3-looking names", () => {
+      expect(RelativePathSchema.safeParse("a/FILE~1.tsx").success).toBe(true);
+    });
+  });
 });
