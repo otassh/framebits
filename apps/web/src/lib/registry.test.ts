@@ -26,6 +26,7 @@ const INDEX = {
       performance: "light",
       difficulty: "easy",
       addedAt: "2026-10-05",
+      previews: { image: "/previews/aurora-text.webp" },
     },
   ],
 };
@@ -60,7 +61,10 @@ describe("createRegistryClient", () => {
     };
     const client = createRegistryClient({ baseUrl: "https://registry.test/r/", fetcher });
 
-    await expect(client.loadIndex()).resolves.toMatchObject({ schemaVersion: 1 });
+    await expect(client.loadIndex()).resolves.toMatchObject({
+      schemaVersion: 1,
+      items: [{ previews: { image: "/previews/aurora-text.webp" } }],
+    });
     expect(requests).toEqual(["https://registry.test/r/index.json"]);
   });
 

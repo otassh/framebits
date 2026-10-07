@@ -26,16 +26,19 @@ import {
 } from "./registry/emit.js";
 import { loadRegistry } from "./registry/index.js";
 import { parseLockFile } from "./registry/versions.js";
+import { generatePreviewAssets, planPreviewAssets } from "./registry/previews.js";
 import { readFile } from "node:fs/promises";
 import type { Diagnostic } from "./registry/types.js";
 
 const USAGE = `usage: build:registry --check [--registry-root <dir>] [--json] [--strict] [--skip-typecheck] [--bump slug=level] [--prune slug]
-   or: build:registry [--registry-root <dir>] [--out <dir>] [--archive-dir <dir>] [--write-lock] [--bump slug=level] [--prune slug] [--git-sha <sha>] [--json] [--strict]
+   or: build:registry [--registry-root <dir>] [--out <dir>] [--archive-dir <dir>] [--preview-cache-dir <dir>] [--generate-previews] [--write-lock] [--bump slug=level] [--prune slug] [--git-sha <sha>] [--json] [--strict]
 
   --check            validate only; writes nothing (no --write-lock/--out/--archive-dir)
   --registry-root    registry directory (default: <repo>/registry)
   --out              output dir for emit (default: <repo>/dist/registry)
   --archive-dir      persistent archive dir (default: <repo>/dist/archive)
+  --preview-cache-dir hash-keyed WebP cache (default: <registry-root>/previews)
+  --generate-previews capture missing previews into the cache (emit only)
   --write-lock       write registry.lock.json (emit only)  --bump             version bump override, repeatable: --bump <slug>=minor|major
   --prune            drop a lock entry, repeatable: --prune <slug>
   --git-sha          release sha for the manifest (default: $GIT_SHA, git HEAD, "unknown")
@@ -101,6 +104,8 @@ export async function run(argv: readonly string[]): Promise<number> {
         "registry-root": { type: "string" },
         out: { type: "string" },
         "archive-dir": { type: "string" },
+        "preview-cache-dir": { type: "string" },
+        "generate-previews": { type: "boolean", default: false },
         "write-lock": { type: "boolean", default: false },
         bump: { type: "string", multiple: true },
         prune: { type: "string", multiple: true },
@@ -114,7 +119,7 @@ export async function run(argv: readonly string[]): Promise<number> {
     process.stderr.write(`error: ${error instanceof Error ? error.message : String(error)}\n${USAGE}`);
     return 2;
   }
-  const get = (name: "registry-root" | "out" | "archive-dir" | "git-sha"): string | undefined => {
+  const get = (name: "registry-root" | "out" | "archive-dir" | "preview-cache-dir" | "git-sha"): string | undefined => {
     const value = parsed.values[name];
     return typeof value === "string" ? value : undefined;
   };
@@ -124,6 +129,7 @@ export async function run(argv: readonly string[]): Promise<number> {
   const strict = parsed.values["strict"] === true;
   const asJson = parsed.values["json"] === true;
   const skipTypecheck = parsed.values["skip-typecheck"] === true;
+  const generatePreviews = parsed.values["generate-previews"] === true;
 
   if (check && (writeLock || get("out") !== undefined || get("archive-dir") !== undefined)) {
     process.stderr.write("error: --write-lock/--out/--archive-dir cannot be combined with --check\n" + USAGE);
@@ -131,6 +137,10 @@ export async function run(argv: readonly string[]): Promise<number> {
   }
   if (!check && skipTypecheck) {
     process.stderr.write("error: emitting with --skip-typecheck is refused\n" + USAGE);
+    return 2;
+  }
+  if (check && generatePreviews) {
+    process.stderr.write("error: --generate-previews cannot be combined with --check\n" + USAGE);
     return 2;
   }
 
@@ -148,6 +158,7 @@ export async function run(argv: readonly string[]): Promise<number> {
   const registryRoot = resolve(get("registry-root") ?? defaultRegistryRoot());
   const outDir = resolve(get("out") ?? defaultOutDir());
   const archiveDir = resolve(get("archive-dir") ?? defaultArchiveDir());
+  const previewCacheDir = resolve(get("preview-cache-dir") ?? join(registryRoot, "previews"));
 
   if (!check) {
     // Emitted trees contain schema/meta.json files that discovery would mistake
@@ -231,6 +242,38 @@ export async function run(argv: readonly string[]): Promise<number> {
   const archive = await planArchive(archiveDir, planned.plans, tree);
   diagnostics.push(...archive.diagnostics);
 
+  let previews = await planPreviewAssets(registryRoot, previewCacheDir, loaded.items);
+  diagnostics.push(...previews.diagnostics);
+  let generatedPreviewCount = 0;
+  if (
+    generatePreviews &&
+    previews.missing.length > 0 &&
+    !diagnostics.some((diagnostic) => diagnostic.severity === "error")
+  ) {
+    try {
+      generatedPreviewCount = previews.missing.length;
+      await generatePreviewAssets(registryRoot, previewCacheDir, loaded.items, previews.missing);
+      previews = await planPreviewAssets(registryRoot, previewCacheDir, loaded.items);
+      diagnostics.push(...previews.diagnostics);
+    } catch (error) {
+      diagnostics.push({
+        severity: "error",
+        code: "PREVIEW_GENERATION_FAILED",
+        file: "previews",
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+  for (const target of previews.missing) {
+    diagnostics.push({
+      severity: "error",
+      code: "PREVIEW_MISSING",
+      file: target.outputPath,
+      message: `preview cache is missing for ${target.slug}@${target.hash}`,
+      hint: "run `pnpm build:registry --generate-previews` and commit registry/previews",
+    });
+  }
+
   const archiveNoun = check ? "pending" : "written";
   const report = {
     registryRoot,
@@ -251,12 +294,19 @@ export async function run(argv: readonly string[]): Promise<number> {
       pruned: planned.pruned,
       errors: 0,
       warnings: 0,
-      bytes: tree.bytes,
+      bytes:
+        tree.bytes +
+        [...previews.assets.values()].reduce((total, bytes) => total + bytes.byteLength, 0),
       treeHash,
       archive: {
         written: archive.stats.written,
         reused: archive.stats.reused,
         missing: archive.stats.missing,
+      },
+      previews: {
+        generated: generatedPreviewCount,
+        reused: previews.reused.length,
+        missing: previews.missing.length,
       },
       typecheckSkipped: skipTypecheck,
     },
@@ -290,6 +340,9 @@ export async function run(argv: readonly string[]): Promise<number> {
       );
       process.stdout.write(
         `archive: ${archiveNoun} ${String(archive.stats.written.length)}, reused ${String(archive.stats.reused.length)}, missing ${String(archive.stats.missing.length)}\n`,
+      );
+      process.stdout.write(
+        `previews: generated ${String(report.counts.previews.generated)}, reused ${String(report.counts.previews.reused)}, missing ${String(report.counts.previews.missing)}\n`,
       );
       process.stdout.write(`bytes: ${String(tree.bytes)}, tree: ${treeHash}\n`);
       process.stdout.write(`duration: ${String(report.durationMs)}ms\n`);
@@ -326,7 +379,7 @@ export async function run(argv: readonly string[]): Promise<number> {
     return finish(1);
   }
   try {
-    const writeDiags = await writeBuildTree(outDir, tree);
+    const writeDiags = await writeBuildTree(outDir, tree, previews.assets);
     diagnostics.push(...writeDiags);
     for (const entry of archive.pending) {
       await writeArchiveFile(archiveDir, entry.name, entry.content);

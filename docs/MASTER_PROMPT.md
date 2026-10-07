@@ -452,7 +452,7 @@ UFW (22/80/443 only), SSH key-only login, fail2ban, unattended security upgrades
 
 ## 13. Out of scope (do NOT build)
 
-User accounts/OAuth, user uploads, moderation, payments, comments, Redis/BullMQ, Elasticsearch/Meilisearch/Typesense, Cloudflare R2/S3, Kubernetes, microservices, Playwright component previews (planned for Task 13), JS and plain-CSS variants (planned later; just keep `files[].variant` optional in the schema now), email delivery (interface + no-op only).
+User accounts/OAuth, user uploads, moderation, payments, comments, Redis/BullMQ, Elasticsearch/Meilisearch/Typesense, Cloudflare R2/S3, Kubernetes, microservices, JS and plain-CSS variants (planned later; just keep `files[].variant` optional in the schema now), email delivery (interface + no-op only).
 
 ---
 
@@ -514,7 +514,8 @@ _Acceptance:_ unauthorized -> 401; brute-force limiting tested; every mutation w
 
 **Task 11. Builder quality gates**: SSR smoke test, bundle-size budgets by `performance` class, reduced-motion detection (warning mode with a flag to promote to error).
 **Task 12. Props documentation**: `react-docgen-typescript` -> `props` field in registry items and a `docs` section (schema updated with `schemaVersion` handling).
-**Task 13. Playwright previews**: render each demo, capture webp/short video into `/previews/<slug>.webp`; add `previews` to index; cache by hash so unchanged components are not re-rendered.
+**Task 13. Playwright previews**: render each demo, capture WebP into `/previews/<slug>.webp`; add `previews` to index; cache by hash so unchanged components are not re-rendered.
+_Acceptance:_ every non-draft component demo is rendered in an isolated build-only host and emitted as a validated WebP; the index exposes a validated preview URL; the production site consumes only static images and never executes registry source; unchanged component hashes reuse the committed cache; catalog and detail pages show the real image with a graceful fallback; unit tests, registry checks, lint, typecheck, test, build, and desktop/mobile visual QA pass.
 **Task 14. RSS polish, OG images, monitoring hooks (Sentry optional via env), k6 load test script for `/r/*` and `/api/events`, final README/CONTRIBUTING pass.**
 
 Each of Tasks 11-14 must have its own acceptance criteria written by you at the start of the task, reviewed against this document's principles, and then verified.
@@ -685,3 +686,7 @@ Each of Tasks 11-14 must have its own acceptance criteria written by you at the 
     under the `framebits` npm organization. The executable remains `framebits`;
     one-shot usage is `npx @framebits/cli ...`. The accidental unscoped
     `framebits` package is not a supported distribution channel.
+12. On 2026-10-07 the owner explicitly authorized Task 13 ahead of Tasks 7–12.
+    Previews are static WebP captures only: Playwright executes trusted in-repo
+    demos during explicit generation, hash-keyed cache files are committed, and
+    production receives image bytes rather than executable registry source.

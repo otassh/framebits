@@ -526,6 +526,22 @@ function SectionHeading({
 
 function PreviewArtwork({ item }: { item: RegistryIndexItem }): React.JSX.Element {
   const reduceMotion = useReducedMotion();
+  const [previewFailed, setPreviewFailed] = useState(false);
+  if (item.previews !== undefined && !previewFailed) {
+    return (
+      <div className="preview-art preview-generated">
+        <img
+          src={item.previews.image}
+          alt={`${item.title} component preview`}
+          loading="lazy"
+          decoding="async"
+          onError={() => {
+            setPreviewFailed(true);
+          }}
+        />
+      </div>
+    );
+  }
   if (item.category === "text-animations") {
     return (
       <div className="preview-art preview-text" aria-hidden="true">

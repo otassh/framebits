@@ -115,6 +115,9 @@ function indexJson(
       performance: item.meta.performance,
       difficulty: item.meta.difficulty,
       addedAt: item.meta.addedAt,
+      ...(item.meta.type === "component"
+        ? { previews: { image: `/previews/${item.slug}.webp` } }
+        : {}),
     };
     return item.meta.status === "deprecated" ? { ...entry, deprecated: true as const } : entry;
   });
@@ -346,7 +349,11 @@ export async function planArchive(
 }
 
 /** Re-read a directory tree and verify it matches the in-memory tree exactly. */
-export async function verifyWrittenTree(dirAbs: string, tree: BuiltTree): Promise<Diagnostic[]> {
+export async function verifyWrittenTree(
+  dirAbs: string,
+  tree: BuiltTree,
+  binaryFiles: ReadonlyMap<string, Uint8Array> = new Map(),
+): Promise<Diagnostic[]> {
   const diagnostics: Diagnostic[] = [];
   for (const [rel, content] of [...tree.files].sort()) {
     let actual: string;
@@ -367,6 +374,28 @@ export async function verifyWrittenTree(dirAbs: string, tree: BuiltTree): Promis
         code: "EMIT_VERIFY_FAILED",
         file: rel,
         message: `emitted file ${rel} differs from the verified content`,
+      });
+    }
+  }
+  for (const [rel, expected] of [...binaryFiles].sort(([a], [b]) => (a < b ? -1 : 1))) {
+    let actual: Uint8Array;
+    try {
+      actual = await readFile(join(dirAbs, ...rel.split("/")));
+    } catch {
+      diagnostics.push({
+        severity: "error",
+        code: "EMIT_VERIFY_FAILED",
+        file: rel,
+        message: `emitted binary file ${rel} is missing after write`,
+      });
+      continue;
+    }
+    if (!Buffer.from(actual).equals(Buffer.from(expected))) {
+      diagnostics.push({
+        severity: "error",
+        code: "EMIT_VERIFY_FAILED",
+        file: rel,
+        message: `emitted binary file ${rel} differs from the verified content`,
       });
     }
   }
@@ -408,7 +437,11 @@ async function writeFileAtomic(absPath: string, content: string): Promise<void> 
  * Write the tree atomically: build in a sibling temp dir, verify, swap into place
  * (old aside, new in, old deleted), verify again. Never leaves a half-written <out>.
  */
-export async function writeBuildTree(outDirAbs: string, tree: BuiltTree): Promise<Diagnostic[]> {
+export async function writeBuildTree(
+  outDirAbs: string,
+  tree: BuiltTree,
+  binaryFiles: ReadonlyMap<string, Uint8Array> = new Map(),
+): Promise<Diagnostic[]> {
   const staging = await mkdtemp(join(resolve(outDirAbs, ".."), ".registry-out-"));
   try {
     for (const [rel, content] of tree.files) {
@@ -416,7 +449,12 @@ export async function writeBuildTree(outDirAbs: string, tree: BuiltTree): Promis
       await mkdir(dirname(abs), { recursive: true });
       await writeFile(abs, content, "utf8");
     }
-    const pre = await verifyWrittenTree(staging, tree);
+    for (const [rel, content] of binaryFiles) {
+      const abs = join(staging, ...rel.split("/"));
+      await mkdir(dirname(abs), { recursive: true });
+      await writeFile(abs, content);
+    }
+    const pre = await verifyWrittenTree(staging, tree, binaryFiles);
     if (pre.some((diagnostic) => diagnostic.severity === "error")) {
       return pre;
     }
@@ -449,7 +487,7 @@ export async function writeBuildTree(outDirAbs: string, tree: BuiltTree): Promis
         `atomic swap failed: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
-    return await verifyWrittenTree(outDirAbs, tree);
+    return await verifyWrittenTree(outDirAbs, tree, binaryFiles);
   } finally {
     await rm(staging, { recursive: true, force: true });
   }
