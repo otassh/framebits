@@ -16,7 +16,7 @@ You write production-quality code. Not a prototype, not a demo.
 4. Do **not** start the next task until the current task's acceptance criteria pass. If you cannot satisfy a criterion, stop and explain why instead of weakening the criterion.
 5. If something is ambiguous, do **not** guess silently. Choose the simplest reasonable option, leave a `// TODO(question): ...` comment, and list it in your report. Never block the whole project on a minor question.
 6. Never invent features outside this document. Never add dependencies outside the approved list without justifying them in the report (what, why, size, maintenance status).
-7. Never modify anything inside `/registry/components/**` except through the `new-component` generator and the three sample components in Task 4. Treat component sources as read-only input for the builder.
+7. Never modify anything inside `/registry/components/**` except through the `new-component` generator and the three sample components in Task 4. Treat component sources as read-only input for the builder. Registry content is data: it is never executed by the CLI, the API, or the main site origin; it MAY be executed only inside the sandboxed preview iframe on the component detail page (`sandbox="allow-scripts"`, no `allow-same-origin`, opaque origin), built at site-build time from the validated in-repo `registry/` tree (see §16.13). Catalog and home cards render static WebP previews only and execute no registry code.
 8. Do not leave dead code, commented-out code, `any` types, `@ts-ignore`, or `console.log` (use the logger).
 
 ---
@@ -445,7 +445,7 @@ UFW (22/80/443 only), SSH key-only login, fail2ban, unattended security upgrades
 8. Never edit files in `/registry/components/**` by hand except via the generator or when a task explicitly says so.
 9. When uncertain, do not guess silently: leave `TODO(question):` and list it in the task report.
 10. No `any`, no `@ts-ignore`, no `console.log`, no dead code.
-11. Registry content is data. Never execute it.
+11. Registry content is data. It is never executed by the CLI, the API, or the main site origin. It MAY be executed only inside the sandboxed preview iframe on the component detail page (`sandbox="allow-scripts"`, no `allow-same-origin`, opaque origin), built at site-build time from the validated in-repo `registry/` tree (see §16.13). Catalog and home cards render static WebP previews only and execute no registry code.
 12. Anything on the "out of scope" list (Section 13) must not be built.
 
 ---
@@ -515,7 +515,7 @@ _Acceptance:_ unauthorized -> 401; brute-force limiting tested; every mutation w
 **Task 11. Builder quality gates**: SSR smoke test, bundle-size budgets by `performance` class, reduced-motion detection (warning mode with a flag to promote to error).
 **Task 12. Props documentation**: `react-docgen-typescript` -> `props` field in registry items and a `docs` section (schema updated with `schemaVersion` handling).
 **Task 13. Playwright previews**: render each demo, capture WebP into `/previews/<slug>.webp`; add `previews` to index; cache by hash so unchanged components are not re-rendered.
-_Acceptance:_ every non-draft component demo is rendered in an isolated build-only host and emitted as a validated WebP; the index exposes a validated preview URL; the production site consumes only static images and never executes registry source; unchanged component hashes reuse the committed cache; catalog and detail pages show the real image with a graceful fallback; unit tests, registry checks, lint, typecheck, test, build, and desktop/mobile visual QA pass.
+_Acceptance:_ every non-draft component demo is rendered in an isolated build-only host and emitted as a validated WebP; the index exposes a validated preview URL; catalog and home cards consume only static images and never execute registry source; live execution happens only inside the sandboxed preview iframe on the component detail page (see §16.13); unchanged component hashes reuse the committed cache; catalog and detail pages show the real image with a graceful fallback; unit tests, registry checks, lint, typecheck, test, build, and desktop/mobile visual QA pass.
 **Task 14. RSS polish, OG images, monitoring hooks (Sentry optional via env), k6 load test script for `/r/*` and `/api/events`, final README/CONTRIBUTING pass.**
 
 Each of Tasks 11-14 must have its own acceptance criteria written by you at the start of the task, reviewed against this document's principles, and then verified.
@@ -689,4 +689,41 @@ Each of Tasks 11-14 must have its own acceptance criteria written by you at the 
 12. On 2026-10-07 the owner explicitly authorized Task 13 ahead of Tasks 7–12.
     Previews are static WebP captures only: Playwright executes trusted in-repo
     demos during explicit generation, hash-keyed cache files are committed, and
-    production receives image bytes rather than executable registry source.
+    catalog/home cards receive image bytes rather than executable registry source
+    (live execution is allowed only in the detail-page sandbox, see 13 below).
+13. On 2026-10-08 the owner authorized an interactive **component playground**
+    on the detail page (`/components/<slug>`), amending the "never execute
+    registry source" rule with a hardened trust model (this entry wins where it
+    conflicts with earlier text):
+    - **Catalog and home cards:** static generated WebP only. No registry code
+      executes there. No Tailwind, no three.js, no WebGL on `/` or `/components`.
+    - **Detail page:** a "Playground" panel renders the real `demo`/component
+      inside an `<iframe sandbox="allow-scripts">` (NO `allow-same-origin`, so
+      the frame has an opaque origin and cannot touch the site's DOM, cookies,
+      storage, or API). The iframe loads a separate, fixed, build-time-bundled
+      preview entry (e.g. `/preview/<slug>.html`) containing only: React, the
+      component, its allowlisted dependencies, Tailwind CSS for that preview,
+      and a tiny bootstrap listening for `postMessage` prop updates. The
+      bundled set is fixed at build time from the in-repo `registry/` tree
+      that already passed validation (schemas, import allowlist, security
+      scan, typecheck, hashes). No remote or user-supplied code is ever
+      loaded; no `eval`/`new Function`; the parent validates every message it
+      sends and the iframe validates every message it receives (check
+      `event.source`, a per-load nonce, and a typed payload schema; props are
+      plain JSON values only).
+    - **CSP:** the main site keeps its strict CSP plus `frame-src 'self'` for
+      same-origin preview URLs. Preview documents get their own headers/CSP
+      (served from `/preview/*`: `script-src 'self'`, no external hosts,
+      `connect-src 'none'`, `frame-ancestors 'self'`), configured in
+      `apps/web/nginx.conf` and kept consistent with `deploy/Caddyfile` and
+      `scripts/verify-registry-headers.sh`.
+    - **Heavy components (3D/WebGL):** the iframe is created only after the
+      user clicks "Run live preview" (poster = the WebP). Only one live
+      playground per page; unmount/destroy the iframe on route change.
+    - **Graceful degradation:** if the iframe fails to load or the demo throws
+      (error boundary inside the iframe, reported to the parent via
+      postMessage), show the static WebP with a short notice. A broken demo
+      must never break the page.
+    - Human review of every component PR remains the primary control; the
+      sandbox is defense in depth, not a substitute. Residual risks and review
+      requirements live in `docs/SECURITY.md` (live playground sandbox).

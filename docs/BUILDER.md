@@ -62,11 +62,15 @@
    summary }` (`summary` is an additive rollup: discovered/modeled counts plus
    by-type/by-status over all parsed metas).
 8. **Preview assets** (`registry/previews.ts`, Task 13): every non-draft component
-   has a hash-keyed cache entry at `registry/previews/<slug>@<hash>.webp`.
-   `--generate-previews` materializes validated model files and trusted demos in
-   a temporary Vite/Tailwind host, captures them with Playwright Chromium, then
-   deletes the host. Normal builds only validate/copy committed image bytes to
-   `r/previews/<slug>.webp`; the production site never executes registry source.
+    has a hash-keyed cache entry at `registry/previews/<slug>@<hash>.webp`.
+    `--generate-previews` materializes validated model files and trusted demos in
+    a temporary Vite/Tailwind host, captures them with Playwright Chromium, then
+    deletes the host. Normal builds only validate/copy committed image bytes to
+    `r/previews/<slug>.webp`. Catalog and home cards render these static images
+    and execute no registry code; live execution happens only inside the
+    sandboxed preview iframe on the component detail page, built at site-build
+    time from the same validated in-repo `registry/` tree (see
+    `docs/MASTER_PROMPT.md` §16.13 and `docs/SECURITY.md`).
 
 All diagnostics are collected (never stop at the first) and sorted by
 (file, line, column, code). Diagnostic paths are POSIX, relative to the registry

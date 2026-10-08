@@ -26,12 +26,15 @@ registryDependencies, files, tailwind, cssVars }`). The CLI recomputes it
   `>=0.0.0`, `>0`, open `||` branches) are rejected by the boundedness check
   (every `||` branch must contain `<`, `<=`, or an exact pin). Verified by
   `semver.test.ts`, `meta.test.ts`, `command.test.ts`, and `verify.test.ts`.
-- **Code execution from registry content is impossible by construction**:
-  registry items are data only. The CLI only writes files and merges CSS
-  marker blocks; it never `eval`s, imports, or spawns registry content.
-  Package installs run via `cross-spawn` with `program` + `args[]` only (no
-  `shell: true`, no string concatenation) — see
-  `apps/cli/src/install/run.ts` and `apps/cli/src/install/command.ts`.
+- **Code execution from registry content is impossible by construction in the
+  CLI, the API, and the main site origin**: registry items are data there.
+  The CLI only writes files and merges CSS marker blocks; it never `eval`s,
+  imports, or spawns registry content. Package installs run via `cross-spawn`
+  with `program` + `args[]` only (no `shell: true`, no string
+  concatenation) — see `apps/cli/src/install/run.ts` and
+  `apps/cli/src/install/command.ts`. The single exception is the sandboxed
+  live playground iframe on the component detail page (see "Live playground
+  sandbox" below): catalog and home cards execute no registry code.
 - **Path traversal** is blocked twice: `RelativePathSchema` (relative, POSIX,
   no `..`, no drive letters, no NUL) plus plan-time prefix mapping and
   write-time realpath containment with symlink refusal.
@@ -122,6 +125,79 @@ as fallbacks if key management is deemed too heavy.
 - Static hardening: `Content-Security-Policy` is served as an nginx header
   (`apps/web/nginx.conf`) plus a `<meta http-equiv>` fallback in
   `apps/web/index.html`; the outer Caddy layer sends the same policy.
+
+## Live playground sandbox (component detail page)
+
+> Authorized 2026-10-08 (`docs/MASTER_PROMPT.md` §16.13). This is the only
+> place where registry source is executed outside the build-time preview
+> harness. Human review of every component/dependency PR remains the primary
+> control; the sandbox is defense in depth, not a substitute.
+
+- **What runs where.** Catalog and home cards render static WebP only. On
+  `/components/<slug>`, the real `demo`/component runs inside an
+  `<iframe sandbox="allow-scripts">` with NO `allow-same-origin`: the frame
+  gets an opaque origin, so it cannot read the parent DOM, cookies,
+  `localStorage`/`sessionStorage`/`indexedDB` of the site origin, or call the
+  API with the user's credentials. `referrerpolicy="no-referrer"`,
+  `loading="lazy"`, and a `title` attribute are set.
+- **Fixed build-time bundle.** The iframe loads a separate preview entry
+  (e.g. `/preview/<slug>.html`) bundled at site-build time from the validated
+  in-repo `registry/` tree (schemas, import allowlist, security scan,
+  typecheck, hashes). No remote or user-supplied code is ever loaded; no
+  `eval`/`new Function` in the protocol or bootstrap.
+- **Validated protocol.** Parent and frame validate every `postMessage`
+  (`event.source` check, per-load nonce, typed payload schema; props are
+  plain JSON values only). Messages: parent → frame `init`, `props`,
+  `replay`, `pause`, `reducedMotion`, `theme`; frame → parent `ready`,
+  `error`, `resize`. Malformed or unexpected messages are dropped.
+- **Network isolation.** Preview documents are served from `/preview/*` with
+  their own CSP (`script-src 'self'`, no external hosts, `connect-src
+  'none'`, `frame-ancestors 'self'`). The main site CSP adds only
+  `frame-src 'self'`. Verified by header checks (nginx + Caddy +
+  `scripts/verify-registry-headers.sh`).
+- **Heavy components.** The iframe is created only after an explicit "Run
+  live preview" click (WebP poster before that). One live iframe per page;
+  destroyed on route change, bounding WebGL contexts.
+- **Failure isolation.** An error boundary inside the frame reports failures
+  to the parent via `postMessage`; the parent falls back to the static WebP
+  with a notice. A broken demo cannot break the page.
+
+### Threat model: malicious component PR
+
+Attacker capability assumed: a merged component PR containing attacker-chosen
+JS/CSS within the import allowlist (review missed it or reviewer is the
+attacker). Reachable from inside the opaque-origin sandbox WITHOUT further
+breakout:
+
+- Phishing/deceptive UI inside the frame (it looks like part of the site).
+  Mitigation: the frame is a visibly labelled "live preview" stage; the
+  frame cannot navigate the parent (`allow-top-navigation` is absent) and
+  cannot read parent state, so credential theft requires user interaction
+  inside the frame itself.
+- CPU/GPU abuse (crypto mining, WebGL stress). Mitigation: runs only on the
+  detail page, heavy items only after click, one frame at a time, destroyed
+  on navigation. Residual risk accepted (same as any site running JS).
+- UI redress/clickjacking of frame contents by a third-party site.
+  Mitigation: `frame-ancestors 'self'` on preview responses.
+- Exfiltration via network. Mitigation: `connect-src 'none'`, no external
+  hosts in preview CSP, no form submission targets; the frame has no access
+  to site cookies/storage to steal. WebRTC/DNS side channels are out of
+  scope (browser-level, not addressable by headers).
+- Sandbox escape via browser 0-day. Out of scope: accepted as residual risk;
+  pinned Chromium behavior is not guaranteed. The builder security scan +
+  allowlist + human review are the controls that keep obviously dangerous
+  primitives (`fetch`, `WebSocket`, `Worker`, `eval`, cookie access) out of
+  components in the first place.
+
+### Review requirements for new components/dependencies
+
+- Every component PR is read in full by a human reviewer (the AST security
+  scan is a mistake-guard, not a boundary). New `dependencies` must be on
+  the shared allowlist with justification; new preview-entry dependencies
+  additionally require checking what network/storage APIs they touch.
+- The preview bootstrap and the parent↔iframe protocol are site code, not
+  registry data: changes there need the same review bar as `apps/web` itself
+  (protocol validation tests must cover wrong source/nonce/shape).
 
 ## Deploy trust notes
 
