@@ -624,7 +624,9 @@ export async function writeBuildTree(
   tree: BuiltTree,
   binaryFiles: ReadonlyMap<string, Uint8Array> = new Map(),
 ): Promise<Diagnostic[]> {
-  const staging = await mkdtemp(join(resolve(outDirAbs, ".."), ".registry-out-"));
+  const outParent = resolve(outDirAbs, "..");
+  await mkdir(outParent, { recursive: true });
+  const staging = await mkdtemp(join(outParent, ".registry-out-"));
   try {
     for (const [rel, content] of tree.files) {
       const abs = join(staging, ...rel.split("/"));
@@ -650,7 +652,7 @@ export async function writeBuildTree(
     let backup: string | undefined;
     try {
       if (outExists) {
-        backup = join(resolve(outDirAbs, ".."), `.registry-old-${randomUUID()}`);
+        backup = join(outParent, `.registry-old-${randomUUID()}`);
         await rename(outDirAbs, backup);
       }
       await rename(staging, outDirAbs);
