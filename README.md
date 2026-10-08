@@ -99,6 +99,7 @@ See [`docs/MASTER_PROMPT.md`](docs/MASTER_PROMPT.md) §14 for the full roadmap. 
 
 ## 📚 Docs
 
+- [Changelog](https://otassh.github.io/framebits/) — every release, rendered from [`CHANGELOG.md`](CHANGELOG.md)
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — how to add a component (generator: `pnpm new-component <slug> --category=<cat>`)
 - [`docs/CLI.md`](docs/CLI.md) — commands, target mapping, security model
 - [`docs/CONTRACTS.md`](docs/CONTRACTS.md) — schemas and registry contracts
