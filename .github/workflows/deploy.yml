@@ -1,8 +1,9 @@
 name: deploy
 
 on:
-  push:
-    branches: [main]
+  # Manual only for now: automatic SSH deploys on push to main are disabled.
+  # Re-enable the push trigger when VPS deploys are wanted again.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,7 +16,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     # Protection: the `production` environment should have required reviewers
-    # (see deploy/README.md section 4) so pushes to main never deploy without
+    # (see deploy/README.md section 4) so manual deploys never run without
     # an explicit approval.
     environment: production
     steps:
