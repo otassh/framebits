@@ -4,11 +4,21 @@ The production Framebits frontend. It is a static React + Vite application
 that reads the builder's validated registry JSON; it does not contain mock
 components, invented statistics, or duplicated registry data.
 
-Component previews render the **real live demos** (`registry/.../demo.tsx`)
-bundled at site-build time via `import.meta.glob` (see
-`src/lib/live-demos.tsx`), each as its own lazily-loaded chunk. The generated
-WebP (`previews.image`) remains as the loading poster and error fallback, so a
-broken demo degrades to a static image instead of breaking the catalog.
+Catalog and home cards render the **static generated WebP**
+(`previews.image`) and execute no registry code. The component detail page
+offers a **live playground**: the real `demo`/component runs inside a
+sandboxed `<iframe sandbox="allow-scripts">` (no `allow-same-origin`,
+opaque origin) loaded from a separate build-time-bundled preview entry
+(`/preview/<slug>.html`), with a `postMessage` prop protocol validated on
+both sides. Heavy (3D/WebGL) previews mount only after an explicit "Run live
+preview" click. See `docs/MASTER_PROMPT.md` §16.13 and `docs/SECURITY.md`
+(live playground sandbox) for the trust model.
+
+> Transitional state: the current code still renders live demos in the main
+> bundle via `src/lib/live-demos.tsx` (`import.meta.glob`, PR #31). PR 4 moves
+> execution into the sandboxed preview entry; PR 6 removes `LiveDemo` from
+> catalog cards so the main bundle contains no registry source and no
+> three.js.
 
 ## Commands
 
@@ -51,14 +61,17 @@ default is the same-origin `/r` path used in production.
 - The build manifest hash (`build-manifest.json`) is intentional: it binds
   the exact registry snapshot the site was built against. A manifest/content
   mismatch means the deployment — not the browser — must be re-built.
-- Live demos execute reviewed in-repo `registry/` sources only (the same
+- Live preview execution is confined to the sandboxed preview iframe
+  described above: reviewed in-repo `registry/` sources only (the same
   sources the builder validates and screenshots; no remote code is ever
-  loaded). Demos import the `@/lib|@/hooks|@/components/ui` aliases, which
-  `vite.config.ts` derives from the registry tree itself, plus bare
-  third-party deps rewritten to their ESM-resolved files. A demo whose
-  dependency is missing fails the build with the exact `pnpm add` hint —
-  that dependency must already be on the shared allowlist.
-  `vite dev` serves the sibling `registry/` dir via `server.fs.allow`.
+  loaded), bundled at site-build time. The main site origin, the CLI, and
+  the API never execute registry content. Preview demos import the
+  `@/lib|@/hooks|@/components/ui` aliases, which the Vite config derives
+  from the registry tree itself, plus bare third-party deps rewritten to
+  their ESM-resolved files. A demo whose dependency is missing fails the
+  build with the exact `pnpm add` hint — that dependency must already be on
+  the shared allowlist. `vite dev` serves the sibling `registry/` dir via
+  `server.fs.allow`.
 
 ## Dependency justification
 

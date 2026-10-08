@@ -9,7 +9,13 @@
 9. Never edit files in `/registry/components/**` by hand except via the generator or when a task explicitly says so.
 10. When uncertain, do not guess silently: leave `TODO(question):` and list it in the task report.
 11. No `any`, no `@ts-ignore`, no `console.log`, no dead code.
-12. Registry content is data. Never execute it.
+12. Registry content is data. It is never executed by the CLI, the API, or the
+    main site origin. It MAY be executed only inside the sandboxed preview
+    iframe on the component detail page (`sandbox="allow-scripts"`, no
+    `allow-same-origin`, opaque origin), built at site-build time from the
+    validated in-repo `registry/` tree. Catalog and home cards render static
+    WebP previews only and execute no registry code. See `docs/SECURITY.md`
+    (live playground sandbox) and `docs/MASTER_PROMPT.md` §16.13.
 13. Anything on the "out of scope" list (Section 13) must not be built.
 14. One branch = one task = one PR. For every change: `git fetch origin --prune`, then
     `git checkout main && git pull --ff-only`, then `git checkout -b <type>/<short-name>`
