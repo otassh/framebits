@@ -380,6 +380,20 @@ describe("planBuild out-of-date", () => {
 });
 
 describe("writeBuildTree", () => {
+  it("creates a missing output parent before staging the atomic write", async () => {
+    const root = await mkdtemp(join(tmpdir(), "emit-missing-parent-"));
+    try {
+      const out = join(root, "missing", "out");
+      const tree = { files: new Map([["r/index.json", "{}\n"]]), bytes: 3 };
+
+      expect(await writeBuildTree(out, tree)).toEqual([]);
+      expect(await readFile(join(out, "r", "index.json"), "utf8")).toBe("{}\n");
+      expect(await readdir(join(root, "missing"))).toEqual(["out"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("writes atomically and replaces on re-run without leftovers", async () => {
     const { root, items } = await loadModels(componentFiles("aurora-text"));
     try {
