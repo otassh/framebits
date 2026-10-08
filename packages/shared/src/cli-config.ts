@@ -20,7 +20,7 @@ export const InstalledEntrySchema = z
 export type InstalledEntry = z.infer<typeof InstalledEntrySchema>;
 
 /**
- * `framebits.json` in the user's project root (MASTER_PROMPT Section 4.5).
+ * `framebits.json` in the user's project root.
  *
  * `registry` must be `https://` without credentials (with `http://localhost`,
  * `http://127.0.0.1`, and `http://[::1]` — also without credentials — allowed for
@@ -37,54 +37,50 @@ export const CliConfigSchema = z
   .object({
     $schema: z.url().optional(),
     schemaVersion: z.literal(SCHEMA_VERSION),
-    registry: z
-      .url("registry must be a valid URL")
-      .superRefine((raw, ctx) => {
-        let parsed: URL;
-        try {
-          parsed = new URL(raw);
-        } catch {
-          ctx.addIssue({ code: "custom", message: "registry must be a valid URL" });
+    registry: z.url("registry must be a valid URL").superRefine((raw, ctx) => {
+      let parsed: URL;
+      try {
+        parsed = new URL(raw);
+      } catch {
+        ctx.addIssue({ code: "custom", message: "registry must be a valid URL" });
+        return;
+      }
+      const hasUserinfo = parsed.username !== "" || parsed.password !== "";
+      if (parsed.protocol === "https:") {
+        if (hasUserinfo) {
+          ctx.addIssue({
+            code: "custom",
+            message: "registry https URL must not contain credentials",
+          });
+        }
+        return;
+      }
+      if (parsed.protocol === "http:") {
+        const hostname = parsed.hostname.toLowerCase();
+        const bare =
+          hostname.startsWith("[") && hostname.endsWith("]") ? hostname.slice(1, -1) : hostname;
+        if (bare !== "localhost" && bare !== "127.0.0.1" && bare !== "::1") {
+          ctx.addIssue({
+            code: "custom",
+            message:
+              "registry must be https:// (http is allowed only for localhost, 127.0.0.1, and ::1)",
+          });
           return;
         }
-        const hasUserinfo = parsed.username !== "" || parsed.password !== "";
-        if (parsed.protocol === "https:") {
-          if (hasUserinfo) {
-            ctx.addIssue({
-              code: "custom",
-              message: "registry https URL must not contain credentials",
-            });
-          }
-          return;
+        if (hasUserinfo) {
+          ctx.addIssue({
+            code: "custom",
+            message: "registry http URL must not contain credentials",
+          });
         }
-        if (parsed.protocol === "http:") {
-          const hostname = parsed.hostname.toLowerCase();
-          const bare =
-            hostname.startsWith("[") && hostname.endsWith("]")
-              ? hostname.slice(1, -1)
-              : hostname;
-          if (bare !== "localhost" && bare !== "127.0.0.1" && bare !== "::1") {
-            ctx.addIssue({
-              code: "custom",
-              message:
-                "registry must be https:// (http is allowed only for localhost, 127.0.0.1, and ::1)",
-            });
-            return;
-          }
-          if (hasUserinfo) {
-            ctx.addIssue({
-              code: "custom",
-              message: "registry http URL must not contain credentials",
-            });
-          }
-          return;
-        }
-        ctx.addIssue({
-          code: "custom",
-          message:
-            "registry must be https:// (http is allowed only for localhost, 127.0.0.1, and ::1)",
-        });
-      }),
+        return;
+      }
+      ctx.addIssue({
+        code: "custom",
+        message:
+          "registry must be https:// (http is allowed only for localhost, 127.0.0.1, and ::1)",
+      });
+    }),
     framework: z.enum(["next", "vite", "remix", "other"]),
     typescript: z.boolean(),
     tailwind: z

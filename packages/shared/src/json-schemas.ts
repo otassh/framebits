@@ -17,7 +17,7 @@ import { RegistryItemSchema } from "./registry-item.js";
 import { SearchIndexSchema } from "./search-index.js";
 
 /**
- * Schemas published as JSON Schema (MASTER_PROMPT Section 4: `/schema/*.json`).
+ * Schemas published as JSON Schema under `/schema/*.json`.
  * Generated from Zod with native `z.toJSONSchema` (Zod 4) — no extra dependency.
  */
 export const JSON_SCHEMA_SOURCES: Record<string, z.ZodType> = {

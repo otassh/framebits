@@ -7,7 +7,7 @@ import { Sha256HashSchema } from "./hashable-json.js";
 /** Max components tracked by the lock file (DoS guard on registry scale). */
 export const MAX_LOCK_COMPONENTS = 1000;
 
-/** `registry/registry.lock.json`: slug -> { version, hash } (MASTER_PROMPT Section 3). */
+/** `registry/registry.lock.json`: slug -> { version, hash }. */
 export const LockEntrySchema = z
   .object({
     version: SemverVersionSchema,

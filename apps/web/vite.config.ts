@@ -15,8 +15,9 @@ interface RegistryAlias {
 /**
  * Live-demo aliases for in-repo registry sources.
  *
- * Catalog previews render the real `demo.tsx` of each published component via
- * `import.meta.glob` (see `src/lib/live-demos.ts`). Demos import their sibling
+ * Detail pages render the real `demo.tsx` of each published component via
+ * `import.meta.glob` (see `src/lib/live-demos.ts`); catalog cards use static
+ * WebP previews. Demos import their sibling
  * source relatively (`./<slug>`) plus the `@/lib|@/hooks|@/components/ui`
  * registry aliases that `pnpm build:registry` enforces. Those aliases must
  * resolve to the same reviewed files here, so they are derived from the
@@ -232,9 +233,12 @@ export default defineConfig({
         manualChunks: {
           icons: ["lucide-react"],
           motion: ["motion/react"],
-          react: ["react", "react-dom"],
+          react: ["react", "react-dom", "react/jsx-runtime"],
           validation: ["zod"],
         },
+        // Keep the heavy dependencies of lazy demos and the hero ballpit in
+        // optional chunks. The shared animated footer uses Motion on every page.
+        onlyExplicitManualChunks: true,
       },
     },
   },

@@ -479,39 +479,10 @@ a {
   display: inline-flex;
 }
 
-.hero-proof strong {
-  font-variant-numeric: tabular-nums;
-}
-
 .button-secondary {
   border-color: var(--line-strong);
   color: var(--text);
   background: var(--surface-raised);
-}
-
-.hero-proof {
-  display: flex;
-  gap: clamp(1.2rem, 3vw, 2.4rem);
-  margin-top: 3.4rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--line);
-}
-
-.hero-proof div {
-  display: grid;
-  gap: 0.25rem;
-}
-
-.hero-proof strong {
-  font-family: var(--mono);
-  font-size: 1.05rem;
-  font-weight: 500;
-}
-
-.hero-proof span {
-  color: var(--muted);
-  font-size: 0.68rem;
-  line-height: 1.4;
 }
 
 .hero-stage {
@@ -1660,49 +1631,6 @@ a {
   color: var(--muted);
 }
 
-.site-footer {
-  padding: 3rem 0;
-  background: #080809;
-}
-
-.footer-grid {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: end;
-  gap: 2rem;
-}
-
-.footer-grid > div:first-child p,
-.footer-meta {
-  margin: 0.85rem 0 0;
-  color: #777570;
-  font-size: 0.7rem;
-}
-
-.footer-links {
-  display: flex;
-  align-items: center;
-  gap: 1.2rem;
-}
-
-.footer-links a {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  color: var(--muted);
-  font-size: 0.7rem;
-}
-
-.footer-links a:hover {
-  color: var(--text);
-}
-
-.footer-meta {
-  grid-column: 1 / -1;
-  padding-top: 1.6rem;
-  border-top: 1px solid var(--line);
-}
-
 @media (max-width: 1000px) {
   .hero-grid,
   .workflow-grid {
@@ -1806,11 +1734,6 @@ a {
     font-size: clamp(3.25rem, 15vw, 5.4rem);
   }
 
-  .hero-proof {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-  }
-
   .hero-stage {
     min-height: 420px;
   }
@@ -1875,18 +1798,6 @@ a {
   .hero-actions .copy-command,
   .workflow-copy .copy-command {
     width: 100%;
-  }
-
-  .hero-proof {
-    gap: 0.8rem;
-  }
-
-  .hero-proof strong {
-    font-size: 0.92rem;
-  }
-
-  .hero-proof span {
-    font-size: 0.59rem;
   }
 
   .hero-stage {
@@ -1958,14 +1869,6 @@ a {
     position: sticky;
     right: 0;
     background: var(--surface-raised);
-  }
-
-  .footer-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .footer-links {
-    flex-wrap: wrap;
   }
 }
 

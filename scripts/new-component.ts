@@ -1,6 +1,6 @@
 /**
  * `pnpm new-component <slug> [--category=<cat>] [--title="..."] [--description="..."]
- * [--type=component|lib|hook]` (Task 3, MASTER_PROMPT Section 6).
+ * [--type=component|lib|hook]`.
  *
  * Thin CLI wrapper: parses args, calls the pure core in
  * `packages/builder/src/scaffold/`, prints results, sets the exit code.
@@ -12,10 +12,7 @@
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
-import {
-  ScaffoldError,
-  scaffold,
-} from "../packages/builder/src/scaffold/index.js";
+import { ScaffoldError, scaffold } from "../packages/builder/src/scaffold/index.js";
 
 export interface RunWriters {
   out?: ((text: string) => void) | undefined;
@@ -117,10 +114,7 @@ export async function run(argv: readonly string[], writers: RunWriters = {}): Pr
   }
 }
 
-if (
-  process.argv[1] !== undefined &&
-  resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-) {
+if (process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   run(process.argv.slice(2)).then(
     (code) => {
       process.exitCode = code;

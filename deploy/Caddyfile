@@ -1,6 +1,6 @@
 # deploy/Caddyfile — production reverse proxy + static registry server (Task 6).
-# Domain is parameterized: `DOMAIN` env (default framebits.dev, still a
-# placeholder per docs/MASTER_PROMPT.md D16.1). Caddy issues/quicks automatic
+# Domain is parameterized through `DOMAIN` (default framebits.dev, still a
+# placeholder). Caddy issues automatic
 # HTTPS for the domain; /var/www is mounted read-only from the host.
 {
   admin off

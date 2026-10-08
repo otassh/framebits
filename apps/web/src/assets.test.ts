@@ -27,7 +27,7 @@ describe("brand assets", () => {
   });
 
   it("renders the real mark in the Brand component", () => {
-    const source = readFileSync(join(root, "src", "app.tsx"), "utf8");
+    const source = readFileSync(join(root, "src", "components", "site-ui.tsx"), "utf8");
     expect(source).toContain("framebits-mark.png");
     expect(source).toContain("<img src={brandMarkUrl}");
   });

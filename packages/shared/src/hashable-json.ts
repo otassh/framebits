@@ -24,10 +24,7 @@ export function findDangerousKey(record: Record<string, unknown>): string | null
  * Shared `superRefine` for string-keyed records: rejects `__proto__`,
  * `constructor`, and `prototype` keys (prototype-pollution guard).
  */
-export function rejectDangerousKeys(
-  record: Record<string, unknown>,
-  ctx: z.RefinementCtx,
-): void {
+export function rejectDangerousKeys(record: Record<string, unknown>, ctx: z.RefinementCtx): void {
   const bad = findDangerousKey(record);
   if (bad !== null) {
     ctx.addIssue({ code: "custom", message: `key "${bad}" is not allowed` });
@@ -72,7 +69,7 @@ export function guardedRecord<V extends z.ZodType>(
   return z.intersection(RawDangerousKeysGuard, z.record(z.string(), valueSchema));
 }
 
-/** `sha256:` followed by 64 lowercase hex chars (MASTER_PROMPT Sections 4.2, 5.7). */
+/** `sha256:` followed by 64 lowercase hex chars. */
 export const Sha256HashSchema = z
   .string()
   .regex(/^sha256:[0-9a-f]{64}$/, 'must look like "sha256:<64 lowercase hex>"');
@@ -88,10 +85,7 @@ export type Sha256Hash = z.infer<typeof Sha256HashSchema>;
  * instead of failing later inside the hasher. `undefined` is not a member: absent
  * optional fields are omitted, never serialized.
  */
-export type HashableJsonValue =
-  | string
-  | HashableJsonValue[]
-  | { [key: string]: HashableJsonValue };
+export type HashableJsonValue = string | HashableJsonValue[] | { [key: string]: HashableJsonValue };
 
 export const HashableJsonValueSchema: z.ZodType<HashableJsonValue> = z
   .union([

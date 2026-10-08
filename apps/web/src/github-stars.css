@@ -1,0 +1,93 @@
+.header-inner {
+  gap: 1.25rem;
+}
+
+.header-inner > .main-nav {
+  margin-left: auto;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 0.6rem;
+}
+
+.github-stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 40px;
+  padding: 0.35rem 0.5rem 0.35rem 0.75rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--muted-strong);
+  font-size: 0.76rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    color 180ms ease;
+}
+
+.github-stars-icon {
+  color: var(--accent-soft);
+  flex-shrink: 0;
+  transition: fill 180ms ease;
+}
+
+.github-stars-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.75rem;
+  min-height: 1.5rem;
+  padding: 0 0.35rem;
+  border-left: 1px solid var(--line-strong);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.github-stars:hover,
+.github-stars:focus-visible {
+  border-color: rgba(255, 107, 61, 0.45);
+  background: rgba(255, 107, 61, 0.08);
+  color: var(--text);
+}
+
+.github-stars:hover .github-stars-icon {
+  fill: rgba(255, 171, 114, 0.2);
+}
+
+.github-stars-count.is-loading {
+  color: var(--muted);
+}
+
+@media (max-width: 1100px) and (min-width: 761px) {
+  .header-inner {
+    gap: 1rem;
+  }
+  .header-inner > .main-nav {
+    gap: 1rem;
+  }
+  .header-inner .copy-command-compact {
+    padding-inline: 0.65rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .header-actions {
+    margin-left: auto;
+  }
+  .github-stars-label {
+    display: none;
+  }
+  .github-stars {
+    min-height: 42px;
+    gap: 0.4rem;
+  }
+  .header-inner {
+    gap: 0.5rem;
+  }
+}

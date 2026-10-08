@@ -5,7 +5,7 @@ import type { CssVars, TailwindFragment } from "./registry-item.js";
 import type { ItemType } from "./meta.js";
 
 /**
- * Canonical hashing (MASTER_PROMPT Section 5.7 + Task 2 clarifications).
+ * Canonical registry hashing.
  *
  * Included: schemaVersion (payload version, see PAYLOAD_VERSION), type,
  * dependencies (keys sorted), registryDependencies (sorted), files sorted by

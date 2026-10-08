@@ -15,7 +15,7 @@ import { Sha256HashSchema } from "./hashable-json.js";
 import { RegistryPreviewsSchema } from "./preview.js";
 
 /**
- * One entry of `/r/index.json` (MASTER_PROMPT Section 4.3).
+ * One entry of `/r/index.json`.
  * Only `published`/`deprecated` items appear; drafts never leave the builder.
  */
 export const RegistryIndexItemSchema = z
@@ -41,7 +41,7 @@ export const RegistryIndexItemSchema = z
 
 export type RegistryIndexItem = z.infer<typeof RegistryIndexItemSchema>;
 
-/** `/r/index.json` (MASTER_PROMPT Section 4.3). */
+/** `/r/index.json`. */
 export const RegistryIndexSchema = z
   .object({
     schemaVersion: z.literal(SCHEMA_VERSION),
