@@ -1,0 +1,73 @@
+{
+  "controls": [
+    {
+      "kind": "number",
+      "key": "intensity",
+      "label": "Intensity",
+      "description": "Glow strength (clamped to 0-2).",
+      "default": 1,
+      "min": 0,
+      "max": 2,
+      "step": 0.05
+    },
+    {
+      "kind": "number",
+      "key": "speed",
+      "label": "Speed",
+      "description": "Idle-motion pace multiplier (intro timing is unaffected).",
+      "default": 1,
+      "min": 0.1,
+      "max": 3,
+      "step": 0.1,
+      "unit": "x"
+    },
+    {
+      "kind": "color",
+      "key": "accent",
+      "label": "Accent",
+      "description": "Brand accent driving the emissive glow and warm lights.",
+      "default": "#ff4918",
+      "group": "Colors"
+    },
+    {
+      "kind": "boolean",
+      "key": "autoRotate",
+      "label": "Auto-rotate",
+      "description": "Idle sway and drift (off freezes autonomous motion; the intro still plays).",
+      "default": true,
+      "group": "Motion"
+    },
+    {
+      "kind": "boolean",
+      "key": "interactive",
+      "label": "Interactive",
+      "description": "Pointer parallax on hover.",
+      "default": true,
+      "group": "Motion"
+    },
+    {
+      "kind": "select",
+      "key": "quality",
+      "label": "Quality",
+      "description": "Render quality (auto drops to low on small or coarse-pointer screens).",
+      "default": "auto",
+      "options": ["auto", "high", "low"]
+    },
+    {
+      "kind": "boolean",
+      "key": "intro",
+      "label": "Intro",
+      "description": "Play the mount-time reveal (replay by remounting).",
+      "default": true,
+      "group": "Motion"
+    },
+    {
+      "kind": "boolean",
+      "key": "scroll",
+      "label": "Scroll depth",
+      "description": "Subtle scroll-linked depth relative to the component.",
+      "default": false,
+      "group": "Motion"
+    }
+  ]
+}

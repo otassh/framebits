@@ -2,20 +2,20 @@
   "version": 1,
   "components": {
     "aurora-text": {
-      "version": "1.0.2",
-      "hash": "sha256:67ddf2f999d5cbdd2bfe527f24399e468f4c85770334571b5d35ea17502687df"
+      "version": "1.0.3",
+      "hash": "sha256:a84c9ef3fb63daa1c69fe71dd439f727dbbe06faba65f25836c0030d024da728"
     },
     "cn": {
       "version": "1.0.1",
       "hash": "sha256:5a3cddf7cc7113c57250124d8c655535eb8cb7fee7e35f639520e6d91b0f89d0"
     },
     "framebits-logo-3d": {
-      "version": "1.0.1",
-      "hash": "sha256:cb13b50b391abf0404c9a10b9e7f714f5ecc81ce80886bc498a17b2c26f751f3"
+      "version": "1.0.2",
+      "hash": "sha256:eaf93c76b0958e3a91a25d3050d1e2a95271a19c53b99c4d01aee3f00065d3f5"
     },
     "shimmer-button": {
-      "version": "1.0.2",
-      "hash": "sha256:3d49bb80e69772fd708333c828898ffceb82e30e65ee150a3c9d0435d8eca1d2"
+      "version": "1.0.3",
+      "hash": "sha256:ac21ac4ff93efa1f14b2d40b95154297250a76a9b535c6abcf1a9719f9ce2a21"
     }
   }
 }
