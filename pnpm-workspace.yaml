@@ -6,3 +6,10 @@ packages:
 # build in Task 5). No blanket approvals: every entry here is deliberate.
 onlyBuiltDependencies:
   - esbuild
+
+# Security override (GHSA-g7r4-m6w7-qqqr): tsup@8.5.1 (latest) resolves its
+# bundle-require peer to esbuild@0.27.7, which is in the vulnerable range
+# >=0.27.3 <0.28.1. Force the already-in-tree patched 0.28.2 until tsup
+# releases with a fixed esbuild floor.
+overrides:
+  esbuild: 0.28.2
