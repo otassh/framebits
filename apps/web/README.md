@@ -4,21 +4,35 @@ The production Framebits frontend. It is a static React + Vite application
 that reads the builder's validated registry JSON; it does not contain mock
 components, invented statistics, or duplicated registry data.
 
-Catalog and home cards render the **static generated WebP**
-(`previews.image`) and execute no registry code. The component detail page
-offers a **live playground**: the real `demo`/component runs inside a
-sandboxed `<iframe sandbox="allow-scripts">` (no `allow-same-origin`,
-opaque origin) loaded from a separate build-time-bundled preview entry
-(`/preview/<slug>.html`), with a `postMessage` prop protocol validated on
-both sides. Heavy (3D/WebGL) previews mount only after an explicit "Run live
-preview" click. See `docs/SECURITY.md`
-(live playground sandbox) for the trust model.
+## Pages
 
-> Transitional state: the current code still renders live demos in the main
-> bundle via `src/lib/live-demos.tsx` (`import.meta.glob`, PR #31). PR 4 moves
-> execution into the sandboxed preview entry; PR 6 removes `LiveDemo` from
-> catalog cards so the main bundle contains no registry source and no
-> three.js.
+- `/`: the product overview, with links to the collection and setup guide.
+- `/components`: the searchable collection with category filters.
+- `/components/<slug>`: a component's live preview, source, and install command.
+- `/docs`: the setup guide and useful CLI options.
+
+Each page lives in `src/pages/`; shared navigation and UI live in
+`src/components/site-ui.tsx`. The header marks the current section. Direct
+links and browser history use the same routes through the SPA fallback.
+
+The homepage hero adapts the supplied ballpit animation with the site's
+violet, orange, and cyan tokens. Three.js loads lazily for the hero, pauses
+offscreen and when the tab is hidden, and is disposed when leaving Home.
+Reduced motion and unavailable WebGL retain the ambient gradient fallback.
+Pointer interaction is scoped to the hero and does not block touch scrolling.
+
+Catalog cards render the **static generated WebP** (`previews.image`)
+and execute no registry code. Detail pages lazy-load the reviewed in-repo
+demo through `src/lib/live-demos.tsx` and render it in the React page.
+The heavy Three.js demo remains in a separate optional chunk. Live demos
+currently share the page's origin; the sandboxed preview architecture in
+`docs/SECURITY.md` is planned, not implemented here.
+
+The navbar reads the public GitHub repository's star count with a short
+cache and an unavailable state. The shared footer provides grouped links,
+an install-command copy button, and a spring-based wordmark interaction.
+Its decorative motion respects reduced motion, and the moving accent
+pauses offscreen or while the tab is hidden.
 
 ## Commands
 
@@ -61,11 +75,11 @@ default is the same-origin `/r` path used in production.
 - The build manifest hash (`build-manifest.json`) is intentional: it binds
   the exact registry snapshot the site was built against. A manifest/content
   mismatch means the deployment — not the browser — must be re-built.
-- Live preview execution is confined to the sandboxed preview iframe
-  described above: reviewed in-repo `registry/` sources only (the same
+- Live preview execution uses reviewed in-repo `registry/` sources only (the same
   sources the builder validates and screenshots; no remote code is ever
-  loaded), bundled at site-build time. The main site origin, the CLI, and
-  the API never execute registry content. Preview demos import the
+  loaded), bundled at site-build time. Detail pages execute these bundled
+  demos on the main site origin; downloaded registry JSON is displayed as
+  data, not executed. Preview demos import the
   `@/lib|@/hooks|@/components/ui` aliases, which the Vite config derives
   from the registry tree itself, plus bare third-party deps rewritten to
   their ESM-resolved files. A demo whose dependency is missing fails the
@@ -82,9 +96,11 @@ default is the same-origin `/r` path used in production.
 - `lucide-react`: accessible SVG interface icons; already on the allowlist.
 - `clsx` + `tailwind-merge`: runtime of the shared `cn` lib helper that live
   demos import via `@/lib/cn`; pinned to the `registry-env` versions.
-- `three` + `@react-three/fiber`: runtime of the 3D component demos. They
-  ship only inside the lazily-loaded 3D demo chunk (the main bundle is
-  unaffected); pinned to the `registry-env` versions.
+- `three` + `@react-three/fiber`: runtime of the 3D component demos;
+  Three.js also renders the homepage hero ballpit. They remain in optional
+  chunks loaded by the hero or a demo; pinned to the `registry-env` versions.
+- `@types/three`: type definitions for the hero scene, pinned to Three.js's
+  matching release series.
 - `zod`: validates every downloaded registry payload through schemas owned by
   `packages/shared`; already used across the workspace.
 - `vite`: static application bundler and development server. It already exists

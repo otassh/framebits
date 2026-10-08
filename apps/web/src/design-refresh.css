@@ -32,7 +32,7 @@ body {
 }
 
 .app-shell::before {
-  position: fixed;
+  position: absolute;
   z-index: -1;
   inset: 0;
   content: "";
@@ -45,24 +45,27 @@ body {
 }
 
 .grain {
-  opacity: 0.025;
+  display: none;
 }
 
 .scroll-progress {
-  height: 3px;
-  background: linear-gradient(90deg, var(--violet), var(--accent), var(--cyan));
-  box-shadow: 0 0 20px rgba(139, 124, 255, 0.65);
+  display: none;
 }
 
 .site-header {
+  position: fixed;
+  z-index: 100;
   top: 1rem;
   right: 1rem;
   left: 1rem;
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 1.1rem;
-  background: rgba(8, 9, 13, 0.76);
-  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.24);
-  backdrop-filter: blur(24px) saturate(140%);
+  background: rgba(8, 9, 13, 0.96);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.28);
+  backdrop-filter: none;
+  transform: translateZ(0);
+  will-change: auto;
+  contain: layout paint style;
 }
 
 .header-inner {
@@ -142,6 +145,19 @@ body {
   border-bottom-color: rgba(255, 255, 255, 0.065);
 }
 
+.hero-copy {
+  animation: fast-fade-up 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.hero-title-line-first,
+.hero-title-line-second {
+  animation: fast-title-in 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.hero-title-line-second {
+  animation-delay: 70ms;
+}
+
 .hero-grid {
   grid-template-columns: minmax(0, 1.03fr) minmax(460px, 0.97fr);
   gap: clamp(3rem, 6vw, 6.5rem);
@@ -153,20 +169,20 @@ body {
 }
 
 .ambient-orb {
-  filter: blur(135px);
-  opacity: 0.19;
+  filter: none;
+  opacity: 0.14;
 }
 
 .ambient-orb-one {
   top: -18rem;
   left: -7rem;
-  background: var(--violet);
+  background: radial-gradient(circle, var(--violet), transparent 68%);
 }
 
 .ambient-orb-two {
   right: -10rem;
   bottom: -18rem;
-  background: var(--accent);
+  background: radial-gradient(circle, var(--accent), transparent 68%);
 }
 
 .ambient-beam {
@@ -275,37 +291,6 @@ body {
   box-shadow: 0 20px 48px rgba(255, 89, 42, 0.28);
 }
 
-.hero-proof {
-  gap: 0;
-  margin-top: 2.7rem;
-  padding-top: 0;
-  border: 1px solid var(--line);
-  border-radius: 1rem;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.018);
-}
-
-.hero-proof div {
-  flex: 1 1 0;
-  min-width: 0;
-  padding: 0.9rem 1rem;
-  border-right: 1px solid var(--line);
-}
-
-.hero-proof div:last-child {
-  border-right: 0;
-}
-
-.hero-proof strong {
-  color: #ebedf3;
-  font-size: 0.9rem;
-}
-
-.hero-proof span {
-  color: #777d8b;
-  font-size: 0.58rem;
-}
-
 .hero-stage {
   min-height: 560px;
   border-color: rgba(255, 255, 255, 0.13);
@@ -316,6 +301,8 @@ body {
     0 45px 120px rgba(0, 0, 0, 0.48),
     0 0 0 1px rgba(139, 124, 255, 0.05),
     inset 0 1px 0 rgba(255, 255, 255, 0.055);
+  transform-style: flat;
+  will-change: auto;
 }
 
 .stage-topbar {
@@ -349,8 +336,8 @@ body {
 .stage-glow {
   width: 19rem;
   height: 19rem;
-  background: rgba(139, 124, 255, 0.16);
-  filter: blur(90px);
+  background: radial-gradient(circle, rgba(139, 124, 255, 0.2), transparent 68%);
+  filter: none;
 }
 
 .stage-orbit {
@@ -380,7 +367,7 @@ body {
   box-shadow:
     0 30px 70px rgba(0, 0, 0, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(20px);
+  backdrop-filter: none;
 }
 
 .stage-card-back {
@@ -401,6 +388,7 @@ body {
   border-radius: 0.9rem;
   background: rgba(7, 8, 11, 0.82);
   box-shadow: 0 16px 35px rgba(0, 0, 0, 0.24);
+  backdrop-filter: none;
 }
 
 .registry-ticker {
@@ -422,6 +410,8 @@ body {
 .section {
   padding: clamp(6rem, 10vw, 9.5rem) 0;
   border-bottom-color: rgba(255, 255, 255, 0.065);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 900px;
 }
 
 .section-heading {
@@ -471,15 +461,19 @@ body {
   border-color: rgba(255, 255, 255, 0.09);
   border-radius: 1.45rem;
   background: linear-gradient(160deg, rgba(21, 23, 31, 0.92), rgba(12, 13, 18, 0.98));
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.2);
-  transform: translateZ(0);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.18);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 510px;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
 }
 
 .component-card:hover {
   border-color: rgba(139, 124, 255, 0.34);
-  box-shadow:
-    0 32px 90px rgba(0, 0, 0, 0.34),
-    0 0 0 1px rgba(139, 124, 255, 0.05);
+  box-shadow: 0 22px 58px rgba(0, 0, 0, 0.25);
+  transform: translateY(-4px);
 }
 
 .component-card::before {
@@ -494,11 +488,7 @@ body {
 }
 
 .component-card::after {
-  background: radial-gradient(
-    circle 240px at var(--card-x, 50%) var(--card-y, 50%),
-    rgba(139, 124, 255, 0.12),
-    transparent 72%
-  );
+  display: none;
 }
 
 .preview-art,
@@ -644,8 +634,8 @@ body {
   height: 12rem;
   border-radius: 50%;
   content: "";
-  background: rgba(139, 124, 255, 0.1);
-  filter: blur(50px);
+  background: radial-gradient(circle, rgba(139, 124, 255, 0.13), transparent 70%);
+  filter: none;
 }
 
 .value-number {
@@ -737,9 +727,9 @@ body {
   padding: 0.72rem;
   border-color: rgba(255, 255, 255, 0.1);
   border-radius: 1.1rem;
-  background: rgba(11, 12, 17, 0.82);
-  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(22px) saturate(135%);
+  background: rgba(11, 12, 17, 0.97);
+  box-shadow: 0 12px 38px rgba(0, 0, 0, 0.22);
+  backdrop-filter: none;
 }
 
 .catalog-toolbar:focus-within {
@@ -817,16 +807,56 @@ body {
   color: #8fe8dd;
 }
 
-.site-footer {
-  padding: 3.5rem 0 2.5rem;
-  border-top: 1px solid var(--line);
-  background:
-    radial-gradient(circle at 15% 120%, rgba(139, 124, 255, 0.09), transparent 28rem), #07080b;
+.route-view {
+  animation: fast-route-in 140ms ease-out both;
 }
 
-.footer-grid > div:first-child p,
-.footer-meta {
-  color: #686e7b;
+.copy-icon > svg {
+  animation: fast-icon-pop 160ms ease-out both;
+}
+
+@keyframes fast-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fast-title-in {
+  from {
+    transform: translateY(105%);
+  }
+
+  to {
+    transform: none;
+  }
+}
+
+@keyframes fast-route-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fast-icon-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @media (max-width: 1100px) {
@@ -930,19 +960,6 @@ body {
   .hero-signals span {
     padding-right: 0.58rem;
     font-size: 0.52rem;
-  }
-
-  .hero-proof {
-    grid-template-columns: 1fr;
-  }
-
-  .hero-proof div {
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
-  }
-
-  .hero-proof div:last-child {
-    border-bottom: 0;
   }
 
   .hero-stage {
