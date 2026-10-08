@@ -17,6 +17,7 @@
 | CLI config (`framebits.json`) | `CliConfigSchema` (+ `CliConfig`) | `cli-config.ts` | registry must be `https://` (or `http://localhost`/`127.0.0.1`); framework enum; tailwind 3\|4; aliases required; `installed` defaults `{}` |
 | Lock file (`registry.lock.json`) | `RegistryLockSchema` (+ `RegistryLock`) | `lock.ts` | `version` literal `1`; keys valid slugs; entries `{version, hash}` |
 | Per-component styles (`styles.json`) | `ComponentStylesSchema` (+ `ComponentStyles`) | `registry-item.ts` | optional `{ tailwind?, cssVars? }`, reusing the exact RegistryItem sub-schemas |
+| Playground definition (`playground.json`) | `PlaygroundSchema` (+ `Playground`, helpers) | `playground.ts` | components only; 1–32 controls, unique JS-identifier keys (no `__proto__`/`constructor`/`prototype`); kinds `text`/`number`/`range`/`duration`/`color`/`colors`/`boolean`/`select`/`radio`; emitted as sidecar `playground/<slug>.json`, excluded from the item hash (website UX only, never installed) |
 | Events | `EventsRequestSchema` | `api.ts` | ≤50 events; `type: install\|view`; slug regex; optional `source: cli\|copy` |
 | Like | `LikeResponseSchema`, `LikesCountSchema` | `api.ts` | `{liked, count≥0}` / `{count≥0}` |
 | Newsletter | `NewsletterRequestSchema` | `api.ts` | email trimmed + lowercased, ≤254 chars |
@@ -54,6 +55,11 @@ Zod 4 `z.toJSONSchema` (`json-schemas.ts`, script `build:schemas`).
   and compares with `timingSafeEqual` (`verifyItemHash`).
 - Included: `type`, `dependencies`, `registryDependencies`, `files` (path, content,
   type, variant), `tailwind`, `cssVars`.
+- Excluded (beyond `version`/`hash`/`title`/timestamps): the playground
+  definition. `playground.json` is validated website UX config, never
+  installed, so control-only edits must not move hashes or bump versions
+  (owner confirmation pending — see the `TODO(question)` in
+  `packages/shared/src/playground.ts`).
 - Excluded: `version`, `hash`, `title`, timestamps, and everything else — including
   `schemaVersion`. Consequence (deliberate): a registry-format change does NOT change
   item hashes; format migrations must be handled outside the hash (builder Task 4).

@@ -2,6 +2,7 @@ import { mkdtemp, mkdir, readFile, readdir, rename, rm, stat, writeFile } from "
 import { dirname, join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import {
+  PlaygroundSchema,
   RegistryIndexSchema,
   RegistryItemSchema,
   SearchIndexSchema,
@@ -167,6 +168,7 @@ function searchJson(items: RegistryItemModel[]): { text: string; count: number }
 
 const SCHEMA_FILES = [
   "meta",
+  "playground",
   "registry-item",
   "registry-index",
   "cli-config",
@@ -219,6 +221,15 @@ export function buildTree(
     const text = serializeCanonical(obj);
     files.set(`r/${item.slug}.json`, text);
     files.set(`r/${item.slug}@${plan.version}.json`, text);
+    // Sidecar playground (latest only, unversioned): validated website UX
+    // config, never part of the item hash or the CLI install payload.
+    if (item.playground !== undefined) {
+      const playground = PlaygroundSchema.safeParse(item.playground);
+      if (!playground.success) {
+        throw new Error(`model playground for ${item.slug} is invalid: ${playground.error.message}`);
+      }
+      files.set(`playground/${item.slug}.json`, serializeCanonical(playground.data));
+    }
   }
 
   const index = indexJson(items, bySlug, generatedAt);
@@ -467,9 +478,11 @@ export async function verifyWrittenTree(
       });
     }
   }
-  // Schema + hash self-check on the round-tripped item files.
+  // Schema + hash self-check on the round-tripped item and playground files.
   for (const [rel, content] of [...tree.files].sort()) {
-    if (!rel.startsWith("r/") || rel === "r/index.json" || rel.includes("@")) continue;
+    const isItem = rel.startsWith("r/") && rel !== "r/index.json" && !rel.includes("@");
+    const isPlayground = rel.startsWith("playground/") && rel.endsWith(".json");
+    if (!isItem && !isPlayground) continue;
     let raw: unknown;
     try {
       raw = JSON.parse(content) as unknown;
@@ -480,6 +493,17 @@ export async function verifyWrittenTree(
         file: rel,
         message: `emitted file ${rel} is not valid JSON`,
       });
+      continue;
+    }
+    if (isPlayground) {
+      if (!PlaygroundSchema.safeParse(raw).success) {
+        diagnostics.push({
+          severity: "error",
+          code: "EMIT_VERIFY_FAILED",
+          file: rel,
+          message: `emitted file ${rel} failed schema self-verification`,
+        });
+      }
       continue;
     }
     const parsed = RegistryItemSchema.safeParse(raw);

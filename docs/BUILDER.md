@@ -14,15 +14,17 @@
    and NUL bytes (`NUL_BYTE`) are reported; their content is excluded downstream.
    A missing root is a valid empty registry.
 2. **Parse** (`registry/validate.ts`): `meta.json` → `MetaSchema` (`META_INVALID`);
-   `styles.json` → `ComponentStylesSchema` (`STYLES_INVALID`). Drafts are fully
-   validated but excluded from the output model.
+   `styles.json` → `ComponentStylesSchema` (`STYLES_INVALID`);
+   `playground.json` (components only) → `PlaygroundSchema` (`PLAYGROUND_INVALID`).
+   Drafts are fully validated but excluded from the output model.
 3. **Layout** (`registry/validate.ts`, decision D4): folder == slug
    (`SLUG_FOLDER_MISMATCH`); parent == category for components
    (`CATEGORY_FOLDER_MISMATCH`); `meta.type` matches the location
    (`LAYOUT_INVALID`); required files present (`MISSING_SOURCE`, `MISSING_DEMO`
    for components); anything else is `UNEXPECTED_FILE`. Component dirs accept
-   `<slug>.tsx`, `demo.tsx`, `meta.json`, `<slug>.css`, `styles.json`. Lib/hook
-   dirs accept `<slug>.ts`, `meta.json` only.
+   `<slug>.tsx`, `demo.tsx`, `meta.json`, `<slug>.css`, `styles.json`,
+   `playground.json`. Lib/hook dirs accept `<slug>.ts`, `meta.json` only
+   (`playground.json` there is `UNEXPECTED_FILE`).
 4. **Cross-item** (`registry/validate.ts`): unique slugs (`DUPLICATE_SLUG`);
    no missing/draft registry dependencies (`REGISTRY_DEP_MISSING`,
    `REGISTRY_DEP_DRAFT`); no cycles, reported with the full path
@@ -53,7 +55,13 @@
    is the control.
 7. **Model** (`registry/model.ts`, decisions D8/D9): per non-draft, error-free item —
    `{ meta, files[] (POSIX target path, normalized content, type, variant "ts-tw"),
-   dependencies, registryDependencies, tailwind?, cssVars?, hash }`.
+   dependencies, registryDependencies, tailwind?, cssVars?, playground?, hash }`.
+   The validated playground rides the model for emit but is NOT hashed (website
+   UX only) and is emitted as a sidecar `playground/<slug>.json`, never inside
+   `/r/<slug>.json` (strict schemas + old-CLI compat). Every control `key` must
+   name a prop declared in the component source (`registry/playground.ts`,
+   `PLAYGROUND_UNKNOWN_PROP`; literal defaults must match,
+   `PLAYGROUND_DEFAULT_MISMATCH` warning).
    `files[].type` always equals the item type (a css file belongs to a component
    item; the RegistryItem enum expresses exactly this). Content is source text
    through shared `normalizeContent` only — imports are never rewritten here.
@@ -84,6 +92,9 @@ root. Shipped target paths: component tsx → `components/ui/<slug>.tsx`, css �
 |---|---|---|
 | META_INVALID | error | meta.json unreadable or failing MetaSchema |
 | STYLES_INVALID | error | styles.json unreadable or failing ComponentStylesSchema |
+| PLAYGROUND_INVALID | error | playground.json unreadable or failing PlaygroundSchema |
+| PLAYGROUND_UNKNOWN_PROP | error | control key is not a declared prop of the component |
+| PLAYGROUND_DEFAULT_MISMATCH | warning | control default differs from the component's own default |
 | DUPLICATE_SLUG | error | slug defined in more than one directory |
 | SLUG_FOLDER_MISMATCH | error | folder name != slug |
 | CATEGORY_FOLDER_MISMATCH | error | parent folder != category (components) |
@@ -189,8 +200,9 @@ pick it up via `update`.
 
 Output tree under `<out>/` (`r/index.json` published+deprecated sorted
 `addedAt` desc then slug, `r/<slug>.json`, `r/<slug>@<version>.json`,
-`search-index.json`, `build-manifest.json`, `schema/*.json`, and
-`previews/<slug>.webp`): canonical
+`search-index.json`, `build-manifest.json`, `schema/*.json` (including
+`schema/playground.json`), `previews/<slug>.webp`, and sidecar
+`playground/<slug>.json` for items with a validated playground): canonical
 serialization (sorted keys, compact, LF, trailing newline). Every emitted item is
 parsed and hash-verified before writing and re-read and re-verified after the
 final rename; any failure aborts leaving the previous output untouched. Output is

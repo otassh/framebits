@@ -161,6 +161,41 @@ describe("validateLayout", () => {
     expect(codes(unexpected)).toContain("UNEXPECTED_FILE");
   });
 
+  it("allows playground.json for components but not for lib", () => {
+    const dir = "components/buttons/ok";
+    const base = { "meta.json": metaJson("ok"), "ok.tsx": "x", "demo.tsx": "x" };
+    const { meta } = parseItemMeta(item(dir, base), []);
+
+    const allowed: Diagnostic[] = [];
+    validateLayout(item(dir, { ...base, "playground.json": "{}" }), meta, allowed);
+    expect(codes(allowed)).toEqual([]);
+
+    const libDir = "lib/cn";
+    const libMetaText = metaJson("cn", { type: "lib" });
+    const { meta: libMeta } = parseItemMeta(item(libDir, { "meta.json": libMetaText }), []);
+    const lib: Diagnostic[] = [];
+    validateLayout(
+      item(libDir, { "meta.json": libMetaText, "cn.ts": "x", "playground.json": "{}" }),
+      libMeta,
+      lib,
+    );
+    expect(codes(lib)).toContain("UNEXPECTED_FILE");
+
+    // Folder-name fallback without a meta allows it too.
+    const fallback: Diagnostic[] = [];
+    validateLayout(
+      item(dir, {
+        "meta.json": "{bad",
+        "ok.tsx": "x",
+        "demo.tsx": "x",
+        "playground.json": "{}",
+      }),
+      undefined,
+      fallback,
+    );
+    expect(codes(fallback)).toEqual([]);
+  });
+
   it("still checks layout when meta.json is invalid (folder name stands in)", () => {
     const dir = "components/buttons/ok";
     // Invalid meta: layout falls back to folder-derived expectations.

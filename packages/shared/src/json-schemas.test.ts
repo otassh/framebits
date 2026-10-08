@@ -13,6 +13,7 @@ describe("JSON_SCHEMA_SOURCES", () => {
         "likes-count",
         "meta",
         "newsletter-request",
+        "playground",
         "popular-query",
         "registry-index",
         "registry-item",

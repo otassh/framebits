@@ -11,6 +11,7 @@ import {
 import { CliConfigSchema } from "./cli-config.js";
 import { RegistryLockSchema } from "./lock.js";
 import { MetaSchema } from "./meta.js";
+import { PlaygroundSchema } from "./playground.js";
 import { RegistryIndexSchema } from "./registry-index.js";
 import { RegistryItemSchema } from "./registry-item.js";
 import { SearchIndexSchema } from "./search-index.js";
@@ -21,6 +22,7 @@ import { SearchIndexSchema } from "./search-index.js";
  */
 export const JSON_SCHEMA_SOURCES: Record<string, z.ZodType> = {
   meta: MetaSchema,
+  playground: PlaygroundSchema,
   "registry-item": RegistryItemSchema,
   "registry-index": RegistryIndexSchema,
   "cli-config": CliConfigSchema,

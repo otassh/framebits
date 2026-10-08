@@ -233,6 +233,7 @@ export function validateLayout(
     allowed.add("demo.tsx");
     allowed.add(`${meta.slug}.css`);
     allowed.add("styles.json");
+    allowed.add("playground.json");
     if (!names.has("demo.tsx")) {
       err(diagnostics, {
         severity: "error",
@@ -249,7 +250,7 @@ export function validateLayout(
         code: "UNEXPECTED_FILE",
         file: `${item.dirRel}/${name}`,
         message: `unexpected file "${name}" in item directory`,
-        hint: "Remove it or, for components, keep only <slug>.tsx, demo.tsx, meta.json, <slug>.css, styles.json.",
+        hint: "Remove it or, for components, keep only <slug>.tsx, demo.tsx, meta.json, <slug>.css, styles.json, playground.json.",
       });
     }
   }
@@ -287,7 +288,14 @@ function validateLayoutWithoutMeta(
         message: 'missing "demo.tsx" (meta.json is invalid, so the component layout is assumed from the folder)',
       });
     }
-    const allowed = new Set(["meta.json", source, "demo.tsx", `${folder}.css`, "styles.json"]);
+    const allowed = new Set([
+      "meta.json",
+      source,
+      "demo.tsx",
+      `${folder}.css`,
+      "styles.json",
+      "playground.json",
+    ]);
     for (const name of [...names].sort()) {
       if (!allowed.has(name)) {
         err(diagnostics, {
