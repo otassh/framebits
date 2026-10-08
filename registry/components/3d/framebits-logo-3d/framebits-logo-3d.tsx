@@ -49,6 +49,12 @@ export interface FrameBitsLogo3DProps {
   quality?: "auto" | "high" | "low";
   /** Glow strength, clamped to 0-2. */
   intensity?: number;
+  /** Idle sway/rotation drift. Off freezes autonomous motion (intro still plays). */
+  autoRotate?: boolean;
+  /** Idle-motion pace multiplier, clamped to 0.1-3 (intro timing is unaffected). */
+  speed?: number;
+  /** Brand accent driving the emissive glow and warm lights. */
+  accent?: string;
   /** Opt into subtle scroll depth relative to this component. */
   scroll?: boolean;
   onIntroComplete?: () => void;
@@ -66,6 +72,9 @@ interface SceneProps {
   reduced: boolean;
   intro: boolean;
   intensity: number;
+  autoRotate: boolean;
+  speed: number;
+  accent: string;
   input: RefObject<MotionInput>;
   glow: RefObject<HTMLDivElement | null>;
   onIntroComplete?: () => void;
@@ -228,7 +237,7 @@ const dots = [
   { position: [projectX(423), projectY(871), 0.09] as const, radius: 0.54 },
 ];
 
-function createMaterial(low: boolean, tail = false) {
+function createMaterial(low: boolean, accent: string, tail = false) {
   const uniforms = {
     uTime: { value: 0 },
     uForm: { value: 1 },
@@ -247,9 +256,9 @@ function createMaterial(low: boolean, tail = false) {
     transmission: low ? 0 : 0.09,
     thickness: 0.45,
     ior: 1.46,
-    attenuationColor: new Color("#ff6a26"),
+    attenuationColor: new Color(accent),
     attenuationDistance: 1.4,
-    emissive: "#ff4918",
+    emissive: accent,
     emissiveIntensity: 0.15,
     envMapIntensity: 0.5,
   });
@@ -404,6 +413,9 @@ function FrameBitsScene({
   reduced,
   intro,
   intensity,
+  autoRotate,
+  speed,
+  accent,
   input,
   glow,
   onIntroComplete,
@@ -411,7 +423,7 @@ function FrameBitsScene({
   const root = useRef<Group>(null);
   const dotRefs = useRef<Array<Mesh | null>>([]);
   const key = useRef<RectAreaLight>(null);
-  const accent = useRef<PointLight>(null);
+  const sweepLight = useRef<PointLight>(null);
   const elapsed = useRef(0);
   const done = useRef(false);
   const callback = useRef(onIntroComplete);
@@ -419,7 +431,7 @@ function FrameBitsScene({
   const resources = useMemo(() => {
     const ribbons = (["upper", "lower", "tail"] as const).map((kind) => {
       const geometry = createRibbon(kind, low);
-      const surface = createMaterial(low, kind === "tail");
+      const surface = createMaterial(low, accent, kind === "tail");
       surface.uniforms.uOrigin.value = [
         Number(geometry.userData["startX"]),
         Number(geometry.userData["startY"]),
@@ -433,12 +445,12 @@ function FrameBitsScene({
       new BufferAttribute(new Float32Array(sphere.getAttribute("position").count), 1),
     );
     const dotMaterials = dots.map(() => {
-      const dotMaterial = createMaterial(low);
+      const dotMaterial = createMaterial(low, accent);
       dotMaterial.uniforms.uIsRibbon.value = 0;
       return dotMaterial;
     });
     return { ribbons, sphere, dotMaterials };
-  }, [intro, low]);
+  }, [accent, intro, low]);
 
   useEffect(() => {
     callback.current = onIntroComplete;
@@ -479,21 +491,25 @@ function FrameBitsScene({
     const idle = Math.max(0, time - 3.45);
     const settled = phase(time, 1.55, 1.85);
     const motion = reduced ? 0 : 1;
+    // Autonomous idle motion only: pointer parallax (targetX/Y) and the
+    // intro choreography (signal/sweep/form) always use raw time.
+    const spin = autoRotate ? motion : 0;
+    const lively = idle * speed;
     const targetX = input.current.x * motion;
     const targetY = input.current.y * motion;
     const scroll = reduced ? 0 : input.current.scroll;
     root.current.scale.setScalar(fit);
-    root.current.position.y = motion * 0.025 * Math.sin((idle * Math.PI * 2) / 6.8) * settled;
+    root.current.position.y = spin * 0.025 * Math.sin((lively * Math.PI * 2) / 6.8) * settled;
     root.current.position.z = MathUtils.damp(root.current.position.z, -0.32 * scroll, 3, delta);
-    const rotationX = (1.3 + targetY * 3 + motion * 0.35 * Math.sin(idle * 0.35)) * degrees;
+    const rotationX = (1.3 + targetY * 3 + spin * 0.35 * Math.sin(lively * 0.35)) * degrees;
     const rotationY =
-      (2.5 + targetX * 4 + motion * 0.55 * Math.sin(idle * 0.27) - 8 * (1 - settled)) * degrees;
+      (2.5 + targetX * 4 + spin * 0.55 * Math.sin(lively * 0.27) - 8 * (1 - settled)) * degrees;
     if (reduced) {
       root.current.rotation.set(1.3 * degrees, 2.5 * degrees, 0);
     } else {
       root.current.rotation.x = MathUtils.damp(root.current.rotation.x, rotationX, 3.4, delta);
       root.current.rotation.y = MathUtils.damp(root.current.rotation.y, rotationY, 3.4, delta);
-      root.current.rotation.z = motion * 0.22 * degrees * Math.sin(idle * 0.31);
+      root.current.rotation.z = spin * 0.22 * degrees * Math.sin(lively * 0.31);
     }
 
     const cycle = (idle - 1.7) % 6.8;
@@ -505,11 +521,11 @@ function FrameBitsScene({
           ? 1
           : phase(time, index === 0 ? 0.82 : index === 1 ? 1.02 : 1.28, index === 2 ? 1.48 : 1.55);
       ribbon.uniforms.uForm.value = form;
-      ribbon.uniforms.uTime.value = reduced ? 0 : idle;
+      ribbon.uniforms.uTime.value = reduced ? 0 : lively;
       ribbon.uniforms.uSignal.value = signal;
       ribbon.uniforms.uSweep.value = sweep;
       ribbon.uniforms.uEnergy.value = intensity * (0.9 + 0.22 * (1 - settled)) * form;
-      ribbon.material.thickness = 0.45 + motion * 0.018 * Math.sin(idle * 0.62 + index * 0.4);
+      ribbon.material.thickness = 0.45 + spin * 0.018 * Math.sin(lively * 0.62 + index * 0.4);
     });
     dots.forEach((dot, index) => {
       const mesh = dotRefs.current[index];
@@ -521,14 +537,14 @@ function FrameBitsScene({
           ? Math.exp(-Math.pow((signal + 0.07 - index * 0.03) * 12, 2))
           : 0;
       const breathe =
-        motion * (0.006 * Math.sin(idle * 0.82 - index * 0.65) + signalResponse * 0.01);
+        spin * (0.006 * Math.sin(lively * 0.82 - index * 0.65) + signalResponse * 0.01);
       const scale = Math.max(0.0001, born) * dot.radius * (overshoot + breathe);
       mesh.scale.set(scale, scale, scale * 0.55);
       const material = resources.dotMaterials[index];
       if (material === undefined) return;
       material.uniforms.uEnergy.value =
-        intensity * (1 + signalResponse * 0.38 + motion * 0.05 * Math.sin(idle * 1.1 - index));
-      material.uniforms.uTime.value = reduced ? 0 : idle + index * 0.3;
+        intensity * (1 + signalResponse * 0.38 + spin * 0.05 * Math.sin(lively * 1.1 - index));
+      material.uniforms.uTime.value = reduced ? 0 : lively + index * 0.3;
       material.uniforms.uSweep.value = sweep;
       material.uniforms.uSignal.value = -4;
       mesh.visible = born > 0.001;
@@ -549,14 +565,14 @@ function FrameBitsScene({
       key.current.lookAt(0, 0, 0);
       key.current.intensity = 7 * (reduced ? 1 : phase(time, 0.2, 1.2));
     }
-    if (accent.current !== null) {
+    if (sweepLight.current !== null) {
       const sweepProgress = phase(time, 2.05, 1.3);
-      accent.current.position.set(-4 + sweepProgress * 8, 4 - sweepProgress * 6, 5);
-      accent.current.intensity = reduced ? 0 : 28 * Math.sin(sweepProgress * Math.PI);
+      sweepLight.current.position.set(-4 + sweepProgress * 8, 4 - sweepProgress * 6, 5);
+      sweepLight.current.intensity = reduced ? 0 : 28 * Math.sin(sweepProgress * Math.PI);
     }
     if (glow.current !== null) {
       glow.current.style.opacity = String(
-        (0.48 + motion * 0.025 * Math.sin(idle * 0.5)) * (reduced ? 1 : phase(time, 0.12, 1.4)),
+        (0.48 + spin * 0.025 * Math.sin(lively * 0.5)) * (reduced ? 1 : phase(time, 0.12, 1.4)),
       );
       glow.current.style.transform = `translate(${String(targetX * 3)}px, ${String(-targetY * 2)}px) scale(${String(1 - scroll * 0.04)})`;
     }
@@ -577,9 +593,9 @@ function FrameBitsScene({
         width={6}
         height={3}
       />
-      <pointLight position={[-5, 1, -2]} color="#ff491a" intensity={55} decay={2} />
-      <pointLight position={[-1, -3, 5]} color="#ff6a36" intensity={13} decay={2} />
-      <pointLight ref={accent} position={[-4, 4, 5]} color="#ffd166" intensity={0} decay={2} />
+      <pointLight position={[-5, 1, -2]} color={accent} intensity={55} decay={2} />
+      <pointLight position={[-1, -3, 5]} color={accent} intensity={13} decay={2} />
+      <pointLight ref={sweepLight} position={[-4, 4, 5]} color="#ffd166" intensity={0} decay={2} />
       <group ref={root}>
         {resources.ribbons.map((ribbon) => (
           <mesh
@@ -674,6 +690,9 @@ export function FrameBitsLogo3D({
   interactive = true,
   quality = "auto",
   intensity = 1,
+  autoRotate = true,
+  speed = 1,
+  accent = "#ff4918",
   scroll = false,
   onIntroComplete,
 }: FrameBitsLogo3DProps) {
@@ -742,6 +761,7 @@ export function FrameBitsLogo3D({
 
   const low = quality === "low" || (quality === "auto" && compact);
   const strength = Number.isFinite(intensity) ? Math.min(2, Math.max(0, intensity)) : 1;
+  const pace = Number.isFinite(speed) ? Math.min(3, Math.max(0.1, speed)) : 1;
   const active = inView && tabVisible;
   return (
     <div
@@ -817,6 +837,9 @@ export function FrameBitsLogo3D({
               reduced={reduced}
               intro={intro}
               intensity={strength}
+              autoRotate={autoRotate}
+              speed={pace}
+              accent={accent}
               input={input}
               glow={glow}
               onIntroComplete={onIntroComplete}

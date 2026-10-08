@@ -1,0 +1,84 @@
+{
+  "controls": [
+    {
+      "kind": "text",
+      "key": "label",
+      "label": "Label",
+      "description": "The button caption.",
+      "default": "Shimmer",
+      "maxLength": 60
+    },
+    {
+      "kind": "duration",
+      "key": "duration",
+      "label": "Duration",
+      "description": "Seconds per shimmer sweep.",
+      "default": 2,
+      "min": 0.5,
+      "max": 10,
+      "step": 0.1,
+      "unit": "s"
+    },
+    {
+      "kind": "range",
+      "key": "angle",
+      "label": "Angle",
+      "description": "Shimmer sweep angle in degrees.",
+      "default": 110,
+      "min": 0,
+      "max": 360,
+      "step": 1,
+      "unit": "deg"
+    },
+    {
+      "kind": "range",
+      "key": "shimmerWidth",
+      "label": "Shimmer width",
+      "description": "Width of the highlight band in percent.",
+      "default": 20,
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "%"
+    },
+    {
+      "kind": "color",
+      "key": "background",
+      "label": "Background",
+      "description": "Base surface color.",
+      "default": "#020617",
+      "group": "Colors"
+    },
+    {
+      "kind": "color",
+      "key": "highlight",
+      "label": "Highlight",
+      "description": "Moving highlight color.",
+      "default": "#475569",
+      "group": "Colors"
+    },
+    {
+      "kind": "color",
+      "key": "textColor",
+      "label": "Text color",
+      "description": "Label color.",
+      "default": "#f8fafc",
+      "group": "Colors"
+    },
+    {
+      "kind": "select",
+      "key": "radius",
+      "label": "Radius",
+      "description": "Corner radius preset.",
+      "default": "full",
+      "options": ["none", "sm", "md", "lg", "full"]
+    },
+    {
+      "kind": "boolean",
+      "key": "disabled",
+      "label": "Disabled",
+      "description": "Render the disabled state.",
+      "default": false
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "controls": [
+    {
+      "kind": "text",
+      "key": "text",
+      "label": "Text",
+      "description": "The text the gradient sweeps across.",
+      "default": "Hello, aurora",
+      "maxLength": 120
+    },
+    {
+      "kind": "duration",
+      "key": "duration",
+      "label": "Duration",
+      "description": "Seconds per gradient sweep.",
+      "default": 6,
+      "min": 0.5,
+      "max": 30,
+      "step": 0.5,
+      "unit": "s"
+    },
+    {
+      "kind": "colors",
+      "key": "colors",
+      "label": "Gradient stops",
+      "description": "Color stops of the aurora gradient.",
+      "default": ["#d946ef", "#38bdf8", "#34d399"],
+      "minItems": 2,
+      "maxItems": 5
+    },
+    {
+      "kind": "range",
+      "key": "angle",
+      "label": "Angle",
+      "description": "Gradient direction in degrees (90 flows left to right).",
+      "default": 90,
+      "min": 0,
+      "max": 360,
+      "step": 1,
+      "unit": "deg"
+    },
+    {
+      "kind": "select",
+      "key": "size",
+      "label": "Size",
+      "description": "Preset text size (inherit keeps the surrounding size).",
+      "default": "inherit",
+      "options": ["inherit", "sm", "md", "lg", "xl", "2xl"],
+      "group": "Typography"
+    },
+    {
+      "kind": "boolean",
+      "key": "loop",
+      "label": "Loop",
+      "description": "Off renders a single sweep instead of an infinite loop.",
+      "default": true,
+      "group": "Motion"
+    },
+    {
+      "kind": "boolean",
+      "key": "paused",
+      "label": "Paused",
+      "description": "Freeze the gradient at its start position.",
+      "default": false,
+      "group": "Motion"
+    }
+  ]
+}
