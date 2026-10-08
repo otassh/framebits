@@ -74,9 +74,11 @@ Tear down: `docker compose -f deploy/docker-compose.local.yml down`
    ```
 8. First deploy: `bash deploy/deploy.sh origin/main`.
 9. Backups: `crontab -e` -> `17 3 * * * /bin/bash ~/framebits/deploy/backup.sh >> /var/log/framebits-backup.log 2>&1`.
-10. Optional CI deploy: add the section-4 secrets, pushes to `main` deploy
-    through `.github/workflows/deploy.yml` (environment `production`, approve
-    the run if the environment has required reviewers).
+10. Optional CI deploy (currently disabled): `.github/workflows/deploy.yml`
+    is manual-only (`workflow_dispatch`), so pushes to `main` do not deploy.
+    To use it, add the section-4 secrets and run it by hand from the Actions
+    tab (environment `production`, approve the run if the environment has
+    required reviewers).
 
 ## 3. Environment / secrets
 
