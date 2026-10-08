@@ -1,5 +1,8 @@
 # Changelog
 
+> Rendered version: https://otassh.github.io/framebits/ (built from this file
+> on every push to `main` by `.github/workflows/changelog.yml`).
+
 All notable changes to the `@framebits/cli` package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
