@@ -67,7 +67,7 @@ export const PerformanceSchema = z.enum(["light", "medium", "heavy"]);
 export const PublishStatusSchema = z.enum(["draft", "published", "deprecated"]);
 
 /**
- * `meta.json`, written by humans (MASTER_PROMPT Section 4.1).
+ * `meta.json`, written by humans.
  * `.strict()`: unknown keys are rejected.
  */
 export const MetaSchema = z
@@ -87,7 +87,7 @@ export const MetaSchema = z
     performance: PerformanceSchema,
     status: PublishStatusSchema,
     addedAt: z.iso.date(),
-    /** Optional version-bump hint for this release (MASTER_PROMPT Section 5.8). */
+    /** Optional version-bump hint for this release. */
     bump: z.enum(["minor", "major"]).optional(),
   })
   .strict()

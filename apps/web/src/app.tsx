@@ -173,6 +173,7 @@ function Brand({ onNavigate }: { onNavigate?: () => void }): React.JSX.Element {
       <span className="brand-word">
         Frame<span>bits</span>
       </span>
+      <span className="brand-edition">motion registry</span>
     </AppLink>
   );
 }
@@ -210,7 +211,7 @@ function Header(): React.JSX.Element {
             Components
           </AppLink>
           <a href="https://github.com/otassh/framebits" target="_blank" rel="noreferrer">
-            GitHub
+            <span className="nav-status-dot" aria-hidden="true" /> GitHub
           </a>
           <CopyCommandButton command="npx @framebits/cli init" compact />
         </nav>
@@ -356,9 +357,9 @@ function Hero({ state }: HeroProps): React.JSX.Element {
         >
           <div className="eyebrow">
             <span className="live-dot" />
-            Curated React motion, shipped as source
+            Open-source motion registry · built for React
           </div>
-          <h1 aria-label="Motion, without the mess.">
+          <h1 aria-label="Motion that feels engineered.">
             <span className="hero-title-mask" aria-hidden="true">
               <motion.span
                 className="hero-title-line"
@@ -366,7 +367,7 @@ function Hero({ state }: HeroProps): React.JSX.Element {
                 animate={{ y: 0 }}
                 transition={{ duration: 0.72, delay: 0.08, ease: [0.2, 0.8, 0.2, 1] }}
               >
-                Motion,
+                Motion that feels
               </motion.span>
             </span>
             <span className="hero-title-mask" aria-hidden="true">
@@ -376,14 +377,19 @@ function Hero({ state }: HeroProps): React.JSX.Element {
                 animate={{ y: 0 }}
                 transition={{ duration: 0.72, delay: 0.18, ease: [0.2, 0.8, 0.2, 1] }}
               >
-                without the mess.
+                engineered.
               </motion.span>
             </span>
           </h1>
           <p className="hero-lede">
-            Production-ready animated components you install, inspect, and own. No runtime lock-in.
-            No mystery bundle. Just clean TypeScript in your codebase.
+            A curated system of production-ready animated components. Install the source, tune every
+            detail, and ship interactions that feel unmistakably yours.
           </p>
+          <div className="hero-signals" aria-label="Framebits highlights">
+            <span>TypeScript native</span>
+            <span>Accessible motion</span>
+            <span>Zero runtime lock-in</span>
+          </div>
           <div className="hero-actions">
             <Magnetic>
               <AppLink href="/components" className="button button-primary">
@@ -396,8 +402,8 @@ function Hero({ state }: HeroProps): React.JSX.Element {
             <ProofStat value={stats?.components} label="published components" />
             <ProofStat value={stats?.categories} label="active categories" />
             <div>
-              <strong>100%</strong>
-              <span>source ownership</span>
+              <strong>&lt; 1 min</strong>
+              <span>from browse to install</span>
             </div>
           </div>
         </motion.div>
@@ -421,11 +427,13 @@ function Hero({ state }: HeroProps): React.JSX.Element {
               <i />
               <i />
             </span>
-            <span>framebits / registry</span>
+            <span>framebits / motion-lab</span>
             <span className="stage-status">live</span>
           </div>
           <div className="stage-canvas">
             <div className="stage-glow" />
+            <span className="stage-orbit stage-orbit-one" aria-hidden="true" />
+            <span className="stage-orbit stage-orbit-two" aria-hidden="true" />
             <motion.div
               className="stage-card stage-card-back"
               animate={reduceMotion ? false : { y: [0, -7, 0], rotate: [-5, -3, -5] }}
@@ -533,6 +541,10 @@ function SectionHeading({
 }
 
 function PreviewArtwork({ item }: { item: RegistryIndexItem }): React.JSX.Element {
+  return <PreviewStaticArt item={item} />;
+}
+
+function DetailPreview({ item }: { item: RegistryIndexItem }): React.JSX.Element {
   const fallback = <PreviewStaticArt item={item} />;
   if (item.type !== "component") return fallback;
   return <LiveDemo slug={item.slug} fallback={fallback} />;
@@ -604,7 +616,9 @@ function ComponentCard({
         <div className="card-body">
           <div className="card-meta">
             <span>{formatCategory(item.category)}</span>
-            <span>v{item.version}</span>
+            <span className={`performance-badge performance-${item.performance}`}>
+              {item.performance} load
+            </span>
           </div>
           <h3>{item.title}</h3>
           <p>{item.description}</p>
@@ -614,7 +628,7 @@ function ComponentCard({
             ))}
           </div>
           <span className="card-open">
-            View source <ArrowRight size={16} />
+            Open component <ArrowRight size={16} />
           </span>
         </div>
       </AppLink>
@@ -670,8 +684,8 @@ function HomeCatalog({
         <Reveal className="section-topline">
           <SectionHeading
             kicker="Live registry"
-            title="Small collection. Sharp standards."
-            description="Every item below comes from the same validated registry used by the CLI. Nothing here is staged or invented."
+            title="Designed to move. Built to last."
+            description="Explore a focused collection where visual craft, accessible motion, and production engineering meet."
           />
           <AppLink href="/components" className="text-link">
             Browse all <ArrowRight size={17} />
@@ -716,8 +730,8 @@ function ValueSection(): React.JSX.Element {
         <Reveal>
           <SectionHeading
             kicker="Built for real projects"
-            title="Animation should not own your architecture."
-            description="Framebits is deliberately boring where it matters: deterministic files, explicit dependencies, and source you can audit."
+            title="Beautiful motion. Serious engineering."
+            description="The expressive layer stays flexible while the delivery layer remains deterministic, auditable, and yours."
           />
         </Reveal>
         <div className="value-grid">
@@ -749,8 +763,8 @@ function WorkflowSection({ state }: { state: IndexState }): React.JSX.Element {
         <Reveal className="workflow-copy">
           <SectionHeading
             kicker="Three deliberate steps"
-            title="From registry to your codebase."
-            description="No package runtime is left behind. The CLI resolves the dependency graph, verifies each hash, then writes only the files you selected."
+            title="From inspiration to production."
+            description="Choose a component, verify the source, and make it yours. Framebits keeps the workflow fast without hiding the implementation."
           />
           <CopyCommandButton command="npx @framebits/cli add aurora-text" />
         </Reveal>
@@ -837,7 +851,7 @@ function CatalogPage({
         <div className="page-heading">
           <div>
             <span className="eyebrow eyebrow-static">Component registry</span>
-            <h1>Find your next interaction.</h1>
+            <h1>Find the motion your interface was missing.</h1>
           </div>
           <p>
             Search the live registry by name, category, or capability. Every result is installable
@@ -1061,7 +1075,7 @@ function DetailPage({
                 <p>{indexItem?.description ?? "Validated source from the Framebits registry."}</p>
                 <CopyCommandButton command={`npx @framebits/cli add ${slug}`} />
               </div>
-              {indexItem === undefined ? null : <PreviewArtwork item={indexItem} />}
+              {indexItem === undefined ? null : <DetailPreview item={indexItem} />}
             </section>
 
             <section className="detail-layout">
@@ -1318,7 +1332,7 @@ export function App(): React.JSX.Element {
   useEffect(() => {
     const title =
       route.kind === "home"
-        ? "Framebits — Motion, without the mess"
+        ? "Framebits — Motion that feels engineered"
         : route.kind === "catalog"
           ? "Components — Framebits"
           : route.kind === "component"

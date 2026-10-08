@@ -5,7 +5,7 @@ import { isDangerousKey } from "./hashable-json.js";
  * Per-component playground definition (`playground.json`, components only).
  *
  * A playground declares the live-tweakable props of one component for the
- * detail-page sandbox (MASTER_PROMPT §16.13). Each control maps to a REAL
+ * detail-page sandbox. Each control maps to a real
  * component prop (`key`); the builder verifies that mapping against the
  * component source, and the web playground generates its controls, URL state,
  * and usage snippet from this definition.
@@ -37,7 +37,10 @@ export const PlaygroundKeySchema = z
   .min(1, "control key must not be empty")
   .max(64, "control key must be at most 64 characters")
   .regex(/^[A-Za-z_$][A-Za-z0-9_$]*$/, "control key must be a valid JS property name")
-  .refine((key) => !isDangerousKey(key), 'key "__proto__", "constructor", and "prototype" are not allowed');
+  .refine(
+    (key) => !isDangerousKey(key),
+    'key "__proto__", "constructor", and "prototype" are not allowed',
+  );
 
 const LabelSchema = z
   .string()
@@ -215,7 +218,10 @@ export const PlaygroundSchema = z
     controls: z
       .array(PlaygroundControlSchema)
       .min(1, "playground needs at least 1 control")
-      .max(MAX_PLAYGROUND_CONTROLS, `playground allows at most ${String(MAX_PLAYGROUND_CONTROLS)} controls`)
+      .max(
+        MAX_PLAYGROUND_CONTROLS,
+        `playground allows at most ${String(MAX_PLAYGROUND_CONTROLS)} controls`,
+      )
       .refine(
         (controls) => new Set(controls.map((control) => control.key)).size === controls.length,
         "control keys must be unique",
@@ -262,7 +268,9 @@ function sanitizeValue(control: PlaygroundControl, raw: unknown): PlaygroundValu
       const low = control.minItems ?? control.default.length;
       const high = control.maxItems ?? control.default.length;
       if (raw.length < low || raw.length > high) return fallback;
-      if (!raw.every((entry) => typeof entry === "string" && HexColorSchema.safeParse(entry).success)) {
+      if (
+        !raw.every((entry) => typeof entry === "string" && HexColorSchema.safeParse(entry).success)
+      ) {
         return fallback;
       }
       return [...(raw as string[])];
@@ -312,15 +320,12 @@ function valuesEqual(a: PlaygroundValue, b: PlaygroundValue): boolean {
  * Entries that differ from their control default, in definition order.
  * Unknown keys in `values` are ignored; missing keys count as default.
  */
-export function playgroundDiff(
-  definition: Playground,
-  values: PlaygroundValues,
-): PlaygroundValues {
+export function playgroundDiff(definition: Playground, values: PlaygroundValues): PlaygroundValues {
   const out: PlaygroundValues = {};
   for (const control of definition.controls) {
     const current: PlaygroundValue = Object.prototype.hasOwnProperty.call(values, control.key)
       ? (values[control.key] as PlaygroundValue)
-      : playgroundDefaults(definition)[control.key] as PlaygroundValue;
+      : (playgroundDefaults(definition)[control.key] as PlaygroundValue);
     const baseline: PlaygroundValue = Array.isArray(control.default)
       ? [...control.default]
       : control.default;
@@ -332,7 +337,11 @@ export function playgroundDiff(
 const COMPONENT_NAME_PATTERN = /^[A-Z][A-Za-z0-9]*$/;
 
 function escapeJsxAttributeText(text: string): string {
-  return text.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 /**

@@ -84,16 +84,16 @@ Tear down: `docker compose -f deploy/docker-compose.local.yml down`
 
 `.env` on the VPS (mode 600, never committed; `.env.example` is the template):
 
-| Key | Required | Notes |
-| --- | -------- | ----- |
-| `POSTGRES_PASSWORD` | yes | Strong random value; compose fails fast if unset (prod). Generate with `openssl rand -base64 32`. |
-| `POSTGRES_USER` / `POSTGRES_DB` | no | Default `framebits`. |
-| `DOMAIN` | no | Default `framebits.dev` (placeholder, unconfirmed). |
-| `ADMIN_TOKEN` | Task 8/10 | Min 32 chars; unused until the API lands. Generate with `openssl rand -base64 48`. |
-| `DATABASE_URL` | Task 7/8 | Compose builds it from the `POSTGRES_*` vars for `api`. |
+| Key                                                                                             | Required           | Notes                                                                                                                                                                                                       |
+| ----------------------------------------------------------------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POSTGRES_PASSWORD`                                                                             | yes                | Strong random value; compose fails fast if unset (prod). Generate with `openssl rand -base64 32`.                                                                                                           |
+| `POSTGRES_USER` / `POSTGRES_DB`                                                                 | no                 | Default `framebits`.                                                                                                                                                                                        |
+| `DOMAIN`                                                                                        | no                 | Default `framebits.dev` (placeholder, unconfirmed).                                                                                                                                                         |
+| `ADMIN_TOKEN`                                                                                   | Task 8/10          | Min 32 chars; unused until the API lands. Generate with `openssl rand -base64 48`.                                                                                                                          |
+| `DATABASE_URL`                                                                                  | Task 7/8           | Compose builds it from the `POSTGRES_*` vars for `api`.                                                                                                                                                     |
 | `LIKE_PEPPER`, `WEB_ORIGIN`, `TRUSTED_PROXY_COUNT`, `PORT`, `REGISTRY_URL`, `VITE_REGISTRY_URL` | see `.env.example` | API/web wiring for later tasks. `TRUSTED_PROXY_COUNT=1` direct on the VPS (Caddy -> api); `2` behind Cloudflare/CDN in front of Caddy (client -> CDN -> Caddy -> api). Never trust more hops than deployed. |
-| `OFFSITE_DEST` / `OFFSITE_TOOL` / `BACKUP_SSH_KEY` | no | `backup.sh` offsite copy (`scp` default, or `rclone`). `scp` always uses `-o BatchMode=yes -o StrictHostKeyChecking=yes`; set `BACKUP_SSH_KEY` for `-i <key>`. |
-| `REQUIRE_API=1` | no | `/api/health` deploy-blocking (default 1; pass `--allow-degraded` or `REQUIRE_API=0` to bypass). |
+| `OFFSITE_DEST` / `OFFSITE_TOOL` / `BACKUP_SSH_KEY`                                              | no                 | `backup.sh` offsite copy (`scp` default, or `rclone`). `scp` always uses `-o BatchMode=yes -o StrictHostKeyChecking=yes`; set `BACKUP_SSH_KEY` for `-i <key>`.                                              |
+| `REQUIRE_API=1`                                                                                 | no                 | `/api/health` deploy-blocking (default 1; pass `--allow-degraded` or `REQUIRE_API=0` to bypass).                                                                                                            |
 
 Generate secrets with `openssl rand` (never reuse passwords across hosts);
 `chmod 600 .env` and `chmod 600 /var/backups/framebits/*.sql.gz` (backup.sh
@@ -108,6 +108,7 @@ dumps on failure).
 `StrictHostKeyChecking=yes`. Until set, the workflow warns and falls back to
 `accept-new` TOFU).
 <!-- TODO(question): owner to add VPS_KNOWN_HOSTS and confirm the accept-new fallback can be removed. -->
+
 The workflow SSHes in and runs `bash deploy/deploy.sh $GITHUB_SHA` with all
 secrets quoted; the private key is removed via `trap` even on failure.
 Set required reviewers on the `production` environment so main never deploys
@@ -148,12 +149,12 @@ without approval.
 
 ## 7. Pinned images
 
-| Service | Image | Why this one |
-| ------- | ----- | ------------ |
-| caddy | `caddy:2.10.2-alpine` | Automatic HTTPS + `file_server` ETags. |
-| api builder/runtime | `node:22.17.0-bookworm-slim` | Matches repo Node 22 LTS + pnpm 10.29.3 via corepack. |
-| postgres | `postgres:16.9-bookworm` | MASTER_PROMPT fixed choice (PG 16). |
-| web runtime | `nginxinc/nginx-unprivileged:1.29-alpine` | Non-root (uid 101) static server with SPA fallback. |
+| Service             | Image                                     | Why this one                                          |
+| ------------------- | ----------------------------------------- | ----------------------------------------------------- |
+| caddy               | `caddy:2.10.2-alpine`                     | Automatic HTTPS + `file_server` ETags.                |
+| api builder/runtime | `node:22.17.0-bookworm-slim`              | Matches repo Node 22 LTS + pnpm 10.29.3 via corepack. |
+| postgres            | `postgres:16.9-bookworm`                  | Project database (PG 16).                             |
+| web runtime         | `nginxinc/nginx-unprivileged:1.29-alpine` | Non-root (uid 101) static server with SPA fallback.   |
 
 Bump pins deliberately (rebuild + re-run section 1) and keep this table truthful.
 
@@ -167,4 +168,4 @@ Bump pins deliberately (rebuild + re-run section 1) and keep this table truthful
 - `pnpm db:migrate` / `pnpm db:sync` (Task 7): `deploy.sh` runs them when the
   `@framebits/db` scripts exist and warns otherwise. The steps run before the
   symlink flip, so a future migration failure can never publish a half-deploy.
-- `DOMAIN=framebits.dev` is still a placeholder (MASTER_PROMPT D16.1).
+- `DOMAIN=framebits.dev` is still a placeholder.

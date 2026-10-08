@@ -128,7 +128,7 @@ as fallbacks if key management is deemed too heavy.
 
 ## Live playground sandbox (component detail page)
 
-> Authorized 2026-10-08 (`docs/MASTER_PROMPT.md` §16.13). This is the only
+> Authorized 2026-10-08. This is the only
 > place where registry source is executed outside the build-time preview
 > harness. Human review of every component/dependency PR remains the primary
 > control; the sandbox is defense in depth, not a substitute.
@@ -152,7 +152,7 @@ as fallbacks if key management is deemed too heavy.
   `error`, `resize`. Malformed or unexpected messages are dropped.
 - **Network isolation.** Preview documents are served from `/preview/*` with
   their own CSP (`script-src 'self'`, no external hosts, `connect-src
-  'none'`, `frame-ancestors 'self'`). The main site CSP adds only
+'none'`, `frame-ancestors 'self'`). The main site CSP adds only
   `frame-src 'self'`. Verified by header checks (nginx + Caddy +
   `scripts/verify-registry-headers.sh`).
 - **Heavy components.** The iframe is created only after an explicit "Run
@@ -207,7 +207,7 @@ breakout:
   in front of Caddy (client -> CDN -> Caddy -> api). Never trust more hops
   than the deployment actually has. Caddy sends an explicit
   `X-Forwarded-For` and trusts only private ranges (`trusted_proxies static
-  private_ranges`).
+private_ranges`).
 - Access logs contain client IPs + Referer/User-Agent: retain via Docker log
   rotation only (`deploy/README.md`), never ship or store elsewhere. The DB
   stores no raw IPs, emails, or user agents.
@@ -218,7 +218,7 @@ breakout:
   forward-only and migrations are never rolled back.
 - `backup.sh` creates dumps with `umask 077` + `chmod 600`, removes partial
   dumps on failure (`trap`), and copies offsite only with `scp -o
-  BatchMode=yes -o StrictHostKeyChecking=yes -i <key>` (or `rclone`).
+BatchMode=yes -o StrictHostKeyChecking=yes -i <key>` (or `rclone`).
 - CI deploy (`deploy.yml`) pins host keys via `VPS_KNOWN_HOSTS`
   (`StrictHostKeyChecking=yes`); without the secret it falls back to
   `accept-new` with a warning.

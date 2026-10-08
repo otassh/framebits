@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * Dependency allowlist (MASTER_PROMPT Section 4.1).
+ * Dependency allowlist.
  * A component's `dependencies` may only reference these packages.
  * Unknown package -> build error.
  */

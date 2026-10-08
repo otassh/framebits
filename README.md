@@ -39,18 +39,18 @@ Using the CLI requires Node >= 20. Developing this repo requires Node >= 22. See
 
 ## 📦 What's inside
 
-| Path                                     | Description                                                                                                                                           | Status         |
-| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| `apps/api`                               | Hono server (events, stats) — planned, Task 8                                                                                                         | Planned (stub) |
-| `apps/cli`                               | The `@framebits/cli` npm package (`framebits` binary) — `init`, `add`, registry client (`list`/`search`/`diff`/`update` planned, Task 9)              | Ready          |
-| `apps/web`                               | React + Vite frontend: static-preview catalog, component source views, sandboxed live playground on detail pages (see `docs/MASTER_PROMPT.md` §16.13) | Ready          |
-| `packages/shared`                        | Zod schemas + inferred types (single source of truth)                                                                                                 | Ready          |
-| `packages/db`                            | Drizzle schema, migrations, DB client, seed/sync — planned, Task 7                                                                                    | Planned (stub) |
-| `packages/builder`                       | Registry build pipeline (validate → hash → emit)                                                                                                      | Ready          |
-| `packages/config`                        | Shared tsconfig + eslint config                                                                                                                       | Ready          |
-| `registry/components/<category>/<slug>/` | Component sources (3 samples)                                                                                                                         | Ready          |
-| `registry/lib/<slug>/`                   | Shared helpers (`cn`)                                                                                                                                 | Ready          |
-| `deploy/`                                | Docker Compose, Caddyfile, deploy scripts — planned, Task 6                                                                                           | Placeholder    |
+| Path                                     | Description                                                                                                                              | Status         |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| `apps/api`                               | Hono server (events, stats) — planned, Task 8                                                                                            | Planned (stub) |
+| `apps/cli`                               | The `@framebits/cli` npm package (`framebits` binary) — `init`, `add`, registry client (`list`/`search`/`diff`/`update` planned, Task 9) | Ready          |
+| `apps/web`                               | React + Vite frontend: static-preview catalog, component source views, sandboxed live playground on detail pages                         | Ready          |
+| `packages/shared`                        | Zod schemas + inferred types (single source of truth)                                                                                    | Ready          |
+| `packages/db`                            | Drizzle schema, migrations, DB client, seed/sync — planned, Task 7                                                                       | Planned (stub) |
+| `packages/builder`                       | Registry build pipeline (validate → hash → emit)                                                                                         | Ready          |
+| `packages/config`                        | Shared tsconfig + eslint config                                                                                                          | Ready          |
+| `registry/components/<category>/<slug>/` | Component sources (3 samples)                                                                                                            | Ready          |
+| `registry/lib/<slug>/`                   | Shared helpers (`cn`)                                                                                                                    | Ready          |
+| `deploy/`                                | Docker Compose, Caddyfile, deploy scripts — planned, Task 6                                                                              | Placeholder    |
 
 ## 🏗 Architecture (target)
 
@@ -95,7 +95,7 @@ Implemented (Tasks 1–5c): monorepo, `packages/shared` contracts, `pnpm new-com
 
 Not built yet: Task 6 (Docker/Caddy/deploy), Task 7 (`packages/db`), Task 8 (`apps/api`: events, stats, likes, newsletter, RSS), Task 9 (CLI telemetry, `list`/`search`/`diff`/`update`), Task 10 (admin), Tasks 11–14 (quality gates, props docs, previews, polish).
 
-See [`docs/MASTER_PROMPT.md`](docs/MASTER_PROMPT.md) §14 for the full roadmap. `apps/api`, `packages/db`, and `deploy/` are stubs/placeholders until their tasks land.
+[`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md) is a historical snapshot of an earlier delivery stage; the live repository is the current implementation reference.
 
 ## 📚 Docs
 

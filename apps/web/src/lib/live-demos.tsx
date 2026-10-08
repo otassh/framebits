@@ -10,19 +10,16 @@ import {
 /**
  * Live component previews.
  *
- * Catalog cards render the REAL registry `demo.tsx` of each component instead
- * of a static screenshot. The demos are bundled at site-build time from the
- * same reviewed in-repo `registry/` tree that `pnpm build:registry` validates
- * (schemas, import allowlist, security scan, typecheck) — the exact trust
- * level as the screenshot pipeline, which already executes these sources in
- * Chromium. No remote or user-supplied code is ever loaded here: the module
- * set is fixed by the static `import.meta.glob` below, and each demo ships as
- * its own lazily-loaded chunk (heavy deps like `three` only download when a
- * 3D demo actually renders).
+ * Detail pages render the real registry `demo.tsx` for each component, while
+ * catalog cards stay lightweight with generated static previews. The demos
+ * are bundled at site-build time from the reviewed in-repo `registry/` tree
+ * that `pnpm build:registry` validates. No remote or user-supplied code is
+ * loaded here: the module set is fixed by the static `import.meta.glob` below,
+ * and each demo ships as its own lazily-loaded chunk.
  *
  * If a slug has no bundled demo, its chunk fails to load, or rendering
  * throws, the caller-provided fallback (generated WebP, then category art)
- * renders instead — a broken demo can never break the catalog.
+ * renders instead — a broken demo can never break the detail page.
  */
 
 type DemoModule = { default: ComponentType };

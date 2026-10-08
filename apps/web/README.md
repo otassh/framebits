@@ -11,7 +11,7 @@ sandboxed `<iframe sandbox="allow-scripts">` (no `allow-same-origin`,
 opaque origin) loaded from a separate build-time-bundled preview entry
 (`/preview/<slug>.html`), with a `postMessage` prop protocol validated on
 both sides. Heavy (3D/WebGL) previews mount only after an explicit "Run live
-preview" click. See `docs/MASTER_PROMPT.md` §16.13 and `docs/SECURITY.md`
+preview" click. See `docs/SECURITY.md`
 (live playground sandbox) for the trust model.
 
 > Transitional state: the current code still renders live demos in the main

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { CategorySchema } from "./categories.js";
 import { SlugSchema } from "./meta.js";
 
-/** `POST /api/events` body (MASTER_PROMPT Section 8). Max 50 events per request. */
+/** `POST /api/events` body. Max 50 events per request. */
 export const EventTypeSchema = z.enum(["install", "view"]);
 export const EventSourceSchema = z.enum(["cli", "copy"]);
 
@@ -20,10 +20,9 @@ export const MAX_EVENTS_PER_REQUEST = 50;
 
 export const EventsRequestSchema = z
   .object({
-    events: z.array(RegistryEventSchema).max(
-      MAX_EVENTS_PER_REQUEST,
-      `at most ${String(MAX_EVENTS_PER_REQUEST)} events per request`,
-    ),
+    events: z
+      .array(RegistryEventSchema)
+      .max(MAX_EVENTS_PER_REQUEST, `at most ${String(MAX_EVENTS_PER_REQUEST)} events per request`),
   })
   .strict();
 
@@ -101,7 +100,7 @@ export const SearchQuerySchema = z
 
 export type SearchQuery = z.infer<typeof SearchQuerySchema>;
 
-/** Consistent API error shape (MASTER_PROMPT Section 8). */
+/** Consistent API error shape. */
 export const ErrorResponseSchema = z
   .object({
     error: z

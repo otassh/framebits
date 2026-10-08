@@ -96,8 +96,8 @@ recorded in `installed` with the same hash and all files unchanged report
 
 ## Styles model (Task 5b)
 
-The CLI NEVER parses or edits `tailwind.config.*` or any JS/TS config (this
-replaces MASTER_PROMPT Section 9 step 8). Styles from `item.tailwind` and
+The CLI NEVER parses or edits `tailwind.config.*` or any JS/TS config. Styles
+from `item.tailwind` and
 `item.cssVars` are written into the CSS entry (`config.tailwind.css`) as
 marker-delimited blocks, one per item slug:
 

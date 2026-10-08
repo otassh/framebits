@@ -55,7 +55,7 @@
    is the control.
 7. **Model** (`registry/model.ts`, decisions D8/D9): per non-draft, error-free item —
    `{ meta, files[] (POSIX target path, normalized content, type, variant "ts-tw"),
-   dependencies, registryDependencies, tailwind?, cssVars?, playground?, hash }`.
+dependencies, registryDependencies, tailwind?, cssVars?, playground?, hash }`.
    The validated playground rides the model for emit but is NOT hashed (website
    UX only) and is emitted as a sidecar `playground/<slug>.json`, never inside
    `/r/<slug>.json` (strict schemas + old-CLI compat). Every control `key` must
@@ -67,18 +67,18 @@
    through shared `normalizeContent` only — imports are never rewritten here.
    `hash` is shared `computeItemHash` (which takes no version, so no placeholder
    is needed). Sorted by slug; `loadRegistry` returns `{ items, diagnostics,
-   summary }` (`summary` is an additive rollup: discovered/modeled counts plus
+summary }` (`summary` is an additive rollup: discovered/modeled counts plus
    by-type/by-status over all parsed metas).
 8. **Preview assets** (`registry/previews.ts`, Task 13): every non-draft component
-    has a hash-keyed cache entry at `registry/previews/<slug>@<hash>.webp`.
-    `--generate-previews` materializes validated model files and trusted demos in
-    a temporary Vite/Tailwind host, captures them with Playwright Chromium, then
-    deletes the host. Normal builds only validate/copy committed image bytes to
-    `r/previews/<slug>.webp`. Catalog and home cards render these static images
-    and execute no registry code; live execution happens only inside the
-    sandboxed preview iframe on the component detail page, built at site-build
-    time from the same validated in-repo `registry/` tree (see
-    `docs/MASTER_PROMPT.md` §16.13 and `docs/SECURITY.md`).
+   has a hash-keyed cache entry at `registry/previews/<slug>@<hash>.webp`.
+   `--generate-previews` materializes validated model files and trusted demos in
+   a temporary Vite/Tailwind host, captures them with Playwright Chromium, then
+   deletes the host. Normal builds only validate/copy committed image bytes to
+   `r/previews/<slug>.webp`. Catalog and home cards render these static images
+   and execute no registry code; live execution happens only inside the
+   sandboxed preview iframe on the component detail page, built at site-build
+   time from the same validated in-repo `registry/` tree (see
+   `docs/SECURITY.md`).
 
 All diagnostics are collected (never stop at the first) and sorted by
 (file, line, column, code). Diagnostic paths are POSIX, relative to the registry
@@ -88,58 +88,58 @@ root. Shipped target paths: component tsx → `components/ui/<slug>.tsx`, css �
 
 ## Diagnostic codes
 
-| Code | Severity | Meaning |
-|---|---|---|
-| META_INVALID | error | meta.json unreadable or failing MetaSchema |
-| STYLES_INVALID | error | styles.json unreadable or failing ComponentStylesSchema |
-| PLAYGROUND_INVALID | error | playground.json unreadable or failing PlaygroundSchema |
-| PLAYGROUND_UNKNOWN_PROP | error | control key is not a declared prop of the component |
-| PLAYGROUND_DEFAULT_MISMATCH | warning | control default differs from the component's own default |
-| DUPLICATE_SLUG | error | slug defined in more than one directory |
-| SLUG_FOLDER_MISMATCH | error | folder name != slug |
-| CATEGORY_FOLDER_MISMATCH | error | parent folder != category (components) |
-| LAYOUT_INVALID | error | wrong location for the type, or misplaced item dir |
-| MISSING_SOURCE | error | required `<slug>.tsx` / `<slug>.ts` absent |
-| MISSING_DEMO | error | component without `demo.tsx` |
-| UNEXPECTED_FILE | error | file outside the D4 table |
-| SYMLINK_NOT_ALLOWED | error | symlink entry (never followed) |
-| FILE_TOO_LARGE | error | file over 200 KB |
-| ENCODING_INVALID | error | not valid UTF-8 |
-| NUL_BYTE | error | NUL byte in file |
-| PARSE_ERROR | error | TypeScript syntax error |
-| IMPORT_UNDECLARED_PACKAGE | error | package not in meta.dependencies |
-| IMPORT_NODE_BUILTIN | error | Node builtin import |
-| IMPORT_URL_FORBIDDEN | error | URL/data: import |
-| IMPORT_ALIAS_TARGET_MISSING | error | alias target missing or wrong type |
-| IMPORT_ALIAS_NOT_DECLARED | error | alias target not in registryDependencies |
-| IMPORT_UNKNOWN_ALIAS | error | unknown `@/` scope |
-| IMPORT_RELATIVE_FORBIDDEN | error | relative import outside own files |
-| IMPORT_DYNAMIC_NONLITERAL | error | dynamic import() with non-literal argument |
-| IMPORT_REQUIRE_FORBIDDEN | error | any `require()` call |
-| DEMO_NO_DEFAULT_EXPORT | error | demo.tsx without a default export |
-| REGISTRY_DEP_MISSING | error | registryDependency slug does not exist |
-| REGISTRY_DEP_DRAFT | error | published/deprecated item depends on a draft |
-| REGISTRY_DEP_CYCLE | error | dependency cycle (`a -> b -> c -> a`) |
-| TYPECHECK_ERROR | error | TypeScript error mapped to the registry file:line |
-| TYPECHECK_ENV_RANGE_MISMATCH | error | declared range not satisfied by the pinned env version |
-| LOCK_ENTRY_REMOVED | error | lock entry without a registry item (use `deprecated`, or `--prune`) |
-| PUBLISHED_TO_DRAFT | error | locked slug is now a draft |
-| BUMP_NOT_APPLICABLE | error | `--bump` for unchanged/unknown/draft slug, or bad level |
-| LOCK_INVALID | error | lock unreadable, off-schema, or non-increasing version |
-| LOCK_OUT_OF_DATE | error | lock would change; re-run with `--write-lock` |
-| IMMUTABILITY_VIOLATION | error | archived `<slug>@<version>.json` differs |
-| EMIT_VERIFY_FAILED | error | emitted file missing/different/invalid after write |
-| PREVIEW_MISSING | error | hash-keyed preview cache is absent; generate and commit it |
-| PREVIEW_INVALID | error | cached preview is not structurally valid WebP |
-| PREVIEW_GENERATION_FAILED | error | isolated Vite/Playwright capture failed |
-| ARCHIVE_MISSING_VERSION | warning | previous lock version absent from the archive |
-| SECURITY_EVAL | error | `eval`, `new Function`, string-arg timers |
-| SECURITY_COOKIE | error | `document.cookie` access |
-| SECURITY_NETWORK | error | network primitives (`fetch`, XHR, Beacon, WebSocket, EventSource, importScripts, Worker) |
-| SECURITY_INNER_HTML | warning | `dangerouslySetInnerHTML` (needs reviewer approval) |
-| SECURITY_STORAGE | warning | browser storage should be avoided |
-| DEP_UNUSED | warning | declared dependency never imported |
-| REGISTRY_DEP_UNUSED | warning | listed registryDependency never imported |
+| Code                         | Severity | Meaning                                                                                  |
+| ---------------------------- | -------- | ---------------------------------------------------------------------------------------- |
+| META_INVALID                 | error    | meta.json unreadable or failing MetaSchema                                               |
+| STYLES_INVALID               | error    | styles.json unreadable or failing ComponentStylesSchema                                  |
+| PLAYGROUND_INVALID           | error    | playground.json unreadable or failing PlaygroundSchema                                   |
+| PLAYGROUND_UNKNOWN_PROP      | error    | control key is not a declared prop of the component                                      |
+| PLAYGROUND_DEFAULT_MISMATCH  | warning  | control default differs from the component's own default                                 |
+| DUPLICATE_SLUG               | error    | slug defined in more than one directory                                                  |
+| SLUG_FOLDER_MISMATCH         | error    | folder name != slug                                                                      |
+| CATEGORY_FOLDER_MISMATCH     | error    | parent folder != category (components)                                                   |
+| LAYOUT_INVALID               | error    | wrong location for the type, or misplaced item dir                                       |
+| MISSING_SOURCE               | error    | required `<slug>.tsx` / `<slug>.ts` absent                                               |
+| MISSING_DEMO                 | error    | component without `demo.tsx`                                                             |
+| UNEXPECTED_FILE              | error    | file outside the D4 table                                                                |
+| SYMLINK_NOT_ALLOWED          | error    | symlink entry (never followed)                                                           |
+| FILE_TOO_LARGE               | error    | file over 200 KB                                                                         |
+| ENCODING_INVALID             | error    | not valid UTF-8                                                                          |
+| NUL_BYTE                     | error    | NUL byte in file                                                                         |
+| PARSE_ERROR                  | error    | TypeScript syntax error                                                                  |
+| IMPORT_UNDECLARED_PACKAGE    | error    | package not in meta.dependencies                                                         |
+| IMPORT_NODE_BUILTIN          | error    | Node builtin import                                                                      |
+| IMPORT_URL_FORBIDDEN         | error    | URL/data: import                                                                         |
+| IMPORT_ALIAS_TARGET_MISSING  | error    | alias target missing or wrong type                                                       |
+| IMPORT_ALIAS_NOT_DECLARED    | error    | alias target not in registryDependencies                                                 |
+| IMPORT_UNKNOWN_ALIAS         | error    | unknown `@/` scope                                                                       |
+| IMPORT_RELATIVE_FORBIDDEN    | error    | relative import outside own files                                                        |
+| IMPORT_DYNAMIC_NONLITERAL    | error    | dynamic import() with non-literal argument                                               |
+| IMPORT_REQUIRE_FORBIDDEN     | error    | any `require()` call                                                                     |
+| DEMO_NO_DEFAULT_EXPORT       | error    | demo.tsx without a default export                                                        |
+| REGISTRY_DEP_MISSING         | error    | registryDependency slug does not exist                                                   |
+| REGISTRY_DEP_DRAFT           | error    | published/deprecated item depends on a draft                                             |
+| REGISTRY_DEP_CYCLE           | error    | dependency cycle (`a -> b -> c -> a`)                                                    |
+| TYPECHECK_ERROR              | error    | TypeScript error mapped to the registry file:line                                        |
+| TYPECHECK_ENV_RANGE_MISMATCH | error    | declared range not satisfied by the pinned env version                                   |
+| LOCK_ENTRY_REMOVED           | error    | lock entry without a registry item (use `deprecated`, or `--prune`)                      |
+| PUBLISHED_TO_DRAFT           | error    | locked slug is now a draft                                                               |
+| BUMP_NOT_APPLICABLE          | error    | `--bump` for unchanged/unknown/draft slug, or bad level                                  |
+| LOCK_INVALID                 | error    | lock unreadable, off-schema, or non-increasing version                                   |
+| LOCK_OUT_OF_DATE             | error    | lock would change; re-run with `--write-lock`                                            |
+| IMMUTABILITY_VIOLATION       | error    | archived `<slug>@<version>.json` differs                                                 |
+| EMIT_VERIFY_FAILED           | error    | emitted file missing/different/invalid after write                                       |
+| PREVIEW_MISSING              | error    | hash-keyed preview cache is absent; generate and commit it                               |
+| PREVIEW_INVALID              | error    | cached preview is not structurally valid WebP                                            |
+| PREVIEW_GENERATION_FAILED    | error    | isolated Vite/Playwright capture failed                                                  |
+| ARCHIVE_MISSING_VERSION      | warning  | previous lock version absent from the archive                                            |
+| SECURITY_EVAL                | error    | `eval`, `new Function`, string-arg timers                                                |
+| SECURITY_COOKIE              | error    | `document.cookie` access                                                                 |
+| SECURITY_NETWORK             | error    | network primitives (`fetch`, XHR, Beacon, WebSocket, EventSource, importScripts, Worker) |
+| SECURITY_INNER_HTML          | warning  | `dangerouslySetInnerHTML` (needs reviewer approval)                                      |
+| SECURITY_STORAGE             | warning  | browser storage should be avoided                                                        |
+| DEP_UNUSED                   | warning  | declared dependency never imported                                                       |
+| REGISTRY_DEP_UNUSED          | warning  | listed registryDependency never imported                                                 |
 
 Human format example:
 
@@ -191,7 +191,7 @@ trailing newline. Decision table (each row tested in `versions.test.ts`):
     unreleased state).
 
 `--bump` for a slug whose hash is unchanged, unknown, draft, or new is never
-applicable (bumps only redirect the automatic patch of a *changed* locked item).
+applicable (bumps only redirect the automatic patch of a _changed_ locked item).
 The emitted item `version` comes from the lock; the version is NOT part of the
 hash. A change to a lib (e.g. `cn`) does not change dependents' hashes; users
 pick it up via `update`.

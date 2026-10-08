@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * Relative, POSIX-style registry/CLI paths (MASTER_PROMPT Section 4.2 + Task 2 path-safety rules).
+ * Relative, POSIX-style registry/CLI paths with path-safety validation.
  *
  * One schema serves both `RegistryItem.files[].path` and CLI target paths (Task 5 reuses it).
  *

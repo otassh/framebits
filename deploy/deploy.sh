@@ -1,7 +1,7 @@
 #!/bin/bash
 # deploy/deploy.sh — idempotent production deploy for the single VPS (Task 6).
 # Usage: bash deploy/deploy.sh [--allow-degraded] [<target-sha>]  (default: origin/main)
-# Must be run from the repo root on the VPS. Steps per docs/MASTER_PROMPT.md:
+# Must be run from the repo root on the VPS. Steps:
 # fetch -> build registry (temp dir, then move) -> rebuild/restart api+web ->
 # db migrate+sync -> atomic symlink switch -> health checks (auto-rollback on
 # failure) -> keep the last 5 releases.

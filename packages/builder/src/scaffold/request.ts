@@ -37,12 +37,18 @@ export function defaultDescription(title: string): string {
 export function resolveScaffoldRequest(request: ScaffoldRequest): ResolvedScaffold {
   const slugResult = SlugSchema.safeParse(request.slug);
   if (!slugResult.success) {
-    throw new ScaffoldError("validation", `invalid slug ${JSON.stringify(request.slug)}: ${slugResult.error.issues.map((issue) => issue.message).join("; ")}`);
+    throw new ScaffoldError(
+      "validation",
+      `invalid slug ${JSON.stringify(request.slug)}: ${slugResult.error.issues.map((issue) => issue.message).join("; ")}`,
+    );
   }
 
   const typeResult = ItemTypeSchema.default("component").safeParse(request.type);
   if (!typeResult.success) {
-    throw new ScaffoldError("validation", `invalid type ${JSON.stringify(request.type)}: expected "component", "lib" or "hook"`);
+    throw new ScaffoldError(
+      "validation",
+      `invalid type ${JSON.stringify(request.type)}: expected "component", "lib" or "hook"`,
+    );
   }
   const type = typeResult.data;
 
@@ -73,7 +79,7 @@ export function resolveScaffoldRequest(request: ScaffoldRequest): ResolvedScaffo
   };
 }
 
-/** Build the meta.json object (key order exactly as in MASTER_PROMPT Section 4.1) and validate it. */
+/** Build and validate the meta.json object with its stable serialization order. */
 export function buildMeta(resolved: ResolvedScaffold, addedAt: string): Meta {
   // Key order below is deliberate: it is the order serialized into meta.json.
   const raw = {
