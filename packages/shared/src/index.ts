@@ -114,6 +114,25 @@ export { RegistryIndexItemSchema, RegistryIndexSchema } from "./registry-index.j
 export type { RegistryIndex, RegistryIndexItem } from "./registry-index.js";
 
 export {
+  MAX_PLAYGROUND_COLORS,
+  MAX_PLAYGROUND_CONTROLS,
+  MAX_PLAYGROUND_TEXT,
+  PlaygroundControlSchema,
+  PlaygroundKeySchema,
+  PlaygroundSchema,
+  generateUsageSnippet,
+  playgroundDefaults,
+  playgroundDiff,
+  resolvePlaygroundValues,
+} from "./playground.js";
+export type {
+  Playground,
+  PlaygroundControl,
+  PlaygroundValue,
+  PlaygroundValues,
+} from "./playground.js";
+
+export {
   MAX_SEARCH_INDEX_KEYS,
   SearchIndexDocSchema,
   SearchIndexSchema,

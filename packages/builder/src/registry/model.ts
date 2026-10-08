@@ -1,5 +1,5 @@
 import { computeItemHash, normalizeContent } from "@framebits/shared";
-import type { ComponentStyles, Meta } from "@framebits/shared";
+import type { ComponentStyles, Meta, Playground } from "@framebits/shared";
 import type { ModelFile, RegistryItemModel } from "./types.js";
 
 export interface ModelInputs {
@@ -9,6 +9,8 @@ export interface ModelInputs {
   /** Raw `<slug>.css` text (components only). */
   cssText: string | undefined;
   styles: ComponentStyles | undefined;
+  /** Validated playground (attached for emit; never hashed). */
+  playground: Playground | undefined;
 }
 
 /**
@@ -47,6 +49,7 @@ export function buildItemModel(input: ModelInputs): RegistryItemModel {
   };
   if (input.styles?.tailwind !== undefined) model.tailwind = input.styles.tailwind;
   if (input.styles?.cssVars !== undefined) model.cssVars = input.styles.cssVars;
+  if (input.playground !== undefined) model.playground = input.playground;
   // computeItemHash takes no version (ItemHashInput has none), so no placeholder
   // is needed: the hash covers exactly the included fields, nothing else.
   model.hash = computeItemHash({

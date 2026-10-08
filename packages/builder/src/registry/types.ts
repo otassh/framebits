@@ -2,6 +2,7 @@ import type {
   CssVars,
   ItemType,
   Meta,
+  Playground,
   TailwindFragment,
 } from "@framebits/shared";
 
@@ -35,6 +36,12 @@ export interface RegistryItemModel {
   registryDependencies: string[];
   tailwind?: TailwindFragment | undefined;
   cssVars?: CssVars | undefined;
+  /**
+   * Validated playground definition. Attached for emit only: it is NOT part
+   * of the item hash (website UX, not installed code) and is emitted as a
+   * sidecar file (`playground/<slug>.json`), never inside `/r/<slug>.json`.
+   */
+  playground?: Playground | undefined;
   hash: string;
 }
 

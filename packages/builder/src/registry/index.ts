@@ -1,9 +1,10 @@
 import ts from "typescript";
-import type { ComponentStyles, Meta } from "@framebits/shared";
+import type { ComponentStyles, Meta, Playground } from "@framebits/shared";
 import { discoverRegistry, type DiscoveredItem } from "./discover.js";
 import { scanCssSecurity } from "./css.js";
 import { analyzeSource, checkImports, type ImportCheckContext } from "./imports.js";
 import { buildItemModel } from "./model.js";
+import { checkPlayground, parseItemPlayground } from "./playground.js";
 import { scanSecurity } from "./security.js";
 import { runTypecheck, type TypecheckItem } from "./typecheck.js";
 import {
@@ -50,11 +51,13 @@ export async function loadRegistry(options: LoadRegistryOptions): Promise<LoadRe
     item: DiscoveredItem;
     meta: Meta | undefined;
     styles: ComponentStyles | undefined;
+    playground: Playground | undefined;
   }
   const records: Record[] = discovery.items.map((item) => {
     const { meta } = parseItemMeta(item, diagnostics);
     validateLayout(item, meta, diagnostics);
     const styles = parseItemStyles(item, diagnostics);
+    const playground = parseItemPlayground(item, diagnostics);
     if (meta?.bump !== undefined) {
       diagnostics.push({
         severity: "warning",
@@ -64,18 +67,24 @@ export async function loadRegistry(options: LoadRegistryOptions): Promise<LoadRe
         hint: "Remove the field; re-run with --bump <slug>=minor|major instead.",
       });
     }
-    return { item, meta, styles };
+    return { item, meta, styles, playground };
   });
 
   interface ParsedRecord {
     item: DiscoveredItem;
     meta: Meta;
     styles: ComponentStyles | undefined;
+    playground: Playground | undefined;
   }
   const parsed: ParsedRecord[] = [];
   for (const record of records) {
     if (record.meta !== undefined) {
-      parsed.push({ item: record.item, meta: record.meta, styles: record.styles });
+      parsed.push({
+        item: record.item,
+        meta: record.meta,
+        styles: record.styles,
+        playground: record.playground,
+      });
     }
   }
 
@@ -89,6 +98,7 @@ export async function loadRegistry(options: LoadRegistryOptions): Promise<LoadRe
   const items: RegistryItemModel[] = [];
   for (const record of parsed) {
     checkItemContent(record.item, record.meta, knownItems, diagnostics);
+    checkPlayground(record.item, record.meta, record.playground, diagnostics);
     if (record.meta.status === "draft") continue;
     if (hasErrors(record.item.dirRel, diagnostics)) continue;
     const model = buildModel(record);
@@ -317,8 +327,9 @@ function buildModel(record: {
   item: DiscoveredItem;
   meta: Meta;
   styles: ComponentStyles | undefined;
+  playground: Playground | undefined;
 }): RegistryItemModel | undefined {
-  const { item, meta, styles } = record;
+  const { item, meta, styles, playground } = record;
   const byName = new Map(
     item.files.map((file) => [file.relPath.slice(item.dirRel.length + 1), file]),
   );
@@ -330,10 +341,15 @@ function buildModel(record: {
 
   const stylesPresent = item.files.some((file) => file.relPath.endsWith("/styles.json"));
   if (stylesPresent && styles === undefined) return undefined;
+  const playgroundPresent = item.files.some((file) =>
+    file.relPath.endsWith("/playground.json"),
+  );
+  if (playgroundPresent && playground === undefined) return undefined;
   return buildItemModel({
     meta,
     sourceText: source.text,
     cssText: css?.text,
     styles,
+    playground,
   });
 }
