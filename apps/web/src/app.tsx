@@ -79,7 +79,7 @@ export function App(): React.JSX.Element {
         {route.kind === "docs" ? <DocsPage /> : null}
         {route.kind === "catalog" ? <CatalogPage state={state} retry={retry} /> : null}
         {route.kind === "component" ? (
-          <DetailPage slug={route.slug} client={client} indexState={state} />
+          <DetailPage slug={route.slug} client={client} indexState={state} retryIndex={retry} />
         ) : null}
         {route.kind === "not-found" ? <NotFoundPage /> : null}
       </div>

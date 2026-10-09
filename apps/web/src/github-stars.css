@@ -71,9 +71,6 @@
   .header-inner > .main-nav {
     gap: 1rem;
   }
-  .header-inner .copy-command-compact {
-    padding-inline: 0.65rem;
-  }
 }
 
 @media (max-width: 760px) {

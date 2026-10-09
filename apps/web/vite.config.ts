@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { defineConfig, type AliasOptions } from "vite";
+import tailwindcss from "@tailwindcss/vite";
 
 const webRoot = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
@@ -16,8 +17,9 @@ interface RegistryAlias {
  * Live-demo aliases for in-repo registry sources.
  *
  * Detail pages render the real `demo.tsx` of each published component via
- * `import.meta.glob` (see `src/lib/live-demos.ts`); catalog cards use static
- * WebP previews. Demos import their sibling
+ * `import.meta.glob` (see `src/lib/live-demos.tsx`); catalog cards lazily mount
+ * those demos on hover or keyboard focus and use WebP previews while idle.
+ * Demos import their sibling
  * source relatively (`./<slug>`) plus the `@/lib|@/hooks|@/components/ui`
  * registry aliases that `pnpm build:registry` enforces. Those aliases must
  * resolve to the same reviewed files here, so they are derived from the
@@ -205,6 +207,7 @@ function escapeRegExp(value: string): string {
 }
 
 export default defineConfig({
+  plugins: [tailwindcss()],
   envDir: "../..",
   publicDir: ".registry",
   resolve: {

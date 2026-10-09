@@ -1,0 +1,120 @@
+.component-card {
+  container-type: inline-size;
+}
+
+.component-card:hover {
+  transform: none;
+}
+
+.component-card:has(.card-link:focus-visible) {
+  outline: 2px solid var(--violet);
+  outline-offset: 4px;
+}
+
+.component-card .card-preview {
+  position: relative;
+  height: clamp(240px, 62.5cqi, 340px);
+  overflow: hidden;
+  border-bottom: 1px solid var(--line);
+  background: #090a0f;
+  pointer-events: none;
+}
+
+.card-preview .preview-art,
+.card-preview .preview-live,
+.card-preview .preview-live-missing,
+.card-preview > .skeleton-preview {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: 0;
+}
+
+.component-card .card-preview .preview-generated img {
+  min-height: 0;
+  transform: none;
+  filter: none;
+  transition: none;
+}
+
+.card-preview .preview-live {
+  padding: 1rem;
+  font-size: clamp(1.75rem, 8cqi, 3rem);
+}
+
+.card-preview .preview-live:has(> .preview-art) {
+  padding: 0;
+}
+
+.card-preview .preview-live > span {
+  overflow-wrap: anywhere;
+}
+
+.card-preview-aurora-text {
+  --card-demo-font: clamp(1.75rem, 8cqi, 3rem);
+}
+
+.component-card .card-preview-aurora-text .preview-generated img,
+.component-card .card-preview-shimmer-button .preview-generated img {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  max-width: none;
+  height: auto;
+  object-fit: contain;
+  transform: translate(-50%, -50%);
+}
+
+.component-card .card-preview-aurora-text .preview-generated img {
+  /* The generated 1200px capture uses 16px type; match the live card's type. */
+  width: calc(var(--card-demo-font) * 75);
+}
+
+.card-preview-aurora-text .preview-live {
+  font-size: var(--card-demo-font);
+}
+
+.component-card .card-preview-shimmer-button .preview-generated img {
+  width: 1320px;
+}
+
+.card-preview-shimmer-button .preview-live > div {
+  justify-content: center;
+  transform: scale(1.1);
+}
+
+.card-preview-framebits-logo-3d .preview-live {
+  padding: 0;
+}
+
+.card-preview-framebits-logo-3d .preview-live > div {
+  width: 100%;
+  height: 100%;
+  min-height: 0 !important;
+}
+
+.component-card .card-title {
+  margin: 0;
+  padding: 1.1rem 1.25rem;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
+}
+
+.component-card .card-link {
+  height: auto;
+}
+
+.component-card .card-link::after {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  content: "";
+}
+
+.component-card .card-link:focus-visible {
+  outline: none;
+}

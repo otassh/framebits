@@ -89,7 +89,12 @@ export function DocsPage(): React.JSX.Element {
             <section className="docs-options" id="cli-options">
               <span className="eyebrow eyebrow-static">A little more control</span>
               <h2>Useful CLI options</h2>
-              <div className="docs-table-wrap">
+              <div
+                className="docs-table-wrap"
+                role="region"
+                aria-label="CLI options table"
+                tabIndex={0}
+              >
                 <table>
                   <thead>
                     <tr>
