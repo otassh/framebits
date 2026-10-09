@@ -1721,10 +1721,6 @@ a {
     display: flex;
   }
 
-  .main-nav .copy-command {
-    width: 100%;
-  }
-
   .hero {
     min-height: 0;
     padding: 8.5rem 0 4.5rem;

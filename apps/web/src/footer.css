@@ -172,27 +172,6 @@
   transform: translateX(3px);
 }
 
-.footer-install {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1.25rem;
-  padding: 1.2rem 0;
-  border-top: 1px solid var(--line);
-}
-.footer-install > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.65rem;
-  color: var(--muted-strong);
-  font-size: 0.73rem;
-}
-.footer-install img {
-  border-radius: 7px;
-}
-.footer-install .copy-command {
-  font-size: 0.7rem;
-}
 .footer-wordmark {
   position: relative;
   display: flex;
@@ -282,12 +261,6 @@
   }
   .footer-link-group > a {
     font-size: 0.75rem;
-  }
-  .footer-install {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-    padding-block: 1.2rem 1.5rem;
   }
   .footer-wordmark {
     font-size: 17.2vw;

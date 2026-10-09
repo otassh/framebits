@@ -1,9 +1,8 @@
 import { ArrowRight, ArrowUp, ArrowUpRight } from "lucide-react";
 import { useInView, usePageInView, useReducedMotion } from "motion/react";
 import { useRef } from "react";
-import { AppLink, CopyCommandButton } from "./site-ui.js";
+import { AppLink } from "./site-ui.js";
 import { GITHUB_REPO_URL } from "../lib/github-stars.js";
-import brandMarkUrl from "../assets/framebits-mark.png";
 import { FooterWordmark } from "./footer-wordmark.js";
 
 export function Footer(): React.JSX.Element {
@@ -86,12 +85,6 @@ export function Footer(): React.JSX.Element {
               </a>
             </div>
           </nav>
-        </div>
-        <div className="footer-install">
-          <span>
-            <img src={brandMarkUrl} width={24} height={24} alt="" /> Your source. Your system.
-          </span>
-          <CopyCommandButton command="npx @framebits/cli init" compact />
         </div>
         <FooterWordmark />
         <div className="footer-bottom">

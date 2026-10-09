@@ -10,8 +10,9 @@ import {
 /**
  * Live component previews.
  *
- * Detail pages render the real registry `demo.tsx` for each component, while
- * catalog cards stay lightweight with generated static previews. The demos
+ * Detail pages render the real registry `demo.tsx` for each component. Catalog
+ * cards mount the same demo only during hover or keyboard focus and otherwise
+ * show their generated static preview. The demos
  * are bundled at site-build time from the reviewed in-repo `registry/` tree
  * that `pnpm build:registry` validates. No remote or user-supplied code is
  * loaded here: the module set is fixed by the static `import.meta.glob` below,
@@ -19,7 +20,7 @@ import {
  *
  * If a slug has no bundled demo, its chunk fails to load, or rendering
  * throws, the caller-provided fallback (generated WebP, then category art)
- * renders instead — a broken demo can never break the detail page.
+ * renders instead — a broken demo can never break the surrounding page.
  */
 
 type DemoModule = { default: ComponentType };

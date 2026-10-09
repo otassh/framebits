@@ -1,7 +1,8 @@
 import type { RegistryIndexItem } from "@framebits/shared";
-import { ArrowRight, Check, Copy, Menu, Terminal, X, Zap } from "lucide-react";
-import { type MouseEvent, type PropsWithChildren, useState } from "react";
-import { formatCategory } from "../lib/catalog.js";
+import { Check, Copy, Menu, Terminal, X, Zap } from "lucide-react";
+import { useInView, usePageInView, useReducedMotion } from "motion/react";
+import { type MouseEvent, type PropsWithChildren, useEffect, useRef, useState } from "react";
+import { LiveDemo } from "../lib/live-demos.js";
 import { navigate, type AppRoute } from "../lib/router.js";
 import brandMarkUrl from "../assets/framebits-mark.png";
 import { GitHubStars } from "./github-stars.js";
@@ -64,15 +65,66 @@ export function Brand({ onNavigate }: { onNavigate?: () => void }): React.JSX.El
 
 export function Header({ route }: { route: AppRoute }): React.JSX.Element {
   const [open, setOpen] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
+  const menuRef = useRef<HTMLButtonElement>(null);
   const close = (): void => {
     setOpen(false);
   };
 
+  useEffect(() => {
+    setOpen(false);
+  }, [route]);
+
+  useEffect(() => {
+    const mobile = window.matchMedia("(max-width: 900px)");
+    const onResize = (): void => {
+      if (!mobile.matches) setOpen(false);
+    };
+    mobile.addEventListener("change", onResize);
+    return () => {
+      mobile.removeEventListener("change", onResize);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    headerRef.current?.querySelector<HTMLAnchorElement>(".main-nav a")?.focus();
+
+    const onEscape = (event: KeyboardEvent): void => {
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      menuRef.current?.focus();
+    };
+    const onOutside = (event: Event): void => {
+      if (event.target instanceof Node && !headerRef.current?.contains(event.target)) {
+        setOpen(false);
+        if (
+          event.type === "pointerdown" &&
+          headerRef.current?.querySelector(".main-nav")?.contains(document.activeElement)
+        ) {
+          menuRef.current?.focus({ preventScroll: true });
+        }
+      }
+    };
+    document.addEventListener("keydown", onEscape);
+    document.addEventListener("pointerdown", onOutside);
+    document.addEventListener("focusin", onOutside);
+    return () => {
+      document.removeEventListener("keydown", onEscape);
+      document.removeEventListener("pointerdown", onOutside);
+      document.removeEventListener("focusin", onOutside);
+    };
+  }, [open]);
+
   return (
-    <header className="site-header">
+    <header className="site-header" ref={headerRef}>
       <div className="shell header-inner">
         <Brand onNavigate={close} />
-        <nav className={`main-nav ${open ? "is-open" : ""}`} aria-label="Main navigation">
+        <nav
+          id="main-navigation"
+          className={`main-nav ${open ? "is-open" : ""}`}
+          aria-label="Main navigation"
+        >
           <AppLink href="/" onNavigate={close} current={route.kind === "home"}>
             Home
           </AppLink>
@@ -86,20 +138,21 @@ export function Header({ route }: { route: AppRoute }): React.JSX.Element {
           <AppLink href="/docs" onNavigate={close} current={route.kind === "docs"}>
             Docs
           </AppLink>
-          <CopyCommandButton command="npx @framebits/cli init" compact />
         </nav>
         <div className="header-actions">
           <GitHubStars />
           <button
+            ref={menuRef}
             className="menu-button"
             type="button"
             onClick={() => {
               setOpen((value) => !value);
             }}
             aria-expanded={open}
+            aria-controls="main-navigation"
             aria-label={open ? "Close navigation" : "Open navigation"}
           >
-            {open ? <X size={20} /> : <Menu size={20} />}
+            {open ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}
           </button>
         </div>
       </div>
@@ -201,29 +254,44 @@ export function PreviewStaticArt({ item }: { item: RegistryIndexItem }): React.J
 }
 
 export function ComponentCard({ item }: { item: RegistryIndexItem }): React.JSX.Element {
+  const cardRef = useRef<HTMLElement>(null);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const visible = useInView(cardRef, { amount: 0.1 });
+  const pageVisible = usePageInView();
+  const reducedMotion = useReducedMotion();
+  const active = (hovered || focused) && visible && pageVisible && !reducedMotion;
+  const still = <PreviewStaticArt item={item} />;
+
   return (
-    <article className="component-card">
-      <AppLink href={`/components/${item.slug}`} className="card-link">
-        <PreviewStaticArt item={item} />
-        <div className="card-body">
-          <div className="card-meta">
-            <span>{formatCategory(item.category)}</span>
-            <span className={`performance-badge performance-${item.performance}`}>
-              {item.performance} load
-            </span>
-          </div>
-          <h3>{item.title}</h3>
-          <p>{item.description}</p>
-          <div className="tag-row">
-            {item.tags.slice(0, 3).map((tag) => (
-              <span key={tag}>{tag}</span>
-            ))}
-          </div>
-          <span className="card-open">
-            Open component <ArrowRight size={16} />
-          </span>
-        </div>
-      </AppLink>
+    <article
+      ref={cardRef}
+      className="component-card"
+      data-preview-active={active}
+      onPointerEnter={(event) => {
+        if (event.pointerType !== "touch") setHovered(true);
+      }}
+      onPointerLeave={() => {
+        setHovered(false);
+      }}
+      onPointerCancel={() => {
+        setHovered(false);
+      }}
+      onFocusCapture={(event) => {
+        setFocused(event.target.matches(":focus-visible"));
+      }}
+      onBlurCapture={() => {
+        setFocused(false);
+      }}
+    >
+      <div className={`card-preview card-preview-${item.slug}`} inert aria-hidden="true">
+        {active ? <LiveDemo slug={item.slug} fallback={still} /> : still}
+      </div>
+      <h3 className="card-title">
+        <AppLink href={`/components/${item.slug}`} className="card-link">
+          {item.title}
+        </AppLink>
+      </h3>
     </article>
   );
 }
@@ -233,12 +301,11 @@ export function LoadingCards(): React.JSX.Element {
     <div className="component-grid" aria-label="Loading components">
       {[0, 1].map((value) => (
         <div className="component-card skeleton-card" key={value}>
-          <div className="skeleton skeleton-preview" />
-          <div className="card-body">
-            <div className="skeleton skeleton-line short" />
+          <div className="card-preview">
+            <div className="skeleton skeleton-preview" />
+          </div>
+          <div className="card-title">
             <div className="skeleton skeleton-line title" />
-            <div className="skeleton skeleton-line" />
-            <div className="skeleton skeleton-line medium" />
           </div>
         </div>
       ))}
