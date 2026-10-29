@@ -340,6 +340,28 @@ try {
   );
   checks++;
 
+  // The source index must open the requested file and move keyboard focus to Code.
+  await viewTabs.getByRole("tab", { name: "Preview", exact: true }).click();
+  const sourceFile = page.locator(".source-index button").last();
+  const sourcePath = (await sourceFile.locator("span").textContent()).trim();
+  await sourceFile.click();
+  await page.locator(".code-panel pre").waitFor();
+  assert.equal(
+    await fileTabs.getByRole("tab", { selected: true }).textContent(),
+    sourcePath.split("/").at(-1),
+  );
+  assert.equal(
+    await viewTabs
+      .getByRole("tab", { name: "Code", exact: true })
+      .evaluate((element) => element === document.activeElement),
+    true,
+  );
+  const dependencies = page.locator(".dependency-disclosure");
+  assert.equal(await dependencies.getAttribute("open"), null);
+  await dependencies.locator("summary").click();
+  assert.equal(await dependencies.getAttribute("open"), "");
+  checks++;
+
   await openPage(page, baseUrl, "/docs");
   const table = page.getByRole("region", { name: "CLI options table" });
   await table.focus();
