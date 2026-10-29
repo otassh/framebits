@@ -20,7 +20,7 @@ function cardFor(page, slug) {
 
 async function openCatalog(page) {
   await page.mouse.move(0, 0);
-  await page.goto(new URL("/components", baseUrl).href, { waitUntil: "networkidle" });
+  await page.goto(new URL("/components", baseUrl).href, { waitUntil: "domcontentloaded" });
   await page.locator(".component-card[data-preview-active]").first().waitFor();
   await page.evaluate(() => document.fonts.ready);
 }
@@ -181,9 +181,13 @@ try {
   checks++;
 
   await page.evaluate(() => document.activeElement.blur());
+  await page.setViewportSize({ width: 1440, height: 300 });
   await activate(aurora);
-  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await page.evaluate(() => window.scrollTo(0, 0));
+  const offscreen = await aurora.boundingBox();
+  assert(offscreen.y >= 300, "the observed card is outside the short viewport");
   await assertInactive(aurora);
+  await page.setViewportSize({ width: 1440, height: 900 });
 
   // The visibility event is deterministic even in headless Chrome, where every tab stays visible.
   await activate(aurora);

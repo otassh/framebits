@@ -1,0 +1,695 @@
+/* Content-only refresh. Hero, header, footer, and brand tokens stay untouched. */
+.content-label {
+  display: block;
+  margin-bottom: 1rem;
+  color: var(--accent-soft);
+  font: 0.65rem/1.6 var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.content-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 44px;
+  color: var(--muted-strong);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.content-link svg {
+  flex-shrink: 0;
+  transition: transform 180ms ease;
+}
+.content-link:hover {
+  color: var(--accent-soft);
+}
+.content-link:hover svg {
+  transform: translateX(3px);
+}
+
+/* A live component index replaces the oversized marketing panels. */
+.home-collection {
+  background: var(--bg);
+}
+.collection-index {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.6fr);
+  align-items: start;
+  gap: clamp(2.5rem, 6vw, 7rem);
+  padding-block: clamp(3.5rem, 6vw, 6rem);
+}
+.collection-intro {
+  padding-top: 1.5rem;
+}
+.collection-intro h2 {
+  margin: 0;
+  font-size: clamp(2rem, 3.2vw, 3.6rem);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.055em;
+}
+.collection-intro p {
+  max-width: 35ch;
+  margin-block: 1.35rem 1rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.85;
+}
+.collection-list {
+  min-width: 0;
+}
+.collection-list-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 48px;
+  align-items: center;
+  color: var(--muted);
+  font: 0.62rem/1.6 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.collection-list-heading > span:last-child {
+  color: var(--accent-soft);
+}
+.component-ledger,
+.catalog-content .component-grid.component-ledger,
+.component-ledger > .component-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  counter-reset: component;
+}
+.component-ledger .component-card {
+  content-visibility: visible;
+  contain-intrinsic-size: none;
+  position: relative;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) clamp(170px, 17vw, 248px) 28px;
+  align-items: center;
+  column-gap: 1.25rem;
+  min-height: 146px;
+  padding: 0.75rem 0.5rem;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+  counter-increment: component;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease;
+}
+.component-ledger .component-card:last-child {
+  border-bottom: 1px solid var(--line);
+}
+.component-ledger .component-card:hover {
+  background: linear-gradient(90deg, rgba(255, 107, 61, 0.035), transparent 75%);
+  border-top-color: rgba(255, 171, 114, 0.3);
+  box-shadow: none;
+  transform: none;
+}
+.component-ledger .component-card::before {
+  mask: none;
+  position: static;
+  grid-column: 1;
+  grid-row: 1;
+  width: auto;
+  height: auto;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  opacity: 1;
+  content: counter(component, decimal-leading-zero);
+  font: 0.65rem var(--mono);
+}
+.component-ledger .component-card::after {
+  display: block;
+  position: static;
+  grid-column: 4;
+  grid-row: 1;
+  width: auto;
+  height: auto;
+  color: var(--muted);
+  background: none;
+  opacity: 1;
+  content: "↗";
+  font-size: 1.25rem;
+  pointer-events: none;
+  transition:
+    color 180ms ease,
+    transform 180ms ease;
+}
+.component-ledger .component-card:hover::after {
+  color: var(--accent-soft);
+  transform: translate(2px, -2px);
+}
+.component-ledger .component-card .card-title {
+  grid-column: 2;
+  grid-row: 1;
+  padding: 0;
+  font-size: clamp(1rem, 1.5vw, 1.6rem);
+  font-weight: 550;
+  line-height: 1.45;
+  letter-spacing: -0.035em;
+  min-width: 0;
+}
+.component-ledger .card-link {
+  display: inline;
+}
+.component-ledger .component-card .card-preview {
+  grid-column: 3;
+  grid-row: 1;
+  width: 100%;
+  height: 120px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #090a0f;
+}
+.component-ledger .card-preview .preview-live {
+  padding: 0.5rem;
+  font-size: 1.5rem;
+}
+.component-ledger .card-preview .preview-live:has(> .preview-art) {
+  padding: 0;
+}
+.component-ledger .card-preview .preview-generated img {
+  object-fit: contain;
+}
+.component-ledger .card-preview-aurora-text {
+  --card-demo-font: 1.5rem;
+}
+.component-ledger .card-preview-aurora-text .preview-live {
+  font-size: var(--card-demo-font);
+}
+.component-ledger .component-card .card-preview-shimmer-button .preview-generated img {
+  width: 780px;
+}
+.component-ledger .card-preview-shimmer-button .preview-live > div {
+  width: max-content;
+  max-width: none;
+  flex-wrap: nowrap;
+  transform: scale(0.65);
+}
+.component-ledger .card-preview-framebits-logo-3d .preview-live {
+  padding: 0;
+}
+.collection-empty {
+  padding: 2rem 0;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+}
+.collection-workflow {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.6fr);
+  gap: clamp(2.5rem, 6vw, 7rem);
+  padding-block: clamp(2.5rem, 4vw, 4rem) clamp(3.5rem, 6vw, 6rem);
+  border-top: 1px solid var(--line);
+}
+.collection-workflow h2 {
+  margin: 0 0 0.75rem;
+  font-size: clamp(1.5rem, 2vw, 2rem);
+  font-weight: 550;
+  line-height: 1.25;
+  letter-spacing: -0.035em;
+}
+.collection-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.collection-steps li {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 1.25rem;
+  padding: 1.15rem 0.5rem;
+  border-bottom: 1px solid var(--line);
+}
+.collection-steps li:first-child {
+  padding-top: 0;
+}
+.collection-steps li > span {
+  padding-top: 0.25rem;
+  color: var(--accent-soft);
+  font: 0.65rem var(--mono);
+}
+.collection-steps h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 550;
+}
+.collection-steps p {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.75;
+}
+
+/* Component pages keep the full-width layout and the large source workspace. */
+.catalog-page .component-browser-layout,
+.detail-page .component-browser-layout {
+  grid-template-columns: 224px minmax(0, 1fr);
+  gap: clamp(2rem, 3vw, 3.5rem);
+}
+.catalog-page .component-browser,
+.detail-page .component-browser {
+  padding: 0.5rem 1.25rem 1rem 0;
+  border: 0;
+  border-right: 1px solid var(--line);
+  border-radius: 0;
+  background: none;
+}
+.component-browser-layout .component-browser-heading h2 {
+  font-size: 0.8rem;
+}
+.component-browser-layout .component-browser-heading > span {
+  border: 0;
+}
+.component-browser-layout .component-browser-search {
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.025);
+}
+.component-browser-layout .component-browser-search input {
+  font-size: 0.85rem;
+}
+.component-browser-layout .component-browser-link {
+  border-radius: 5px;
+}
+.component-browser-layout .component-browser-link[aria-current="page"] {
+  border-color: transparent;
+  box-shadow: inset 2px 0 var(--accent);
+}
+.catalog-page .workspace-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+.catalog-page .workspace-heading h1,
+.detail-page .detail-copy h1,
+.docs-page .workspace-heading h1 {
+  max-width: none;
+  margin: 0.45rem 0 0.5rem;
+  font-size: clamp(2rem, 3.25vw, 3.5rem);
+  line-height: 1.15;
+  letter-spacing: -0.045em;
+}
+.catalog-page .workspace-heading .content-label {
+  margin-bottom: 0.5rem;
+}
+.catalog-page .workspace-heading p {
+  max-width: 36ch;
+  margin-bottom: 0.35rem;
+  font-size: 0.85rem;
+}
+.catalog-content .catalog-toolbar {
+  margin-bottom: 0.5rem;
+  padding: 0;
+  border: 0;
+}
+.catalog-page .catalog-category-filters button {
+  min-height: 44px;
+  border-radius: 6px;
+  font-size: 0.73rem;
+}
+.catalog-page .result-count {
+  margin: 1.2rem 0 0.75rem;
+  color: var(--muted);
+  font: 0.65rem var(--mono);
+}
+.catalog-page .result-count > span::after {
+  content: " components";
+}
+.detail-page .back-link {
+  min-height: 44px;
+  margin-bottom: 1.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.detail-page .back-link:hover {
+  color: var(--accent-soft);
+}
+.detail-page .detail-heading {
+  margin-bottom: 1.75rem;
+}
+.detail-page .detail-heading .detail-copy {
+  max-width: none;
+}
+.detail-page .detail-copy > p {
+  max-width: 72ch;
+  font-size: 0.875rem;
+  line-height: 1.8;
+}
+.detail-page .component-workspace {
+  border-radius: 8px;
+  box-shadow: none;
+  border-color: var(--line-strong);
+}
+.detail-page .component-preview > .preview-live {
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+}
+.detail-page .component-preview .preview-live > .preview-art {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+}
+.detail-page .workspace-toolbar {
+  padding: 0.45rem 0.65rem;
+  background: rgba(255, 255, 255, 0.015);
+}
+.detail-page .workspace-view-tabs > button,
+.detail-page .workspace-toolbar .copy-code {
+  border-radius: 5px;
+  font-size: 0.75rem;
+}
+.detail-page .workspace-view-tabs > button[aria-selected="true"] {
+  border-color: var(--line);
+  background: rgba(255, 255, 255, 0.05);
+}
+.detail-page .workspace-toolbar .copy-code {
+  background: transparent;
+}
+.detail-page .detail-metadata {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 3rem;
+  margin-top: 2rem;
+}
+.source-index,
+.component-setup {
+  min-width: 0;
+}
+.source-index-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 48px;
+  border-bottom: 1px solid var(--line);
+}
+.source-index-heading h2 {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 550;
+}
+.source-index-heading > span {
+  color: var(--muted);
+  font: 0.65rem var(--mono);
+}
+.source-index-heading .content-link {
+  font-size: 0.7rem;
+}
+.source-index ul {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0;
+}
+.source-index button {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.5rem 0;
+  border: 0;
+  background: none;
+  color: var(--muted-strong);
+  font: 0.7rem/1.7 var(--mono);
+  text-align: left;
+  cursor: pointer;
+}
+.source-index button > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.source-index button > svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.source-index button:hover,
+.source-index button:hover > svg {
+  color: var(--accent-soft);
+}
+.component-setup > p {
+  margin-block: 0.85rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.8;
+}
+.dependency-disclosure {
+  color: var(--muted-strong);
+  font-size: 0.8rem;
+}
+.dependency-disclosure summary {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 44px;
+  list-style: none;
+  cursor: pointer;
+}
+.dependency-disclosure summary::-webkit-details-marker {
+  display: none;
+}
+.dependency-disclosure summary > span {
+  font: 0.65rem var(--mono);
+  color: var(--muted);
+}
+.dependency-disclosure summary > svg {
+  margin-left: auto;
+  transition: transform 180ms ease;
+}
+.dependency-disclosure[open] summary > svg {
+  transform: rotate(180deg);
+}
+
+/* Documentation follows the same flat, readable structure. */
+.docs-page {
+  padding-top: var(--header-offset);
+}
+.docs-page .docs-layout {
+  grid-template-columns: 224px minmax(0, 1fr);
+  gap: clamp(2rem, 3vw, 3.5rem);
+}
+.docs-page .docs-content {
+  max-width: 960px;
+}
+.docs-page .docs-sidebar {
+  padding-right: 1rem;
+  border-right: 1px solid var(--line);
+}
+.docs-page .sidebar-guide {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+.docs-page .workspace-heading {
+  margin-bottom: 1.75rem;
+}
+.docs-page .workspace-heading h1 {
+  max-width: 24ch;
+}
+.docs-page .workspace-heading > p {
+  font-size: 0.9rem;
+}
+.docs-page .docs-requirements {
+  border: 0;
+  border-left: 2px solid var(--cyan);
+  border-radius: 0;
+  background: none;
+  padding: 0.5rem 1rem;
+}
+.docs-page .docs-release-note {
+  margin-top: 1.25rem;
+  font-size: 0.78rem;
+  color: var(--accent-soft);
+}
+.docs-page .docs-step {
+  padding-block: 2.25rem;
+  grid-template-columns: 28px minmax(0, 1fr);
+}
+.docs-page .step-number {
+  width: 28px;
+  height: 32px;
+  border: 0;
+  border-radius: 0;
+  color: var(--accent-soft);
+  font-size: 0.65rem;
+}
+.docs-page .docs-content h2 {
+  font-size: 1.35rem;
+  font-weight: 550;
+}
+.docs-page .docs-step p {
+  max-width: 76ch;
+}
+.docs-page .docs-step .copy-command {
+  border-radius: 6px;
+  font-size: 0.78rem;
+}
+.docs-page .docs-table-wrap {
+  border-radius: 6px;
+}
+.docs-page .docs-next {
+  padding: 1.75rem 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: none;
+}
+.docs-page .docs-next > svg {
+  display: none;
+}
+.docs-page .docs-next .button {
+  min-height: 44px;
+  padding-inline: 1rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 1100px) {
+  .collection-index,
+  .collection-workflow {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2rem;
+  }
+  .collection-intro {
+    padding: 0;
+  }
+  .collection-intro h2 br,
+  .collection-workflow h2 br {
+    display: none;
+  }
+  .collection-intro p {
+    max-width: 58ch;
+    margin-block: 1rem 0.5rem;
+  }
+  .catalog-page .workspace-heading {
+    display: block;
+  }
+  .catalog-page .workspace-heading p {
+    max-width: none;
+    margin-top: 0.75rem;
+  }
+  .detail-page .detail-metadata {
+    gap: 1.5rem;
+  }
+}
+@media (max-width: 900px) {
+  .catalog-page .component-browser-layout,
+  .detail-page .component-browser-layout,
+  .docs-page .docs-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.75rem;
+  }
+  .catalog-page .component-browser,
+  .detail-page .component-browser {
+    padding: 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--surface);
+  }
+  .component-browser-layout .component-browser-search input {
+    font-size: 1rem;
+  }
+  .docs-page .docs-sidebar {
+    padding-right: 0;
+    border-right: 0;
+  }
+}
+@media (max-width: 600px) {
+  .collection-index {
+    padding-block: 3rem;
+  }
+  .collection-intro h2 {
+    font-size: 2.15rem;
+  }
+  .collection-intro p {
+    font-size: 0.85rem;
+  }
+  .component-ledger .component-card {
+    grid-template-columns: minmax(0, 1fr) 112px 18px;
+    gap: 0.65rem;
+    min-height: 112px;
+    padding: 0.65rem 0;
+  }
+  .component-ledger .component-card::before {
+    display: none;
+  }
+  .component-ledger .component-card::after {
+    grid-column: 3;
+    font-size: 1.1rem;
+  }
+  .component-ledger .component-card .card-title {
+    grid-column: 1;
+    font-size: 0.95rem;
+  }
+  .component-ledger .component-card .card-preview {
+    grid-column: 2;
+    height: 86px;
+  }
+  .component-ledger .card-preview-aurora-text {
+    --card-demo-font: 1rem;
+  }
+  .component-ledger .component-card .card-preview-shimmer-button .preview-generated img {
+    width: 480px;
+  }
+  .component-ledger .card-preview-shimmer-button .preview-live > div {
+    transform: scale(0.4);
+  }
+  .component-ledger .card-preview .preview-live {
+    padding: 0.25rem;
+  }
+  .component-ledger .card-preview-framebits-logo-3d .preview-live {
+    padding: 0;
+  }
+  .collection-workflow {
+    padding-block: 2rem 3rem;
+  }
+  .collection-steps li {
+    grid-template-columns: 24px minmax(0, 1fr);
+    gap: 0.75rem;
+    padding-inline: 0;
+  }
+  .catalog-page .workspace-heading h1,
+  .detail-page .detail-copy h1,
+  .docs-page .workspace-heading h1 {
+    font-size: 2rem;
+  }
+  .detail-page .detail-metadata {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .detail-page .workspace-toolbar {
+    gap: 0.25rem;
+    padding: 0.5rem;
+  }
+  .detail-page .workspace-view-tabs > button,
+  .detail-page .workspace-toolbar .copy-code {
+    padding-inline: 0.5rem;
+    font-size: 0.7rem;
+  }
+  .source-index-heading {
+    flex-wrap: wrap;
+    padding-block: 0.35rem;
+  }
+  .docs-page .docs-next > div {
+    flex-basis: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .component-ledger .component-card,
+  .component-ledger .component-card::after,
+  .content-link svg,
+  .dependency-disclosure summary > svg {
+    transition: none;
+  }
+}

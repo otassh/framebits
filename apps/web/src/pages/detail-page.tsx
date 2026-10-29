@@ -1,12 +1,21 @@
 import type { RegistryItem, RegistryIndexItem } from "@framebits/shared";
-import { ArrowLeft, Check, Code2, Copy, Play, ShieldCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  Check,
+  ChevronDown,
+  Code2,
+  Copy,
+  FileCode2,
+  Play,
+} from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { formatCategory } from "../lib/catalog.js";
 import type { RegistryClient } from "../lib/registry.js";
 import type { IndexState } from "../lib/page-state.js";
 import { LiveDemo } from "../lib/live-demos.js";
 import { MAX_RENDER_CHARS, truncateForDisplay } from "../lib/code-view.js";
-import { AppLink, CopyCommandButton, ErrorPanel, PreviewStaticArt } from "../components/site-ui.js";
+import { AppLink, ErrorPanel, PreviewStaticArt } from "../components/site-ui.js";
 import { ComponentSidebar } from "../components/component-sidebar.js";
 type ItemState =
   | { status: "loading" }
@@ -122,7 +131,6 @@ export function DetailPage({
                   <h1>{state.item.title}</h1>
                   <p>{indexItem?.description ?? "Validated source from the Framebits registry."}</p>
                 </div>
-                <CopyCommandButton command={`npx @framebits/cli add ${slug}`} />
               </section>
 
               <section
@@ -270,38 +278,56 @@ export function DetailPage({
                 </div>
               </section>
               <section className="detail-layout detail-metadata" aria-label="Component information">
-                <aside className="detail-sidebar">
-                  <div className="info-card">
-                    <h2>Registry details</h2>
-                    <dl>
-                      <div>
-                        <dt>Version</dt>
-                        <dd>{state.item.version}</dd>
-                      </div>
-                      <div>
-                        <dt>Type</dt>
-                        <dd>{state.item.type}</dd>
-                      </div>
-                      {indexItem === undefined ? null : (
-                        <>
-                          <div>
-                            <dt>Difficulty</dt>
-                            <dd>{indexItem.difficulty}</dd>
-                          </div>
-                          <div>
-                            <dt>Performance</dt>
-                            <dd>{indexItem.performance}</dd>
-                          </div>
-                        </>
-                      )}
-                      <div>
-                        <dt>Files</dt>
-                        <dd>{state.item.files.length}</dd>
-                      </div>
-                    </dl>
+                <div className="source-index">
+                  <div className="source-index-heading">
+                    <h2>Source files</h2>
+                    <span>
+                      {state.item.files.length} {state.item.files.length === 1 ? "file" : "files"}
+                    </span>
                   </div>
-                  <div className="info-card">
-                    <h2>Dependencies</h2>
+                  <ul>
+                    {state.item.files.map((file) => (
+                      <li key={file.path}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedPath(file.path);
+                            setView("code");
+                            viewTabs.current[1]?.focus();
+                            viewTabs.current[1]?.scrollIntoView({
+                              block: "center",
+                              behavior: "instant",
+                            });
+                          }}
+                        >
+                          <FileCode2 size={16} aria-hidden="true" />
+                          <span>{file.path}</span>
+                          <ArrowUpRight size={14} aria-hidden="true" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="component-setup">
+                  <div className="source-index-heading">
+                    <h2>Bring it into your project</h2>
+                    <AppLink href="/docs" className="content-link">
+                      Setup guide <ArrowUpRight size={14} aria-hidden="true" />
+                    </AppLink>
+                  </div>
+                  <p>
+                    Copy the source files, include their styles, and check the required packages
+                    before using the component.
+                  </p>
+                  <details className="dependency-disclosure">
+                    <summary>
+                      Dependencies{" "}
+                      <span>
+                        {Object.keys(state.item.dependencies).length +
+                          state.item.registryDependencies.length}
+                      </span>
+                      <ChevronDown size={15} aria-hidden="true" />
+                    </summary>
                     {Object.keys(state.item.dependencies).length === 0 &&
                     state.item.registryDependencies.length === 0 ? (
                       <p className="muted-copy">No external dependencies.</p>
@@ -321,12 +347,8 @@ export function DetailPage({
                         ))}
                       </ul>
                     )}
-                  </div>
-                  <div className="integrity-note">
-                    <ShieldCheck size={18} />
-                    <span>Hash verified by the CLI before files are written.</span>
-                  </div>
-                </aside>
+                  </details>
+                </div>
               </section>
             </>
           ) : null}

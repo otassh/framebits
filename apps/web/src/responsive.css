@@ -65,13 +65,21 @@ html {
   line-height: 1.6;
 }
 
+.hero {
+  display: grid;
+  align-items: center;
+}
+
 .hero-grid {
   grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
 }
 
 .hero-copy {
-  max-width: 960px;
+  width: 100%;
+  max-width: 72rem;
   min-width: 0;
+  text-align: center;
 }
 
 .hero h1 {
@@ -86,7 +94,8 @@ html {
 }
 
 .hero-title-line {
-  padding-bottom: 0;
+  /* Keep descenders inside the gradient's paint box as the entry mask moves. */
+  padding-bottom: 0.16em;
 }
 
 .hero-title-line-first {
@@ -99,7 +108,12 @@ html {
 }
 
 .hero-lede {
-  max-width: 58ch;
+  max-width: 54ch;
+  margin-inline: auto;
+}
+
+.hero-actions {
+  justify-content: center;
 }
 
 .section {
@@ -667,17 +681,12 @@ html {
   }
 
   .hero-actions,
-  .hero-actions .magnetic,
   .hero-actions .button {
     width: 100%;
   }
 
   .hero-actions {
     margin-top: 1.75rem;
-  }
-
-  .hero-signals span {
-    font-size: 0.6rem;
   }
 
   .destination-grid,

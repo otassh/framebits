@@ -37,11 +37,6 @@ export function DocsPage(): React.JSX.Element {
           <span aria-hidden="true">/</span>
           <span aria-current="page">Docs</span>
         </nav>
-        <div className="workspace-heading">
-          <span className="eyebrow eyebrow-static">Documentation</span>
-          <h1>From first install to your own.</h1>
-          <p>Three steps to bring Framebits into your React project.</p>
-        </div>
         <div className="docs-layout">
           <aside className="workspace-sidebar docs-sidebar">
             <span className="sidebar-label">
@@ -63,13 +58,22 @@ export function DocsPage(): React.JSX.Element {
             </AppLink>
           </aside>
           <div className="docs-content">
+            <div className="workspace-heading">
+              <span className="content-label">Documentation</span>
+              <h1>Make it part of your project.</h1>
+              <p>A practical guide to the source, dependencies, and CLI.</p>
+            </div>
             <div className="docs-requirements">
               <Check size={18} />
               <p>
-                Start with a React project and Node.js 20 or newer. Run the commands from your
-                project directory.
+                Start with a React project. Open a component, select Code, then copy each file and
+                check its dependencies. Include any CSS files or required keyframes.
               </p>
             </div>
+            <p className="docs-release-note">
+              The published CLI needs a registry compatibility update. Use the source workflow above
+              for now; the commands below are the CLI reference.
+            </p>
             {steps.map((step, index) => (
               <section className="docs-step" id={step.id} key={step.id}>
                 <span className="step-number">0{index + 1}</span>
