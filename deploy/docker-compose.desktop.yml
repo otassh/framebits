@@ -1,0 +1,8 @@
+# Docker Desktop overlay: keep the site on loopback :5054 and Postgres internal.
+# Builds inherit the current repository context from docker-compose.local.yml.
+services:
+  caddy:
+    ports: !override
+      - "127.0.0.1:5054:8080"
+  postgres:
+    ports: !reset []

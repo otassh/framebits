@@ -198,7 +198,7 @@ describe("loadRegistry", () => {
     }
   });
 
-  it("reports DEMO_UNREADABLE for an unscannable demo and BUMP_IGNORED for meta.bump", async () => {
+  it("reports DEMO_UNREADABLE for an unscannable demo and rejects meta.bump", async () => {
     const root = await makeRegistry({
       ...componentFiles("components/buttons", "ok"),
       "components/buttons/ok/demo.tsx": `x${"y".repeat(300 * 1024)}`,
@@ -211,9 +211,12 @@ describe("loadRegistry", () => {
       const codes = diagnostics.map((d) => d.code);
       expect(codes).toContain("FILE_TOO_LARGE");
       expect(codes).toContain("DEMO_UNREADABLE");
-      const bumped = diagnostics.filter((d) => d.code === "BUMP_IGNORED");
+      const bumped = diagnostics.filter(
+        (d) => d.code === "META_INVALID" && d.file.endsWith("bumped/meta.json"),
+      );
       expect(bumped.length).toBe(1);
-      expect(bumped[0]?.severity).toBe("warning");
+      expect(bumped[0]?.severity).toBe("error");
+      expect(bumped[0]?.message).toContain("Unrecognized key");
     } finally {
       await rmRegistry(root);
     }
@@ -232,7 +235,7 @@ describe("loadRegistry", () => {
     }
     const dirty = await makeRegistry({
       ...componentFiles("components/buttons", "ok"),
-      "components/buttons/ok/ok.css": "@import \"https://evil.example/x.css\";\n",
+      "components/buttons/ok/ok.css": '@import "https://evil.example/x.css";\n',
     });
     try {
       const { diagnostics } = await loadRegistry({ registryRoot: dirty, skipTypecheck: true });

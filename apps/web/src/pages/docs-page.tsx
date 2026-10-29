@@ -1,34 +1,70 @@
-import { ArrowRight, BookOpen, Check, Code2, Terminal } from "lucide-react";
+import { ArrowRight, BookOpen, Check, Code2, ShieldCheck } from "lucide-react";
+import { useReducedMotion } from "motion/react";
+import { useEffect, useState } from "react";
 import { AppLink, CopyCommandButton } from "../components/site-ui.js";
+import { DOC_COMMANDS, DOC_NAV } from "../lib/docs.js";
 
 const steps = [
   {
-    id: "initialize",
+    id: "install",
     title: "Initialize your project",
     description:
       "Run this in your React project. The CLI detects your framework, TypeScript, Tailwind, and import aliases, then creates framebits.json.",
-    command: "npx @framebits/cli init",
+    command: DOC_COMMANDS.init,
     note: "Your existing tsconfig and project files stay as they are.",
   },
   {
-    id: "add-component",
+    id: "add",
     title: "Add a component",
     description:
       "Choose a component from the collection and copy its install command. Start with Aurora Text for a small, expressive accent.",
-    command: "npx @framebits/cli add aurora-text",
+    command: DOC_COMMANDS.add,
     note: "The CLI verifies the source, resolves registry dependencies, writes the files, and installs missing packages.",
   },
   {
-    id: "make-it-yours",
-    title: "Make it yours",
+    id: "files",
+    title: "What gets written",
     description:
       "Import the component from the path printed by the CLI. The files belong to your project: adjust the styles, markup, and motion directly in the source.",
-    command: "npx @framebits/cli add shimmer-button --dry-run",
+    command: DOC_COMMANDS.dryRun,
     note: "Use --dry-run to see the files and dependencies a component needs before making changes.",
   },
 ];
 
 export function DocsPage(): React.JSX.Element {
+  const reduceMotion = useReducedMotion();
+  const [activeId, setActiveId] = useState(DOC_NAV[0]?.id ?? "install");
+
+  useEffect(() => {
+    const nodes = DOC_NAV.map((item) => document.getElementById(item.id)).filter(
+      (node): node is HTMLElement => node !== null,
+    );
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((left, right) => right.intersectionRatio - left.intersectionRatio);
+        const id = visible[0]?.target.id;
+        if (id !== undefined) setActiveId(id);
+      },
+      { rootMargin: "-18% 0px -68% 0px", threshold: [0, 0.25, 0.6] },
+    );
+    for (const node of nodes) observer.observe(node);
+    const id = window.location.hash.replace(/^#/, "");
+    if (id !== "") document.getElementById(id)?.scrollIntoView({ block: "start" });
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  const jump = (id: string): void => {
+    const node = document.getElementById(id);
+    if (node === null) return;
+    window.history.replaceState({}, "", `/docs#${id}`);
+    node.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    setActiveId(id);
+  };
+
   return (
     <main id="main-content" tabIndex={-1} className="page docs-page">
       <div className="shell">
@@ -43,15 +79,20 @@ export function DocsPage(): React.JSX.Element {
               <BookOpen size={15} /> Getting started
             </span>
             <nav aria-label="On this page">
-              {steps.map((step, index) => (
-                <a href={`#${step.id}`} key={step.id}>
-                  <span>0{index + 1}</span>
-                  {step.title}
+              {DOC_NAV.map((item, index) => (
+                <a
+                  href={`#${item.id}`}
+                  key={item.id}
+                  aria-current={activeId === item.id ? "location" : undefined}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    jump(item.id);
+                  }}
+                >
+                  <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+                  {item.label}
                 </a>
               ))}
-              <a href="#cli-options">
-                <Terminal size={15} /> CLI options
-              </a>
             </nav>
             <AppLink href="/components" className="sidebar-guide">
               Explore the collection <ArrowRight size={16} />
@@ -74,6 +115,11 @@ export function DocsPage(): React.JSX.Element {
               The published CLI needs a registry compatibility update. Use the source workflow above
               for now; the commands below are the CLI reference.
             </p>
+            <div className="docs-command-rail" aria-label="Quick commands">
+              <CopyCommandButton command={DOC_COMMANDS.init} />
+              <CopyCommandButton command={DOC_COMMANDS.add} />
+              <CopyCommandButton command={DOC_COMMANDS.dryRun} label="add --dry-run" />
+            </div>
             {steps.map((step, index) => (
               <section className="docs-step" id={step.id} key={step.id}>
                 <span className="step-number">0{index + 1}</span>
@@ -82,14 +128,55 @@ export function DocsPage(): React.JSX.Element {
                   <p>{step.description}</p>
                   <CopyCommandButton command={step.command} />
                   <p className="docs-note">{step.note}</p>
-                  {step.id === "add-component" ? (
+                  {step.id === "add" ? (
                     <AppLink href="/components/aurora-text" className="text-link">
                       Preview Aurora Text <ArrowRight size={16} />
                     </AppLink>
                   ) : null}
+                  {step.id === "files" ? (
+                    <dl className="docs-files">
+                      <div>
+                        <dt>Component files</dt>
+                        <dd>Registry paths map to your component, library, and hook aliases.</dd>
+                      </div>
+                      <div>
+                        <dt>Tailwind</dt>
+                        <dd>
+                          CSS marker blocks support v3 and v4 without editing Tailwind config.
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>npm packages</dt>
+                        <dd>Missing allowlisted packages install unless you use --no-install.</dd>
+                      </div>
+                      <div>
+                        <dt>Config</dt>
+                        <dd>Installed entries in framebits.json update after the files land.</dd>
+                      </div>
+                    </dl>
+                  ) : null}
                 </div>
               </section>
             ))}
+            <section className="docs-step" id="safety">
+              <span className="step-number">04</span>
+              <div>
+                <h2>Safety</h2>
+                <p>
+                  The CLI treats downloaded registry content as data. It checks the schema, slug,
+                  version, SHA-256 hashes, and dependency allowlist before writing files. A mismatch
+                  fails closed.
+                </p>
+                <p className="docs-note">
+                  <ShieldCheck size={16} aria-hidden="true" /> Conflicts fail before any write
+                  unless you pass --overwrite or confirm each file. Use --dry-run to review the plan
+                  first. Re-running init preserves existing installed entries.
+                </p>
+                <p className="docs-note">
+                  The CLI requires Node 20 or newer; repo development requires Node 22 or newer.
+                </p>
+              </div>
+            </section>
             <section className="docs-options" id="cli-options">
               <span className="eyebrow eyebrow-static">A little more control</span>
               <h2>Useful CLI options</h2>
@@ -127,6 +214,18 @@ export function DocsPage(): React.JSX.Element {
                     </tr>
                     <tr>
                       <td>
+                        <code>--yes</code>
+                      </td>
+                      <td>Use non-interactive defaults without enabling overwrite.</td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <code>--registry &lt;url&gt;</code>
+                      </td>
+                      <td>Override the registry with HTTPS or a localhost URL.</td>
+                    </tr>
+                    <tr>
+                      <td>
                         <code>--cwd &lt;dir&gt;</code>
                       </td>
                       <td>Run inside another project directory.</td>
@@ -142,6 +241,9 @@ export function DocsPage(): React.JSX.Element {
               </div>
               <p>
                 For the full command reference, run <code>npx @framebits/cli --help</code>.
+              </p>
+              <p className="docs-note">
+                Exit codes: 0 success, 1 failure or conflict, 2 usage, 3 network, 4 integrity.
               </p>
             </section>
             <div className="docs-next">

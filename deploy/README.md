@@ -50,6 +50,22 @@ carry `Access-Control-Allow-Origin: *` and
 Tear down: `docker compose -f deploy/docker-compose.local.yml down`
 (add `-v` to drop the local pgdata volume).
 
+For Docker Desktop, use the tracked overlay below. It serves the site only on
+`http://127.0.0.1:5054`, keeps Postgres off the host network, and builds web/API
+from this checkout. Rebuild the bind-mounted registry before recreating services:
+
+```sh
+pnpm build:registry
+docker compose -f deploy/docker-compose.local.yml -f deploy/docker-compose.desktop.yml up -d --build --force-recreate
+bash scripts/verify-registry-headers.sh http://127.0.0.1:5054
+```
+
+The API package currently provides configuration/security modules, without an
+HTTP server. Rebuilding it still leaves its healthcheck unhealthy and `/api/*`
+returns 502 until `src/server.ts` is implemented. Web and static registry reads
+work independently of the API. Recreating services preserves the named database
+volume; do not add `down -v` when refreshing the stack.
+
 ## 2. First-time VPS setup (ordered, Ubuntu 24.04)
 
 1. Create the VPS, add your SSH key, disable password login:

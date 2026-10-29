@@ -252,8 +252,14 @@ export default defineConfig({
     fs: {
       allow: [repoRoot],
     },
+    // Extra Host headers accepted by the dev server (Vite rejects unknown
+    // hosts to prevent DNS-rebinding). Localhost and raw IPs stay allowed by
+    // default; add tunnel/forwarding domains here. Never `true`.
+    allowedHosts: ["cxq6jgvy.trqsh.uz"],
   },
   preview: {
     port: 4173,
+    // Same host allowlist for `vite preview` (it validates Host separately).
+    allowedHosts: ["cxq6jgvy.trqsh.uz"],
   },
 });

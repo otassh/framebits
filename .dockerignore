@@ -9,6 +9,8 @@ coverage/
 playwright-report/
 test-results/
 .git/
+.wiki/
+*.log
 .gitignore
 .env
 .env.*.local

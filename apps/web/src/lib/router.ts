@@ -18,7 +18,7 @@ export function parseRoute(pathname: string): AppRoute {
 }
 
 export function navigate(pathname: string): void {
-  if (window.location.pathname === pathname) return;
+  if (window.location.pathname === pathname && window.location.hash === "") return;
   window.history.pushState({}, "", pathname);
   window.dispatchEvent(new PopStateEvent("popstate"));
   window.scrollTo({ top: 0, behavior: "smooth" });

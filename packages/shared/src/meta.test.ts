@@ -106,7 +106,6 @@ describe("MetaSchema", () => {
         tags: [],
         dependencies: {},
         registryDependencies: [],
-        bump: "minor",
       }).success,
     ).toBe(true);
   });
@@ -125,9 +124,7 @@ describe("MetaSchema", () => {
 
   it("rejects more than 100 registryDependencies", () => {
     const deps = Array.from({ length: 101 }, (_, n) => `dep-${String(n)}`);
-    expect(
-      MetaSchema.safeParse({ ...validMeta, registryDependencies: deps }).success,
-    ).toBe(false);
+    expect(MetaSchema.safeParse({ ...validMeta, registryDependencies: deps }).success).toBe(false);
   });
 
   it.each([
@@ -156,7 +153,7 @@ describe("MetaSchema", () => {
     ["bad status", { status: "archived" }],
     ["bad date", { addedAt: "04-10-2026" }],
     ["impossible date", { addedAt: "2026-13-01" }],
-    ["bad bump", { bump: "patch" }],
+    ["forbidden bump metadata", { bump: "minor" }],
     ["missing title", { title: undefined }],
   ])("rejects %s", (_rule, override) => {
     expect(MetaSchema.safeParse({ ...validMeta, ...override }).success).toBe(false);

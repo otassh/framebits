@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { Header } from "./components/site-ui.js";
 import type { IndexState } from "./lib/page-state.js";
+import { DOC_NAV } from "./lib/docs.js";
 import { HomePage } from "./pages/home-page.js";
 import { CatalogPage } from "./pages/catalog-page.js";
 import { DocsPage } from "./pages/docs-page.js";
@@ -69,6 +70,12 @@ describe("public pages", () => {
     expect(html).toContain("npx @framebits/cli init");
     expect(html).toContain("npx @framebits/cli add aurora-text");
     expect(html).toContain('id="cli-options"');
+    expect(html).toContain('aria-label="Quick commands"');
+    expect(html).toContain("The published CLI needs a registry compatibility update.");
+    for (const item of DOC_NAV) {
+      expect(html).toContain(`href="#${item.id}"`);
+      expect(html).toContain(`id="${item.id}"`);
+    }
     expect(html).not.toContain('class="component-card"');
     expect(html).not.toContain('class="hero-ballpit"');
   });

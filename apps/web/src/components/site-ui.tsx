@@ -4,6 +4,7 @@ import { useInView, usePageInView, useReducedMotion } from "motion/react";
 import { type MouseEvent, type PropsWithChildren, useEffect, useRef, useState } from "react";
 import { LiveDemo } from "../lib/live-demos.js";
 import { navigate, type AppRoute } from "../lib/router.js";
+import { DOC_COMMANDS } from "../lib/docs.js";
 import brandMarkUrl from "../assets/framebits-mark.png";
 import { GitHubStars } from "./github-stars.js";
 interface LinkProps extends PropsWithChildren {
@@ -88,6 +89,8 @@ export function Header({ route }: { route: AppRoute }): React.JSX.Element {
 
   useEffect(() => {
     if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     headerRef.current?.querySelector<HTMLAnchorElement>(".main-nav a")?.focus();
 
     const onEscape = (event: KeyboardEvent): void => {
@@ -110,6 +113,7 @@ export function Header({ route }: { route: AppRoute }): React.JSX.Element {
     document.addEventListener("pointerdown", onOutside);
     document.addEventListener("focusin", onOutside);
     return () => {
+      document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", onEscape);
       document.removeEventListener("pointerdown", onOutside);
       document.removeEventListener("focusin", onOutside);
@@ -140,6 +144,9 @@ export function Header({ route }: { route: AppRoute }): React.JSX.Element {
           </AppLink>
         </nav>
         <div className="header-actions">
+          <div className="header-install-command">
+            <CopyCommandButton command={DOC_COMMANDS.init} compact />
+          </div>
           <GitHubStars />
           <button
             ref={menuRef}

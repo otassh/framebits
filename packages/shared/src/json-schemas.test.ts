@@ -40,6 +40,8 @@ describe("JSON_SCHEMA_SOURCES", () => {
       unknown
     >;
     expect(meta["additionalProperties"]).toBe(false);
+    const properties = meta["properties"] as Record<string, unknown>;
+    expect(properties).not.toHaveProperty("bump");
   });
 
   it("jsonSchemaFor resolves names and throws on unknown ones", () => {

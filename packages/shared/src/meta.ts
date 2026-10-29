@@ -87,8 +87,6 @@ export const MetaSchema = z
     performance: PerformanceSchema,
     status: PublishStatusSchema,
     addedAt: z.iso.date(),
-    /** Optional version-bump hint for this release. */
-    bump: z.enum(["minor", "major"]).optional(),
   })
   .strict()
   .superRefine((meta, ctx) => {
