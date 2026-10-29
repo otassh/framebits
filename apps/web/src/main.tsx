@@ -11,6 +11,7 @@ import "./footer.css";
 import "./responsive.css";
 import "./component-browser.css";
 import "./component-cards.css";
+import "./content-layout.css";
 
 const root = document.querySelector<HTMLDivElement>("#root");
 

@@ -75,7 +75,7 @@ export function App(): React.JSX.Element {
       <div className="grain" aria-hidden="true" />
       <Header route={route} />
       <div className="route-view" key={routeKey} id="route-view">
-        {route.kind === "home" ? <HomePage /> : null}
+        {route.kind === "home" ? <HomePage state={state} retry={retry} /> : null}
         {route.kind === "docs" ? <DocsPage /> : null}
         {route.kind === "catalog" ? <CatalogPage state={state} retry={retry} /> : null}
         {route.kind === "component" ? (
@@ -83,7 +83,7 @@ export function App(): React.JSX.Element {
         ) : null}
         {route.kind === "not-found" ? <NotFoundPage /> : null}
       </div>
-      <Footer />
+      {route.kind !== "catalog" ? <Footer /> : null}
     </div>
   );
 }

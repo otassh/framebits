@@ -39,13 +39,10 @@ export function CatalogPage({
           </nav>
           <div className="workspace-heading">
             <div>
-              <span className="eyebrow eyebrow-static">Component registry</span>
+              <span className="content-label">The collection</span>
               <h1>Components</h1>
             </div>
-            <p>
-              A little motion. A lot of possibility. Find a component, try its preview, and make it
-              yours.
-            </p>
+            <p>Hover to explore. Open a component to preview it and copy the source.</p>
           </div>
           <div className="catalog-toolbar">
             <div
@@ -75,7 +72,11 @@ export function CatalogPage({
               ))}
             </div>
           </div>
-          {state.status === "loading" ? <LoadingCards /> : null}
+          {state.status === "loading" ? (
+            <div className="component-ledger">
+              <LoadingCards />
+            </div>
+          ) : null}
           {state.status === "error" ? <ErrorPanel message={state.message} retry={retry} /> : null}
           {state.status === "ready" ? (
             <p className="result-count" role="status" aria-live="polite" aria-atomic="true">
@@ -85,7 +86,7 @@ export function CatalogPage({
             </p>
           ) : null}
           {state.status === "ready" && filtered.length > 0 ? (
-            <div className="component-grid catalog-grid">
+            <div className="component-grid catalog-grid component-ledger">
               {filtered.map((item) => (
                 <ComponentCard key={item.slug} item={item} />
               ))}

@@ -31,12 +31,13 @@ const state: IndexState = {
 };
 
 describe("public pages", () => {
-  it("keeps browsing and installation instructions off the homepage", () => {
-    const html = renderToStaticMarkup(createElement(HomePage));
+  it("keeps the hero and links a compact collection to its source pages", () => {
+    const html = renderToStaticMarkup(createElement(HomePage, { state, retry: () => {} }));
     expect(html).toContain('href="/components"');
     expect(html).toContain('href="/docs"');
     expect(html).toContain('class="hero-ballpit"');
-    expect(html).not.toContain('class="component-card"');
+    expect(html).toContain('href="/components/aurora-text"');
+    expect(html).not.toContain('class="destination-card"');
     expect(html).not.toContain('type="search"');
     expect(html).not.toContain("npx @framebits/cli init");
   });
@@ -49,6 +50,18 @@ describe("public pages", () => {
     expect(html).not.toContain('class="hero"');
     expect(html).not.toContain('class="hero-ballpit"');
     expect(html).not.toContain("Initialize your project");
+  });
+
+  it("keeps homepage loading, retry and empty states usable", () => {
+    const render = (nextState: IndexState): string =>
+      renderToStaticMarkup(createElement(HomePage, { state: nextState, retry: () => {} }));
+    expect(render({ status: "loading" })).toContain('aria-label="Loading components"');
+    const error = render({ status: "error", message: "Registry unavailable" });
+    expect(error).toContain("Registry unavailable");
+    expect(error).toContain("Try again");
+    expect(render({ ...state, index: { ...state.index, items: [] } })).toContain(
+      "New components are on their way.",
+    );
   });
 
   it("renders setup independently of the live registry", () => {
