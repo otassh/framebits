@@ -472,6 +472,60 @@
 }
 
 /* Documentation follows the same flat, readable structure. */
+.header-install-command {
+  display: flex;
+}
+
+.docs-command-rail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-block: 1.5rem 2.5rem;
+}
+
+.docs-sidebar nav a[aria-current="location"] {
+  color: var(--accent-soft);
+}
+
+.docs-files {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.docs-files > div {
+  display: grid;
+  grid-template-columns: 9rem minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.docs-files dt {
+  font-weight: 600;
+}
+
+.docs-files dd {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+@media (max-width: 1100px) {
+  .header-install-command {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .docs-command-rail .copy-command {
+    width: 100%;
+  }
+
+  .docs-files > div {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+}
+
 .docs-page {
   padding-top: var(--header-offset);
 }

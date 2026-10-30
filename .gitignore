@@ -10,6 +10,9 @@ apps/cli/LICENSE
 apps/web/.registry/
 apps/web/.registry-archive/
 .turbo/
+# Local checkout of the separately versioned GitHub wiki and runtime logs.
+.wiki/
+*.log
 *.local
 .env
 .env.*.local

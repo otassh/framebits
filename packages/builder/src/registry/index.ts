@@ -58,15 +58,6 @@ export async function loadRegistry(options: LoadRegistryOptions): Promise<LoadRe
     validateLayout(item, meta, diagnostics);
     const styles = parseItemStyles(item, diagnostics);
     const playground = parseItemPlayground(item, diagnostics);
-    if (meta?.bump !== undefined) {
-      diagnostics.push({
-        severity: "warning",
-        code: "BUMP_IGNORED",
-        file: `${item.dirRel}/meta.json`,
-        message: `meta.json "bump" is ignored (bump levels are a builder CLI argument, not a meta field)`,
-        hint: "Remove the field; re-run with --bump <slug>=minor|major instead.",
-      });
-    }
     return { item, meta, styles, playground };
   });
 
@@ -138,7 +129,13 @@ export async function loadRegistry(options: LoadRegistryOptions): Promise<LoadRe
     if (meta.status === "draft") summary.draftSlugs.push(meta.slug);
   }
   summary.draftSlugs.sort();
-  return { registryRoot, items, diagnostics, summary, typecheckRan: options.skipTypecheck !== true };
+  return {
+    registryRoot,
+    items,
+    diagnostics,
+    summary,
+    typecheckRan: options.skipTypecheck !== true,
+  };
 }
 
 function hasErrors(dirRel: string, diagnostics: Diagnostic[]): boolean {
@@ -218,7 +215,8 @@ function checkItemContent(
         severity: "error",
         code: "DEMO_UNREADABLE",
         file: demo.relPath,
-        message: "demo.tsx exists but its content could not be scanned (see the discovery error above)",
+        message:
+          "demo.tsx exists but its content could not be scanned (see the discovery error above)",
       });
     } else {
       checkFile("demo.tsx", true);
@@ -341,9 +339,7 @@ function buildModel(record: {
 
   const stylesPresent = item.files.some((file) => file.relPath.endsWith("/styles.json"));
   if (stylesPresent && styles === undefined) return undefined;
-  const playgroundPresent = item.files.some((file) =>
-    file.relPath.endsWith("/playground.json"),
-  );
+  const playgroundPresent = item.files.some((file) => file.relPath.endsWith("/playground.json"));
   if (playgroundPresent && playground === undefined) return undefined;
   return buildItemModel({
     meta,
