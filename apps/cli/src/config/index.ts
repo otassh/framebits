@@ -2,7 +2,7 @@
  * CLI config load/write (C7). Validated with CliConfigSchema, 2-space indent,
  * LF, trailing newline, atomic temp+rename.
  */
-import { CliConfigSchema, type CliConfig } from "@framebits/shared";
+import { CliConfigSchema, CONFIG_SCHEMA_URL, type CliConfig } from "@framebits/shared";
 import { randomUUID } from "node:crypto";
 import { configError } from "../errors.js";
 
@@ -105,7 +105,7 @@ export function mergeInitConfig(
   const registry = options.registryFlag ?? existing?.registry ?? detected.registry;
   if (existing === undefined) {
     return {
-      $schema: "https://framebits.dev/schema/config.json",
+      $schema: CONFIG_SCHEMA_URL,
       schemaVersion: 1,
       registry,
       framework: detected.framework,

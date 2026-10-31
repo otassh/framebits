@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { CliConfigSchema, MAX_INSTALLED_ENTRIES } from "./cli-config.js";
 
 export const validConfig = {
-  $schema: "https://framebits.dev/schema/config.json",
+  $schema: "https://framebits.trqsh.uz/schema/config.json",
   schemaVersion: 1,
-  registry: "https://framebits.dev/r",
+  registry: "https://framebits.trqsh.uz/r",
   framework: "next",
   typescript: true,
   tailwind: { version: 3, config: "tailwind.config.ts", css: "src/app/globals.css" },
@@ -33,14 +33,14 @@ describe("CliConfigSchema", () => {
 
   it("rejects credentialed and off-host registry URLs", () => {
     for (const registry of [
-      "https://user:pass@framebits.dev/r",
-      "https://user@framebits.dev/r",
+      "https://user:pass@framebits.trqsh.uz/r",
+      "https://user@framebits.trqsh.uz/r",
       "http://user:pass@localhost:3000/r",
       "http://localhost.evil.com/r",
       "http://evil-localhost/r",
       "http://192.168.1.10/r",
       "http://[::2]/r",
-      "ftp://framebits.dev/r",
+      "ftp://framebits.trqsh.uz/r",
     ]) {
       expect(CliConfigSchema.safeParse({ ...validConfig, registry }).success).toBe(false);
     }

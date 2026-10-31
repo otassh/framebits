@@ -21,7 +21,9 @@ describe("aliases", () => {
       projectRoot: "/proj",
       configDir: "/proj",
       configFile: "tsconfig.json",
-      fs: fsOf({ "tsconfig.json": JSON.stringify({ compilerOptions: { paths: { "@/*": ["./src/*"] } } }) }),
+      fs: fsOf({
+        "tsconfig.json": JSON.stringify({ compilerOptions: { paths: { "@/*": ["./src/*"] } } }),
+      }),
       isVite: false,
     });
     expect(resolved.components).toBe("@/components/ui");
@@ -37,7 +39,11 @@ describe("aliases", () => {
         "tsconfig.json": JSON.stringify({
           compilerOptions: {
             baseUrl: ".",
-            paths: { "@/components/ui/*": ["./custom/ui/*"], "@/lib/*": ["./custom/lib/*"], "@/hooks/*": ["./custom/hooks/*"] },
+            paths: {
+              "@/components/ui/*": ["./custom/ui/*"],
+              "@/lib/*": ["./custom/lib/*"],
+              "@/hooks/*": ["./custom/hooks/*"],
+            },
           },
         }),
       }),
@@ -96,11 +102,122 @@ describe("aliases", () => {
       projectRoot: "/proj",
       configDir: "/proj",
       configFile: "tsconfig.json",
-      fs: fsOf({ "tsconfig.json": JSON.stringify({ compilerOptions: { paths: { "~/*": ["./src/*"] } } }) }),
+      fs: fsOf({
+        "tsconfig.json": JSON.stringify({ compilerOptions: { paths: { "~/*": ["./src/*"] } } }),
+      }),
       isVite: false,
     });
     expect(resolved.lib).toBe("~/lib");
     expect(resolved.dirs.lib).toBe("/proj/src/lib");
+  });
+
+  it.each([
+    { compilerOptions: { paths: { "@/*": ["../src/*"] } } },
+    { compilerOptions: { baseUrl: "..", paths: { "@/*": ["src/*"] } } },
+  ])("resolves inherited paths relative to their declaring config: %j", (base) => {
+    const resolved = resolveAliasesFromConfig({
+      projectRoot: "/proj",
+      configDir: "/proj",
+      configFile: "tsconfig.json",
+      fs: fsOf({
+        "tsconfig.json": JSON.stringify({ extends: "./config/base.json" }),
+        "config/base.json": JSON.stringify(base),
+      }),
+      isVite: false,
+    });
+    expect(resolved.dirs.lib).toBe("/proj/src/lib");
+  });
+
+  it("resolves nested referenced config paths in that config's directory", () => {
+    const resolved = resolveAliasesFromConfig({
+      projectRoot: "/proj",
+      configDir: "/proj",
+      configFile: "tsconfig.json",
+      fs: fsOf({
+        "tsconfig.json": JSON.stringify({ references: [{ path: "./config/app.json" }] }),
+        "config/app.json": JSON.stringify({ compilerOptions: { paths: { "~/*": ["../src/*"] } } }),
+      }),
+      isVite: true,
+    });
+    expect(resolved.lib).toBe("~/lib");
+    expect(resolved.dirs.lib).toBe("/proj/src/lib");
+  });
+
+  it("applies later extends configurations and replaces inherited paths", () => {
+    const resolved = resolveAliasesFromConfig({
+      projectRoot: "/proj",
+      configDir: "/proj",
+      configFile: "tsconfig.json",
+      fs: fsOf({
+        "tsconfig.json": JSON.stringify({ extends: ["./first.json", "./second.json"] }),
+        "first.json": JSON.stringify({ compilerOptions: { paths: { "@/*": ["./old/*"] } } }),
+        "second.json": JSON.stringify({ compilerOptions: { paths: { "~/*": ["./src/*"] } } }),
+      }),
+      isVite: false,
+    });
+    expect(resolved.lib).toBe("~/lib");
+    expect(resolved.dirs.lib).toBe("/proj/src/lib");
+  });
+
+  it("does not invent an @ alias from baseUrl alone", () => {
+    expect(() =>
+      resolveAliasesFromConfig({
+        projectRoot: "/proj",
+        configDir: "/proj",
+        configFile: "tsconfig.json",
+        fs: fsOf({ "tsconfig.json": JSON.stringify({ compilerOptions: { baseUrl: "./src" } }) }),
+        isVite: true,
+      }),
+    ).toThrow("no usable import alias");
+  });
+
+  it("honors specific aliases alongside a wildcard base", () => {
+    const resolved = resolveAliasesFromConfig({
+      projectRoot: "/proj",
+      configDir: "/proj",
+      configFile: "tsconfig.json",
+      fs: fsOf({
+        "tsconfig.json": JSON.stringify({
+          compilerOptions: {
+            paths: {
+              "@/*": ["./src/*"],
+              "@/lib/*": ["./shared/*"],
+            },
+          },
+        }),
+      }),
+      isVite: true,
+    });
+    expect(resolved.dirs.components).toBe("/proj/src/components/ui");
+    expect(resolved.dirs.lib).toBe("/proj/shared");
+  });
+
+  it("resolves directory project references", () => {
+    const resolved = resolveAliasesFromConfig({
+      projectRoot: "/proj",
+      configDir: "/proj",
+      configFile: "tsconfig.json",
+      fs: fsOf({
+        "tsconfig.json": JSON.stringify({ references: [{ path: "./config" }] }),
+        "config/tsconfig.json": JSON.stringify({
+          compilerOptions: { paths: { "@/*": ["../src/*"] } },
+        }),
+      }),
+      isVite: true,
+    });
+    expect(resolved.dirs.lib).toBe("/proj/src/lib");
+  });
+
+  it("rejects cyclic extends instead of recursing indefinitely", () => {
+    expect(() =>
+      resolveAliasesFromConfig({
+        projectRoot: "/proj",
+        configDir: "/proj",
+        configFile: "tsconfig.json",
+        fs: fsOf({ "tsconfig.json": JSON.stringify({ extends: "./tsconfig.json" }) }),
+        isVite: true,
+      }),
+    ).toThrow("cyclic or too-deep");
   });
 
   it("throws with instructions when no alias exists", () => {

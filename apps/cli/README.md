@@ -11,7 +11,12 @@ npx @framebits/cli add aurora-text
 
 Or install globally (`npm i -g @framebits/cli`) and run `framebits`.
 
-Using the CLI requires Node >= 20. Developing this repo requires Node >= 22. The bundle is a single ESM file (`dist/cli.js`, ~1 MB, no runtime dependencies to install).
+Using the CLI requires Node >= 20. Developing this repo requires Node >= 22. The bundle is a single ESM file (`dist/cli.js`, ~1 MB); the package manager installs its `cross-spawn` runtime dependency.
+
+Components require TypeScript, React, and a configured import alias. Tailwind 3
+and 4 are supported. In Vite, configure the alias in both `tsconfig.app.json`
+and `vite.config.ts`; TypeScript paths alone do not configure the bundler.
+See [`docs/CLI.md`](../../docs/CLI.md#consumer-project-setup) for setup examples.
 
 ## Usage
 
@@ -46,7 +51,7 @@ Flags:
 - `--no-styles`: skip Tailwind CSS patching (print the snippet instead).
 - `--cwd <dir>`: run inside another app directory.
 - `--registry <url>`: override the registry (flag > env
-  `FRAMEBITS_REGISTRY_URL` > config > default `https://framebits.dev/r`).
+  `FRAMEBITS_REGISTRY_URL` > config > default `https://framebits.trqsh.uz/r`).
 - `--timeout <seconds>`: network timeout, integer 1–300 (flag > env
   `FRAMEBITS_TIMEOUT` in seconds > `timeoutSeconds` in `framebits.json`
   in seconds > default 10 s). Invalid values exit 2.

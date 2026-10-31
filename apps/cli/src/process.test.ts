@@ -3,7 +3,15 @@
  * Requires `pnpm build` to have run (turbo test depends on build).
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -48,6 +56,57 @@ describe("built cli.js", () => {
     expect(result.stdout).toContain("--no-styles");
     expect(result.stdout).toContain("--dry-run");
     expect(result.stdout).toContain("--overwrite");
+  });
+
+  it.each([
+    {
+      name: "relative extends",
+      files: {
+        "tsconfig.json": '{ "extends": "./tsconfig.base.json" }',
+        "tsconfig.base.json": '{ "compilerOptions": { "paths": { "@/*": ["./src/*"] } } }',
+      },
+    },
+    {
+      name: "JSONC project references",
+      files: {
+        "tsconfig.json":
+          '{ // Vite app config\n "references": [{ "path": "./tsconfig.app.json" }], }',
+        "tsconfig.app.json": '{ "compilerOptions": { "paths": { "@/*": ["./src/*"] } } }',
+      },
+    },
+    {
+      name: "nested referenced config with inherited aliases",
+      files: {
+        "tsconfig.json": '{ "references": [{ "path": "./config/tsconfig.app.json" }] }',
+        "config/tsconfig.app.json": '{ "extends": "./base.json" }',
+        "config/base.json": '{ "compilerOptions": { "paths": { "~/*": ["../src/*"] } } }',
+      },
+    },
+  ])("initializes a real project using $name", ({ files }) => {
+    const dir = mkdtempSync(join(tmpdir(), "framebits-init-"));
+    try {
+      writeFileSync(
+        join(dir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          packageManager: "pnpm@10.29.3",
+          devDependencies: { vite: "^9.0.0" },
+        }),
+      );
+      for (const [path, content] of Object.entries(files)) {
+        mkdirSync(dirname(join(dir, path)), { recursive: true });
+        writeFileSync(join(dir, path), content);
+      }
+      const result = run(["init", "--yes", "--cwd", dir]);
+      expect(result.stderr).not.toContain("could not read");
+      expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
+      expect(readFileSync(join(dir, "framebits.json"), "utf8")).toContain("components/ui");
+      for (const [path, content] of Object.entries(files)) {
+        expect(readFileSync(join(dir, path), "utf8")).toBe(content);
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("runs through a symlink/junction shim like an npm bin link", () => {

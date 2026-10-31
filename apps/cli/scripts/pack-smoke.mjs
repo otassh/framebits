@@ -4,12 +4,12 @@
  * Packaging smoke test (C1 + publishability): pnpm pack -> inspect the tarball
  * (file list must be package.json/README/LICENSE/dist only; the bundled dist/cli.js
  * must not reference @framebits/* at runtime) -> install the tarball into a
- * clean temp dir with npm -> run `framebits --version` and `--help` (direct
+ * clean temp dir with pnpm -> run `framebits --version` and `--help` (direct
  * node invocation and npx-style) -> build a real registry with the builder,
  * serve it over local http, init a fixture project with the packed binary and
  * run `framebits add aurora-text --dry-run` (exit 0, project untouched).
  *
- * Public organization-scoped package (MIT, version 0.1.0): this script
+ * Public organization-scoped package (MIT): this script
  * never publishes. It only packs and installs locally. The LICENSE in the
  * tarball is the generated copy staged by `prepack` (scripts/copy-license.mjs).
  */
@@ -267,7 +267,7 @@ try {
     `${JSON.stringify({ name: "cli-smoke-install", private: true, version: "0.0.0" }, null, 2)}\n`,
     "utf8",
   );
-  runSh("npm", ["install", "--no-audit", "--no-fund", tarball], { cwd: installDir });
+  runSh("pnpm", ["add", tarball], { cwd: installDir });
   const installedBundle = join(installDir, "node_modules", "@framebits", "cli", "dist", "cli.js");
   if (!existsSync(installedBundle)) {
     throw new Error("installed tarball is missing dist/cli.js");
@@ -311,7 +311,7 @@ try {
       `installed framebits --help looks wrong:\n${helpOut.stdout}\n${helpOut.stderr}`,
     );
   }
-  runSh("npm", ["exec", "--yes", "--package", tarball, "--", "framebits", "--version"], {
+  runSh("pnpm", ["exec", "framebits", "--version"], {
     cwd: installDir,
   });
 

@@ -2,7 +2,7 @@
  * `init` command (C5-C7). Detects the project, resolves aliases, writes
  * framebits.json idempotently. Never modifies tsconfig or other files.
  */
-import type { CliConfig } from "@framebits/shared";
+import { DEFAULT_REGISTRY_URL, type CliConfig } from "@framebits/shared";
 import { resolveAliasesFromConfig } from "../aliases/index.js";
 import { loadConfig, mergeInitConfig, writeConfigAtomic, type ConfigFs } from "../config/index.js";
 import { detectProject, type PackageJson } from "../detect/index.js";
@@ -95,7 +95,7 @@ export async function runInit(
   const detectedRegistry = options.registryFlag ??
     registryEnv ??
     existing?.config.registry ??
-    "https://framebits.dev/r";
+    DEFAULT_REGISTRY_URL;
 
   const tailwind = detection.tailwind.version === undefined
     ? { version: 3 as const, config: undefined as string | undefined, css: undefined as string | undefined }

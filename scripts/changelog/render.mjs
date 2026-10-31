@@ -326,7 +326,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fo
 <body>
 <header class="site-header"><div class="wrap">
 <h1>Framebits Changelog</h1>
-<nav><a href="https://github.com/otassh/framebits">Repository</a><a href="https://github.com/otassh/framebits/releases">GitHub Releases</a><a href="https://framebits.dev/r/index.json">Registry</a></nav>
+<nav><a href="https://github.com/otassh/framebits">Repository</a><a href="https://github.com/otassh/framebits/releases">GitHub Releases</a><a href="https://framebits.trqsh.uz/r/index.json">Registry</a></nav>
 </div></header>
 <div class="layout">
 <aside class="sidebar">

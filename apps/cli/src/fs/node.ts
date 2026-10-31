@@ -16,7 +16,9 @@ import {
   stat,
   writeFile,
 } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { parse, type ParseError } from "jsonc-parser";
+import { MAX_TSCONFIG_DEPTH, MAX_TSCONFIG_FILES, TsconfigSchema } from "@framebits/shared";
 import type { ProjectSnapshot } from "../detect/index.js";
 
 async function exists(path: string): Promise<boolean> {
@@ -65,14 +67,6 @@ const PROBE_FILES = [
 
 const PROBE_DIRS = ["app", "src/app", "pages", "src/pages", "src"] as const;
 
-interface TsconfigReferences {
-  references?: Array<{ path?: unknown }>;
-}
-
-function isReferencesPayload(value: unknown): value is TsconfigReferences {
-  return typeof value === "object" && value !== null && "references" in value;
-}
-
 export async function readProjectSnapshot(rootAbs: string): Promise<ProjectSnapshot> {
   const root = resolve(rootAbs);
   const files = new Set<string>();
@@ -82,7 +76,12 @@ export async function readProjectSnapshot(rootAbs: string): Promise<ProjectSnaps
   for (const dir of PROBE_DIRS) {
     if (await isDirectory(join(root, ...dir.split("/")))) dirs.add(dir);
   }
-  for (const layout of ["app/layout.tsx", "app/layout.jsx", "src/app/layout.tsx", "src/app/layout.jsx"]) {
+  for (const layout of [
+    "app/layout.tsx",
+    "app/layout.jsx",
+    "src/app/layout.tsx",
+    "src/app/layout.jsx",
+  ]) {
     if (await exists(join(root, ...layout.split("/")))) {
       files.add(layout);
       const dir = layout.slice(0, layout.lastIndexOf("/"));
@@ -124,34 +123,58 @@ export async function readProjectSnapshot(rootAbs: string): Promise<ProjectSnaps
     }
   }
 
-  const tsconfigText = contents.get("tsconfig.json");
-  if (tsconfigText !== undefined) {
+  // Alias resolution uses an injected snapshot. Load its complete local JSONC
+  // config graph as well as the entry file, without walking outside the app.
+  const realRoot = await realpath(root).catch(() => root);
+  const visited = new Set<string>();
+  async function loadConfigTree(abs: string, depth: number): Promise<boolean> {
+    if (depth > MAX_TSCONFIG_DEPTH + 1 || visited.size >= MAX_TSCONFIG_FILES) return false;
+    const rel = relative(root, abs).replace(/\\/g, "/");
+    if (rel === ".." || rel.startsWith("../") || isAbsolute(rel)) return false;
+    if (visited.has(rel)) return true;
+    let text: string;
     try {
-      const parsed: unknown = JSON.parse(tsconfigText);
-      if (isReferencesPayload(parsed) && Array.isArray(parsed.references)) {
-        for (const ref of parsed.references.slice(0, 5)) {
-          if (typeof ref.path !== "string") continue;
-          const refPath = ref.path.replace(/\/+$/, "").replace(/^\.\//, "");
-          const candidates = [`${refPath}.json`, refPath];
-          for (const candidate of candidates) {
-            if (files.has(candidate)) break;
-            const abs = join(root, ...candidate.split("/"));
-            if (await exists(abs)) {
-              try {
-                const text = await readFile(abs, "utf8");
-                files.add(candidate);
-                contents.set(candidate, text);
-              } catch {
-                // Ignore.
-              }
-              break;
-            }
-          }
-        }
-      }
+      const actual = relative(realRoot, await realpath(abs));
+      if (
+        actual === ".." ||
+        actual.startsWith(`..${process.platform === "win32" ? "\\" : "/"}`) ||
+        isAbsolute(actual)
+      )
+        return false;
+      text = await readFile(abs, "utf8");
     } catch {
-      // Malformed tsconfig: detection will report it via aliases/config.
+      return false;
     }
+    visited.add(rel);
+    files.add(rel);
+    contents.set(rel, text);
+    const errors: ParseError[] = [];
+    const raw: unknown = parse(text, errors, { allowTrailingComma: true });
+    const config = TsconfigSchema.safeParse(raw);
+    if (errors.length > 0 || !config.success) return true; // Resolver reports malformed configs.
+    const bases =
+      config.data.extends === undefined
+        ? []
+        : Array.isArray(config.data.extends)
+          ? config.data.extends
+          : [config.data.extends];
+    for (const base of bases) {
+      if (!base.startsWith(".")) continue;
+      await loadConfigTree(
+        resolve(dirname(abs), base.endsWith(".json") ? base : `${base}.json`),
+        depth + 1,
+      );
+    }
+    for (const ref of config.data.references ?? []) {
+      const target = resolve(dirname(abs), ref.path);
+      for (const candidate of [target, `${target}.json`, join(target, "tsconfig.json")]) {
+        if (await loadConfigTree(candidate, depth + 1)) break;
+      }
+    }
+    return true;
+  }
+  for (const entry of ["tsconfig.json", "jsconfig.json"]) {
+    if (files.has(entry)) await loadConfigTree(join(root, entry), 0);
   }
 
   return { root, files, dirs, contents };

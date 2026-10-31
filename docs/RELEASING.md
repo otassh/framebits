@@ -42,9 +42,8 @@ otassh` in `LICENSE` — the login `otassh` is used because `gh api user`
 - TODO(question): confirm the starting version (DONE in first-publish prep:
   `apps/cli/package.json` is `"0.1.0"`, public; the bootstrap publishes
   exactly this version, and the first CI-driven release is `0.1.1`).
-- TODO(question): confirm the production domain/registry URL if it changes
-  any user-facing text (currently a placeholder, see
-  `packages/shared/src/site.ts`).
+- Production domain: `framebits.trqsh.uz`; registry: `https://framebits.trqsh.uz/r`.
+  The permanent defaults are defined in `packages/shared/src/site.ts`.
 - TODO(question): **make the repo public before the first automated
   release.** npm provenance requires a public package in a public repo on a
   GitHub-hosted runner. OIDC publish itself works while the repo is private,
@@ -122,7 +121,7 @@ its real local pack + clean-room install; only the final upload is skipped.)
    `"license": "MIT"`, `publishConfig` is `{ "access": "public" }` with NO
    `provenance` key — local publish with provenance fails outside CI; the
    workflow in §5 passes `--provenance` explicitly on its own command line.
-   `prepublishOnly` is `npm run build && node scripts/pack-smoke.mjs`
+   `prepublishOnly` is `pnpm build && node scripts/pack-smoke.mjs`
    (tsup build + local smoke; neither calls publish, so no recursion under
    `npm publish`), and `prepack` is `node scripts/copy-license.mjs`.
 4. Verify the `## [0.1.0]` entry in root `CHANGELOG.md`.

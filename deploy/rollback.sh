@@ -42,7 +42,7 @@ mv -Tf "$CURRENT_LINK.new" "$CURRENT_LINK"
 cd "$COMPOSE_DIR"
 GIT_SHA="$PREV_SHA" docker compose -f "deploy/docker-compose.yml" up -d --build api web
 
-DOMAIN="${DOMAIN:-framebits.dev}"
+DOMAIN="${DOMAIN:-framebits.trqsh.uz}"
 for i in $(seq 1 30); do
   if curl -fsS --max-time 5 "https://$DOMAIN/r/index.json" >/dev/null 2>&1; then
     log "registry is healthy on $PREV_SHA"

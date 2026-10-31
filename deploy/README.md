@@ -79,7 +79,7 @@ volume; do not add `down -v` when refreshing the stack.
    rotation in `/etc/docker/daemon.json`:
    `{"log-driver":"json-file","log-opts":{"max-size":"10m","max-file":"3"}}`,
    then `systemctl restart docker`.
-6. DNS: point `framebits.dev` (placeholder domain, still unconfirmed) at the
+6. DNS: point the permanent domain `framebits.trqsh.uz` at the
    VPS. Caddy obtains HTTPS certificates automatically on first request.
 7. Layout + repo:
    ```sh
@@ -104,7 +104,7 @@ volume; do not add `down -v` when refreshing the stack.
 | ----------------------------------------------------------------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `POSTGRES_PASSWORD`                                                                             | yes                | Strong random value; compose fails fast if unset (prod). Generate with `openssl rand -base64 32`.                                                                                                           |
 | `POSTGRES_USER` / `POSTGRES_DB`                                                                 | no                 | Default `framebits`.                                                                                                                                                                                        |
-| `DOMAIN`                                                                                        | no                 | Default `framebits.dev` (placeholder, unconfirmed).                                                                                                                                                         |
+| `DOMAIN`                                                                                        | no                 | Default `framebits.trqsh.uz` (permanent production domain).                                                                                                                                                 |
 | `ADMIN_TOKEN`                                                                                   | Task 8/10          | Min 32 chars; unused until the API lands. Generate with `openssl rand -base64 48`.                                                                                                                          |
 | `DATABASE_URL`                                                                                  | Task 7/8           | Compose builds it from the `POSTGRES_*` vars for `api`.                                                                                                                                                     |
 | `LIKE_PEPPER`, `WEB_ORIGIN`, `TRUSTED_PROXY_COUNT`, `PORT`, `REGISTRY_URL`, `VITE_REGISTRY_URL` | see `.env.example` | API/web wiring for later tasks. `TRUSTED_PROXY_COUNT=1` direct on the VPS (Caddy -> api); `2` behind Cloudflare/CDN in front of Caddy (client -> CDN -> Caddy -> api). Never trust more hops than deployed. |
@@ -184,4 +184,4 @@ Bump pins deliberately (rebuild + re-run section 1) and keep this table truthful
 - `pnpm db:migrate` / `pnpm db:sync` (Task 7): `deploy.sh` runs them when the
   `@framebits/db` scripts exist and warns otherwise. The steps run before the
   symlink flip, so a future migration failure can never publish a half-deploy.
-- `DOMAIN=framebits.dev` is still a placeholder.
+- `DOMAIN=framebits.trqsh.uz` is the permanent production default.

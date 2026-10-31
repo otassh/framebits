@@ -1,6 +1,6 @@
 # deploy/Caddyfile — production reverse proxy + static registry server (Task 6).
-# Domain is parameterized through `DOMAIN` (default framebits.dev, still a
-# placeholder). Caddy issues automatic
+# Domain is parameterized through `DOMAIN` (default framebits.trqsh.uz).
+# Caddy issues automatic
 # HTTPS for the domain; /var/www is mounted read-only from the host.
 {
   admin off
@@ -29,7 +29,7 @@
   }
 }
 
-{$DOMAIN:framebits.dev} {
+{$DOMAIN:framebits.trqsh.uz} {
   encode zstd gzip
 
   log {
