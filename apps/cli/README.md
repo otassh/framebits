@@ -6,7 +6,7 @@ The Framebits CLI. Adds curated animated React components to your project.
 
 ```sh
 npx @framebits/cli init
-npx @framebits/cli add aurora-text
+npx @framebits/cli add framebits-logo-3d
 ```
 
 Or install globally (`npm i -g @framebits/cli`) and run `framebits`.
@@ -27,7 +27,7 @@ import aliases) and writes `framebits.json`. It never modifies `tsconfig`
 or any other project file.
 
 `add` fetches items from the registry, verifies hashes, resolves
-`registryDependencies` (e.g. `aurora-text` pulls in `cn`), rewrites import
+`registryDependencies`, rewrites import
 aliases to yours, writes files atomically (with rollback), patches Tailwind
 styles into the CSS entry, installs missing npm dependencies, and updates
 `installed` in the config.

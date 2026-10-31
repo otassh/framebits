@@ -21,11 +21,11 @@ const EXAMPLES = [
   "examples:",
   "  framebits init",
   "  framebits init --yes --cwd ./my-app",
-  "  framebits add aurora-text",
-  "  framebits add aurora-text shimmer-button --overwrite",
+  "  framebits add framebits-logo-3d",
+  "  framebits add framebits-logo-3d cn --overwrite",
   "  framebits add cn@1.0.0 --dry-run",
-  "  framebits add shimmer-button --no-install --no-styles",
-  "  framebits add aurora-text --timeout 30",
+  "  framebits add framebits-logo-3d --no-install --no-styles",
+  "  framebits add framebits-logo-3d --timeout 30",
 ].join("\n");
 
 interface SnapshotPackageJson {

@@ -17,7 +17,7 @@ const steps = [
     id: "add",
     title: "Add a component",
     description:
-      "Choose a component from the collection and copy its install command. Start with Aurora Text for a small, expressive accent.",
+      "Start with FrameBits Logo 3D: preview the interactive emblem, inspect its source, and install it in your project.",
     command: DOC_COMMANDS.add,
     note: "The CLI verifies the source, resolves registry dependencies, writes the files, and installs missing packages.",
   },
@@ -129,8 +129,8 @@ export function DocsPage(): React.JSX.Element {
                   <CopyCommandButton command={step.command} />
                   <p className="docs-note">{step.note}</p>
                   {step.id === "add" ? (
-                    <AppLink href="/components/aurora-text" className="text-link">
-                      Preview Aurora Text <ArrowRight size={16} />
+                    <AppLink href="/components/framebits-logo-3d" className="text-link">
+                      Preview FrameBits Logo 3D <ArrowRight size={16} />
                     </AppLink>
                   ) : null}
                   {step.id === "files" ? (

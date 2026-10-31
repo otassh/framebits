@@ -18,21 +18,21 @@
 - **One-command install** — `framebits init` detects your setup (package manager, TypeScript, Tailwind, import aliases), `framebits add <slug>` does the rest
 - **Safe by default** — SHA-256 hash verification, dependency allow-lists, atomic writes with automatic rollback
 - **Zero-config styling** — Tailwind CSS is patched automatically; `--dry-run` previews every change first
-- **Smart dependencies** — registry dependencies resolve transitively (e.g. `aurora-text` pulls in `cn`), missing npm packages are installed for you
+- **Smart dependencies** — registry dependencies resolve transitively, and missing npm packages are installed for you
 - **Static-first registry** — components are served as static JSON, verified independently of the API or database
 
 ## 🚀 Quick start
 
 ```sh
 npx @framebits/cli init
-npx @framebits/cli add aurora-text
+npx @framebits/cli add framebits-logo-3d
 ```
 
 Or install globally and use it anywhere:
 
 ```sh
 npm i -g @framebits/cli
-framebits add aurora-text --dry-run   # preview the plan, change nothing
+framebits add framebits-logo-3d --dry-run   # preview the plan, change nothing
 ```
 
 Using the CLI requires Node >= 20. Developing this repo requires Node >= 22. See [`apps/cli/README.md`](apps/cli/README.md) and [`docs/CLI.md`](docs/CLI.md) for all commands, flags, and exit codes.
@@ -48,7 +48,7 @@ Using the CLI requires Node >= 20. Developing this repo requires Node >= 22. See
 | `packages/db`                            | Drizzle schema, migrations, DB client, seed/sync — planned, Task 7                                                                       | Planned (stub) |
 | `packages/builder`                       | Registry build pipeline (validate → hash → emit)                                                                                         | Ready          |
 | `packages/config`                        | Shared tsconfig + eslint config                                                                                                          | Ready          |
-| `registry/components/<category>/<slug>/` | Component sources (3 samples)                                                                                                            | Ready          |
+| `registry/components/<category>/<slug>/` | Component sources (FrameBits Logo 3D)                                                                                                    | Ready          |
 | `registry/lib/<slug>/`                   | Shared helpers (`cn`)                                                                                                                    | Ready          |
 | `deploy/`                                | Docker Compose, Caddyfile, deploy scripts — planned, Task 6                                                                              | Placeholder    |
 
@@ -91,7 +91,7 @@ Deploy scripts are bash/POSIX. Develop inside WSL2 or Git Bash so shell scripts 
 
 ## 📌 Project status
 
-Implemented (Tasks 1–5c): monorepo, `packages/shared` contracts, `pnpm new-component` generator, `packages/builder` pipeline with 3 sample components, CLI `init` + `add` (styles + install), and the production registry frontend.
+Implemented (Tasks 1–5c): monorepo, `packages/shared` contracts, `pnpm new-component` generator, `packages/builder` pipeline with the FrameBits Logo 3D component, CLI `init` + `add` (styles + install), and the production registry frontend.
 
 Not built yet: Task 6 (Docker/Caddy/deploy), Task 7 (`packages/db`), Task 8 (`apps/api`: events, stats, likes, newsletter, RSS), Task 9 (CLI telemetry, `list`/`search`/`diff`/`update`), Task 10 (admin), Tasks 11–14 (quality gates, props docs, previews, polish).
 

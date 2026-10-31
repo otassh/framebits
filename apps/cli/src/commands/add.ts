@@ -129,7 +129,7 @@ function isInsideRoot(root: string, candidate: string): boolean {
 export async function runAdd(options: AddOptions, deps: AddDeps): Promise<AddResult> {
   const projectRoot = options.cwd;
   if (options.slugs.length === 0) {
-    throw configError("no slugs given", "usage: framebits add <slug...> (e.g. add aurora-text)");
+    throw configError("no slugs given", "usage: framebits add <slug...> (e.g. add framebits-logo-3d)");
   }
   const loaded = await loadConfig(projectRoot, deps.configFs);
   if (loaded === undefined) {

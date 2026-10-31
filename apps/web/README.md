@@ -157,5 +157,5 @@ default is the same-origin `/r` path used in production.
   explicit and reproducible. No framework router or state library is added.
 - `tailwindcss` + `@tailwindcss/vite`: compile the registry demos' utility classes
   and theme tokens without applying Tailwind's reset to the site. Versions match
-  the registry builder. `src/demo-utilities.css` supplies the shimmer animation
-  under a separate keyframe name so loading a demo preserves the site skeletons.
+  the registry builder. `src/demo-utilities.css` includes utilities and theme tokens
+  without applying the page reset.

@@ -1,4 +1,4 @@
-/* global document, getComputedStyle, window, Event */
+/* global document, window, Event */
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -40,15 +40,6 @@ async function activate(card) {
   checks++;
 }
 
-async function assertAnimationChanges(page, element, label) {
-  await element.waitFor();
-  const before = await element.evaluate((node) => getComputedStyle(node).backgroundPosition);
-  await page.waitForTimeout(280);
-  const after = await element.evaluate((node) => getComputedStyle(node).backgroundPosition);
-  assert.notEqual(after, before, `${label} renders a running component animation`);
-  checks++;
-}
-
 async function assertBounds(page, label) {
   const issues = await page.evaluate(() => {
     const problems = [];
@@ -87,7 +78,7 @@ try {
   await openCatalog(page);
 
   const cards = page.locator(".component-card[data-preview-active]");
-  assert.equal(await cards.count(), 3, "all published cards are visible");
+  assert.equal(await cards.count(), 1, "all published cards are visible");
   assert.equal(await cards.locator(".preview-live").count(), 0, "idle cards use static previews");
   assert.equal(
     await cards.locator(".card-meta, .tag-row, .card-open, p").count(),
@@ -101,7 +92,7 @@ try {
   );
   assert.equal(
     await cards.locator(".card-preview[inert][aria-hidden='true']").count(),
-    3,
+    1,
     "demo controls cannot enter keyboard or accessibility navigation",
   );
   const loadedDemoChunks = await page.evaluate(() =>
@@ -113,24 +104,6 @@ try {
   assert.deepEqual(loadedDemoChunks, [], "idle catalog does not load component demo chunks");
   checks += 6;
   await page.screenshot({ path: join(outputDir, "desktop-idle.png"), fullPage: true });
-
-  const aurora = cardFor(page, "aurora-text");
-  await activate(aurora);
-  await assertAnimationChanges(page, aurora.locator(".preview-live > span"), "Aurora Text");
-  await aurora.screenshot({ path: join(outputDir, "aurora-active.png") });
-  await page.mouse.move(0, 0);
-  await assertInactive(aurora);
-
-  const shimmer = cardFor(page, "shimmer-button");
-  await activate(shimmer);
-  await assertAnimationChanges(
-    page,
-    shimmer.locator(".preview-live button").first(),
-    "Shimmer Button",
-  );
-  await shimmer.screenshot({ path: join(outputDir, "shimmer-active.png") });
-  await page.mouse.move(0, 0);
-  await assertInactive(shimmer);
 
   const logo = cardFor(page, "framebits-logo-3d");
   await activate(logo);
@@ -162,54 +135,52 @@ try {
   await page.mouse.move(0, 0);
   await assertInactive(logo);
 
-  await aurora.scrollIntoViewIfNeeded();
+  await logo.scrollIntoViewIfNeeded();
   await page.keyboard.press("Tab");
-  await aurora.locator(".card-link").focus();
-  await aurora.locator(".preview-live > span").waitFor();
-  await assertAnimationChanges(
-    page,
-    aurora.locator(".preview-live > span"),
-    "Keyboard-focused Aurora Text",
-  );
+  await logo.locator(".card-link").focus();
+  await logo
+    .locator(".preview-live canvas, .preview-live svg, .preview-live img")
+    .first()
+    .waitFor();
   await page.keyboard.press("Tab");
   assert.equal(
     await page.evaluate(() => document.activeElement.closest(".card-preview") !== null),
     false,
     "keyboard cannot enter an inert demo",
   );
-  await assertInactive(aurora);
+  await assertInactive(logo);
   checks++;
 
   await page.evaluate(() => document.activeElement.blur());
   await page.setViewportSize({ width: 1440, height: 300 });
-  await activate(aurora);
+  await activate(logo);
   await page.evaluate(() => window.scrollTo(0, 0));
-  const offscreen = await aurora.boundingBox();
+  const offscreen = await logo.boundingBox();
   assert(offscreen.y >= 300, "the observed card is outside the short viewport");
-  await assertInactive(aurora);
+  await assertInactive(logo);
   await page.setViewportSize({ width: 1440, height: 900 });
 
   // The visibility event is deterministic even in headless Chrome, where every tab stays visible.
-  await activate(aurora);
+  await activate(logo);
   await page.evaluate(() => {
     Object.defineProperty(document, "hidden", { configurable: true, value: true });
     Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
     document.dispatchEvent(new Event("visibilitychange"));
   });
-  await assertInactive(aurora);
+  await assertInactive(logo);
   await page.mouse.move(0, 0);
   await page.evaluate(() => {
     delete document.hidden;
     delete document.visibilityState;
     document.dispatchEvent(new Event("visibilitychange"));
   });
-  await assertInactive(aurora);
+  await assertInactive(logo);
 
   const [newTab] = await Promise.all([
     context.waitForEvent("page"),
-    aurora.locator(".card-link").click({ modifiers: ["Control"] }),
+    logo.locator(".card-link").click({ modifiers: ["Control"] }),
   ]);
-  await newTab.waitForURL("**/components/aurora-text");
+  await newTab.waitForURL("**/components/framebits-logo-3d");
   await newTab.close();
   assert.equal(
     new URL(page.url()).pathname,
@@ -220,33 +191,31 @@ try {
 
   for (const target of ["preview", "title", "blank"]) {
     await openCatalog(page);
-    const card = cardFor(page, "aurora-text");
+    const card = cardFor(page, "framebits-logo-3d");
     if (target === "preview") {
       await card.scrollIntoViewIfNeeded();
       const box = await card.locator(".card-preview").boundingBox();
       await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
     } else if (target === "title") await card.locator(".card-link").click();
     else await card.click({ position: { x: 8, y: (await card.boundingBox()).height - 8 } });
-    await page.waitForURL("**/components/aurora-text");
+    await page.waitForURL("**/components/framebits-logo-3d");
     await page.locator(".component-workspace").waitFor();
     checks++;
   }
   await openCatalog(page);
-  await cardFor(page, "aurora-text").locator(".card-link").focus();
+  await cardFor(page, "framebits-logo-3d").locator(".card-link").focus();
   await page.keyboard.press("Enter");
-  await page.waitForURL("**/components/aurora-text");
+  await page.waitForURL("**/components/framebits-logo-3d");
   checks++;
 
   for (const width of widths) {
     await page.setViewportSize({ width, height: width < 901 ? 844 : 900 });
     await openCatalog(page);
     await assertBounds(page, `${width}px idle cards`);
-    for (const slug of ["aurora-text", "shimmer-button", "framebits-logo-3d"]) {
+    for (const slug of ["framebits-logo-3d"]) {
       const card = cardFor(page, slug);
       const before = await card.boundingBox();
       await activate(card);
-      if (slug === "aurora-text") await card.locator(".preview-live > span").waitFor();
-      if (slug === "shimmer-button") await card.locator(".preview-live button").first().waitFor();
       if (slug === "framebits-logo-3d")
         await card
           .locator(".preview-live canvas, .preview-live svg, .preview-live img")
@@ -272,7 +241,7 @@ try {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await openCatalog(page);
-  for (const slug of ["aurora-text", "shimmer-button", "framebits-logo-3d"]) {
+  for (const slug of ["framebits-logo-3d"]) {
     const card = cardFor(page, slug);
     await card.hover();
     await assertInactive(card);
@@ -293,7 +262,7 @@ try {
   );
   const touchPage = await touchContext.newPage();
   await openCatalog(touchPage);
-  const touchCard = cardFor(touchPage, "shimmer-button");
+  const touchCard = cardFor(touchPage, "framebits-logo-3d");
   await touchCard.scrollIntoViewIfNeeded();
   await assertInactive(touchCard);
   const touchBox = await touchCard.locator(".card-preview").boundingBox();
@@ -301,7 +270,7 @@ try {
     touchBox.x + touchBox.width / 2,
     touchBox.y + touchBox.height / 2,
   );
-  await touchPage.waitForURL("**/components/shimmer-button");
+  await touchPage.waitForURL("**/components/framebits-logo-3d");
   checks++;
   await touchContext.close();
 

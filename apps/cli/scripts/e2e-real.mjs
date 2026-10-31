@@ -130,32 +130,17 @@ function startRegistryServer(registryOut) {
 }
 
 function verifyCommon(projDir, label, cssFiles) {
-  for (const dep of [
-    "motion",
-    "clsx",
-    "tailwind-merge",
-    "three",
-    "@types/three",
-    "@react-three/fiber",
-  ]) {
+  for (const dep of ["three", "@types/three", "@react-three/fiber"]) {
     assertExists(join(projDir, "node_modules", dep), `${label} node_modules/${dep}`);
   }
   assertExists(
     join(projDir, "src", "components", "ui", "framebits-logo-3d.tsx"),
     `${label} FrameBitsLogo3D component`,
   );
-  const cssHits = cssFiles.filter((file) =>
-    readFileSync(file, "utf8").includes("@keyframes shimmer"),
-  );
-  if (cssHits.length === 0) throw new Error(`${label}: built CSS has no @keyframes shimmer`);
-  log(`ok: ${label} built CSS contains @keyframes shimmer (${cssHits.join(", ")})`);
-  const utilHits = cssFiles.filter((file) => {
-    const text = readFileSync(file, "utf8");
-    return text.includes(".animate-shimmer") || text.includes("--animate-shimmer");
-  });
-  if (utilHits.length === 0)
-    throw new Error(`${label}: built CSS has no animate-shimmer utility/variable`);
-  log(`ok: ${label} built CSS contains the animation class/variable`);
+  if (!cssFiles.some((file) => readFileSync(file, "utf8").trim().length > 0)) {
+    throw new Error(`${label}: consumer styles were not emitted`);
+  }
+  log(`ok: ${label} production build emits consumer styles`);
 }
 
 function snapshotProject(dir) {
@@ -196,18 +181,7 @@ async function verifyNoOp(projDir, label, registryUrl) {
   const before = snapshotProject(projDir);
   await run(
     process.execPath,
-    [
-      cliJs,
-      "add",
-      "--yes",
-      "aurora-text",
-      "shimmer-button",
-      "framebits-logo-3d",
-      "--cwd",
-      projDir,
-      "--registry",
-      registryUrl,
-    ],
+    [cliJs, "add", "--yes", "framebits-logo-3d", "--cwd", projDir, "--registry", registryUrl],
     { cwd: projDir },
   );
   const after = snapshotProject(projDir);
@@ -226,18 +200,7 @@ async function verifyNoOp(projDir, label, registryUrl) {
   );
   await run(
     process.execPath,
-    [
-      cliJs,
-      "add",
-      "--yes",
-      "aurora-text",
-      "shimmer-button",
-      "framebits-logo-3d",
-      "--cwd",
-      projDir,
-      "--registry",
-      registryUrl,
-    ],
+    [cliJs, "add", "--yes", "framebits-logo-3d", "--cwd", projDir, "--registry", registryUrl],
     { cwd: projDir },
   );
   await run("git", ["diff", "--exit-code"], { cwd: projDir });
@@ -270,18 +233,7 @@ async function scenarioNext(workRoot, registryUrl) {
   await run(process.execPath, [cliJs, "init", "--yes", "--cwd", projDir], { cwd: projDir });
   await run(
     process.execPath,
-    [
-      cliJs,
-      "add",
-      "--yes",
-      "aurora-text",
-      "shimmer-button",
-      "framebits-logo-3d",
-      "--cwd",
-      projDir,
-      "--registry",
-      registryUrl,
-    ],
+    [cliJs, "add", "--yes", "framebits-logo-3d", "--cwd", projDir, "--registry", registryUrl],
     { cwd: projDir, timeout: 600000 },
   );
   writeFileSync(
@@ -357,18 +309,7 @@ async function scenarioVite(workRoot, registryUrl) {
   await run(process.execPath, [cliJs, "init", "--yes", "--cwd", projDir], { cwd: projDir });
   await run(
     process.execPath,
-    [
-      cliJs,
-      "add",
-      "--yes",
-      "aurora-text",
-      "shimmer-button",
-      "framebits-logo-3d",
-      "--cwd",
-      projDir,
-      "--registry",
-      registryUrl,
-    ],
+    [cliJs, "add", "--yes", "framebits-logo-3d", "--cwd", projDir, "--registry", registryUrl],
     { cwd: projDir, timeout: 600000 },
   );
   writeFileSync(
