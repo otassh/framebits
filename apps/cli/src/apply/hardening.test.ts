@@ -4,7 +4,7 @@ import type { CliConfig } from "@framebits/shared";
 
 function baseConfig(): CliConfig {
   return {
-    $schema: "https://framebits.dev/schema/config.json",
+    $schema: "https://framebits.trqsh.uz/schema/config.json",
     schemaVersion: 1,
     registry: "https://x/r",
     framework: "next",

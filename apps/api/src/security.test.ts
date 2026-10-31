@@ -35,7 +35,7 @@ describe("OAuth and session security", () => {
 
   it("keeps local return paths and removes stale authentication errors", () => {
     expect(
-      safeReturnTo("/components?q=aurora&auth_error=old#source", "https://framebits.dev"),
+      safeReturnTo("/components?q=aurora&auth_error=old#source", "https://framebits.trqsh.uz"),
     ).toBe("/components?q=aurora#source");
   });
 
@@ -53,7 +53,7 @@ describe("OAuth and session security", () => {
     "/components/../api/auth/github",
     `/${"x".repeat(2048)}`,
   ])("rejects unsafe return paths: %s", (path) => {
-    expect(safeReturnTo(path, "https://framebits.dev")).toBe("/");
+    expect(safeReturnTo(path, "https://framebits.trqsh.uz")).toBe("/");
   });
 
   it("ignores forwarded addresses unless the exact proxy depth is trusted", () => {

@@ -16,6 +16,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-31
+
+### Fixed
+
+- Resolve aliases from real JSONC project references and relative TypeScript
+  `extends` chains, including paths declared in nested configurations.
+- Honor explicit alias mappings and reject `baseUrl` configurations without an
+  import alias instead of installing files with unresolved imports.
+
+### Changed
+
+- Set `framebits.trqsh.uz` as the permanent production domain and default registry.
+- Verify packed CLI installs, dependency installation, generated production CSS,
+  idempotency, and conflict protection in fresh Next.js and Vite projects with
+  Tailwind 3 and 4 on Linux and Windows for every pull request.
+
 ## [0.1.0] - 2026-10-06
 
 ### Added

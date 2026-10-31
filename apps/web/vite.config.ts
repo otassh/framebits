@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { defineConfig, type AliasOptions } from "vite";
 import tailwindcss from "@tailwindcss/vite";
+import { SITE_DOMAIN } from "../../packages/shared/src/site.js";
 
 const webRoot = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
@@ -255,11 +256,11 @@ export default defineConfig({
     // Extra Host headers accepted by the dev server (Vite rejects unknown
     // hosts to prevent DNS-rebinding). Localhost and raw IPs stay allowed by
     // default; add tunnel/forwarding domains here. Never `true`.
-    allowedHosts: ["cxq6jgvy.trqsh.uz"],
+    allowedHosts: [SITE_DOMAIN],
   },
   preview: {
     port: 4173,
     // Same host allowlist for `vite preview` (it validates Host separately).
-    allowedHosts: ["cxq6jgvy.trqsh.uz"],
+    allowedHosts: [SITE_DOMAIN],
   },
 });

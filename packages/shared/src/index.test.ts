@@ -1,6 +1,7 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   CliConfigSchema,
+  CONFIG_SCHEMA_URL,
   DEFAULT_REGISTRY_URL,
   EventsRequestSchema,
   MAX_DEPTH,
@@ -11,7 +12,8 @@ import {
   MAX_SEMVER_LENGTH,
   MetaSchema,
   PAYLOAD_VERSION,
-  PLACEHOLDER_DOMAIN,
+  SITE_DOMAIN,
+  SITE_ORIGIN,
   PROJECT_NAME,
   RegistryIndexSchema,
   RegistryItemSchema,
@@ -42,8 +44,10 @@ describe("shared stub", () => {
   });
 
   it("defines the domain and default registry URL in one place", () => {
-    expect(PLACEHOLDER_DOMAIN).toBe("framebits.dev");
-    expect(DEFAULT_REGISTRY_URL).toBe(`https://${PLACEHOLDER_DOMAIN}/r`);
+    expect(SITE_DOMAIN).toBe("framebits.trqsh.uz");
+    expect(SITE_ORIGIN).toBe(`https://${SITE_DOMAIN}`);
+    expect(DEFAULT_REGISTRY_URL).toBe(`https://${SITE_DOMAIN}/r`);
+    expect(CONFIG_SCHEMA_URL).toBe(`${SITE_ORIGIN}/schema/config.json`);
   });
 
   it("defines the project name in one place", () => {

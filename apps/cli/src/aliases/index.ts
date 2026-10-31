@@ -4,6 +4,7 @@
  * `paths`, and falls back to referenced configs when `references` exist.
  */
 import { parse, type ParseError } from "jsonc-parser";
+import { MAX_TSCONFIG_DEPTH, TsconfigSchema, type Tsconfig } from "@framebits/shared";
 import { posix, win32 } from "node:path";
 import { configError } from "../errors.js";
 
@@ -24,47 +25,29 @@ export interface ResolvedAliases {
   };
 }
 
-interface TsconfigJson {
-  extends?: string | string[] | undefined;
-  compilerOptions?: {
-    baseUrl?: string | undefined;
-    paths?: Record<string, string[]> | undefined;
-  } | undefined;
-  references?: Array<{ path: string }> | undefined;
+interface TsconfigJson extends Tsconfig {
+  /** Directory of the config that declared paths (which may be inherited). */
+  pathsDir?: string | undefined;
 }
-
-const MAX_EXTENDS_DEPTH = 5;
 
 function toPosix(input: string): string {
   return input.split(win32.sep).join(posix.sep);
 }
 
 function normalizeAbsolute(root: string, target: string): string {
-  const posixRoot = toPosix(root).replace(/\/+$/, "");
   const posixTarget = toPosix(target);
-  if (posixTarget.startsWith("/")) return posixTarget;
-  const stacked = `${posixRoot}/${posixTarget}`;
-  const parts = stacked.split("/");
-  const out: string[] = [];
-  for (const part of parts) {
-    if (part === "" || part === ".") {
-      if (out.length === 0) out.push("");
-      continue;
-    }
-    if (part === "..") {
-      if (out.length > 1) out.pop();
-      continue;
-    }
-    out.push(part);
+  if (posixTarget.startsWith("/") || /^[A-Za-z]:\//.test(posixTarget)) {
+    return posix.normalize(posixTarget);
   }
-  return out.join("/") || "/";
+  return posix.normalize(`${toPosix(root)}/${posixTarget}`);
 }
 
 function isInside(root: string, candidate: string): boolean {
   const normalizedRoot = normalizeAbsolute("/", root);
   const normalizedCandidate = normalizeAbsolute("/", candidate);
-  return normalizedCandidate === normalizedRoot ||
-    normalizedCandidate.startsWith(`${normalizedRoot}/`);
+  return (
+    normalizedCandidate === normalizedRoot || normalizedCandidate.startsWith(`${normalizedRoot}/`)
+  );
 }
 
 function parseConfigText(text: string, file: string): TsconfigJson {
@@ -73,21 +56,25 @@ function parseConfigText(text: string, file: string): TsconfigJson {
   if (errors.length > 0 || typeof parsed !== "object" || parsed === null) {
     throw configError(`could not parse ${file}`, "fix the JSON syntax and re-run init");
   }
-  return parsed;
+  const result = TsconfigSchema.safeParse(parsed);
+  if (!result.success) {
+    throw configError(
+      `invalid TypeScript configuration in ${file}`,
+      "check extends, references, baseUrl, and paths",
+    );
+  }
+  return result.data;
 }
 
 function mergeConfigs(base: TsconfigJson, child: TsconfigJson): TsconfigJson {
-  const mergedPaths: Record<string, string[]> = {
-    ...(base.compilerOptions?.paths ?? {}),
-    ...(child.compilerOptions?.paths ?? {}),
-  };
   return {
     extends: child.extends,
     compilerOptions: {
       baseUrl: child.compilerOptions?.baseUrl ?? base.compilerOptions?.baseUrl,
-      paths: Object.keys(mergedPaths).length > 0 ? mergedPaths : undefined,
+      paths: child.compilerOptions?.paths ?? base.compilerOptions?.paths,
     },
-    references: child.references ?? base.references,
+    references: child.references,
+    pathsDir: child.pathsDir ?? base.pathsDir,
   };
 }
 
@@ -96,31 +83,45 @@ function resolveExtendsChain(
   startDir: string,
   fs: AliasFileSystem,
 ): TsconfigJson {
-  let current = parseConfigText(fs.readFile(startFile) ?? "", startFile);
-  const chain: TsconfigJson[] = [current];
-  let dir = startDir;
-  const seen = new Set<string>([startFile]);
-  for (let depth = 0; depth < MAX_EXTENDS_DEPTH; depth++) {
-    const ext = current.extends;
-    const first = Array.isArray(ext) ? ext[0] : ext;
-    if (typeof first !== "string" || first === "") break;
-    if (!first.startsWith(".")) break;
-    const withJson = first.endsWith(".json") ? first : `${first}.json`;
-    const nextFile = normalizeAbsolute(dir, withJson);
-    if (seen.has(nextFile)) break;
-    seen.add(nextFile);
-    const text = fs.readFile(nextFile);
-    if (text === undefined) break;
-    current = parseConfigText(text, nextFile);
-    chain.push(current);
-    const lastSlash = nextFile.lastIndexOf("/");
-    dir = lastSlash === -1 ? "." : nextFile.slice(0, lastSlash);
+  const visiting = new Set<string>();
+  function load(file: string, dir: string, depth: number): TsconfigJson {
+    if (depth > MAX_TSCONFIG_DEPTH || visiting.has(file)) {
+      throw configError(
+        "cyclic or too-deep TypeScript extends chain",
+        "keep relative extends acyclic and at most 5 levels deep",
+      );
+    }
+    visiting.add(file);
+    const current = parseConfigText(fs.readFile(file) ?? "", file);
+    let inherited: TsconfigJson = {};
+    const bases =
+      current.extends === undefined
+        ? []
+        : Array.isArray(current.extends)
+          ? current.extends
+          : [current.extends];
+    for (const base of bases) {
+      if (!base.startsWith(".")) continue;
+      const nextFile = normalizeAbsolute(dir, base.endsWith(".json") ? base : `${base}.json`);
+      const loaded = load(nextFile, posix.dirname(nextFile), depth + 1);
+      inherited = mergeConfigs(inherited, loaded);
+    }
+    const normalized: TsconfigJson = {
+      ...current,
+      compilerOptions: {
+        ...current.compilerOptions,
+        baseUrl:
+          current.compilerOptions?.baseUrl === undefined
+            ? undefined
+            : normalizeAbsolute(dir, current.compilerOptions.baseUrl),
+      },
+      pathsDir: current.compilerOptions?.paths === undefined ? undefined : dir,
+      references: current.references?.map((ref) => ({ path: normalizeAbsolute(dir, ref.path) })),
+    };
+    visiting.delete(file);
+    return mergeConfigs(inherited, normalized);
   }
-  let merged: TsconfigJson = {};
-  for (let i = chain.length - 1; i >= 0; i--) {
-    merged = mergeConfigs(merged, chain[i] as TsconfigJson);
-  }
-  return merged;
+  return load(startFile, startDir, 0);
 }
 
 function stripWildcard(pattern: string): { prefix: string; hasWildcard: boolean } {
@@ -155,10 +156,7 @@ export function resolveAliasesFromConfig(input: AliasResolutionInput): ResolvedA
   const startFile = normalizeAbsolute(configDir, configFile);
   const rawText = fs.readFile(startFile);
   if (rawText === undefined) {
-    throw configError(
-      `could not read ${configFile}`,
-      "re-run init inside the project directory",
-    );
+    throw configError(`could not read ${configFile}`, "re-run init inside the project directory");
   }
   let merged = resolveExtendsChain(startFile, configDir, fs);
   if (
@@ -168,21 +166,15 @@ export function resolveAliasesFromConfig(input: AliasResolutionInput): ResolvedA
     merged.references.length > 0
   ) {
     for (const ref of merged.references) {
-      const refFile = normalizeAbsolute(configDir, `${ref.path.replace(/\/+$/, "")}.json`);
-      const refAlt = normalizeAbsolute(configDir, ref.path);
-      const text = fs.readFile(refFile) ?? fs.readFile(refAlt);
-      if (text === undefined) continue;
-      const parsed = parseConfigText(text, refFile);
+      const refPath = normalizeAbsolute(configDir, ref.path.replace(/\/+$/, ""));
+      const actualFile = [refPath, `${refPath}.json`, `${refPath}/tsconfig.json`].find(
+        (path) => fs.readFile(path) !== undefined,
+      );
+      if (actualFile === undefined) continue;
+      const parsed = resolveExtendsChain(actualFile, posix.dirname(actualFile), fs);
       const paths = parsed.compilerOptions?.paths;
       if (paths !== undefined && Object.keys(paths).length > 0) {
-        merged = {
-          ...merged,
-          compilerOptions: {
-            ...merged.compilerOptions,
-            baseUrl: parsed.compilerOptions?.baseUrl ?? merged.compilerOptions?.baseUrl,
-            paths,
-          },
-        };
+        merged = mergeConfigs(merged, parsed);
         break;
       }
     }
@@ -193,29 +185,13 @@ export function resolveAliasesFromConfig(input: AliasResolutionInput): ResolvedA
   const found = new Map<string, string>();
 
   for (const [pattern, targets] of Object.entries(paths)) {
-    const { prefix, hasWildcard } = stripWildcard(pattern);
+    const { prefix } = stripWildcard(pattern);
     if (prefix === "") continue;
     const first = targets[0];
     if (first === undefined) continue;
-    const dir = targetToDir(projectRoot, configDir, baseUrl, hasWildcard ? first : first);
+    const dir = targetToDir(projectRoot, merged.pathsDir ?? configDir, baseUrl, first);
     if (dir === undefined) continue;
     if (!found.has(prefix)) found.set(prefix, dir);
-  }
-
-  if (baseUrl !== undefined && found.size === 0) {
-    const base = normalizeAbsolute(configDir, baseUrl);
-    if (isInside(projectRoot, base)) {
-      return {
-        components: "@/components/ui",
-        lib: "@/lib",
-        hooks: "@/hooks",
-        dirs: {
-          components: normalizeAbsolute(base, "components/ui"),
-          lib: normalizeAbsolute(base, "lib"),
-          hooks: normalizeAbsolute(base, "hooks"),
-        },
-      };
-    }
   }
 
   const atStar = found.get("@");
@@ -225,9 +201,9 @@ export function resolveAliasesFromConfig(input: AliasResolutionInput): ResolvedA
       lib: "@/lib",
       hooks: "@/hooks",
       dirs: {
-        components: normalizeAbsolute(atStar, "components/ui"),
-        lib: normalizeAbsolute(atStar, "lib"),
-        hooks: normalizeAbsolute(atStar, "hooks"),
+        components: found.get("@/components/ui") ?? normalizeAbsolute(atStar, "components/ui"),
+        lib: found.get("@/lib") ?? normalizeAbsolute(atStar, "lib"),
+        hooks: found.get("@/hooks") ?? normalizeAbsolute(atStar, "hooks"),
       },
     };
   }
@@ -241,9 +217,9 @@ export function resolveAliasesFromConfig(input: AliasResolutionInput): ResolvedA
       lib: `${prefix}/lib`,
       hooks: `${prefix}/hooks`,
       dirs: {
-        components: normalizeAbsolute(dir, "components/ui"),
-        lib: normalizeAbsolute(dir, "lib"),
-        hooks: normalizeAbsolute(dir, "hooks"),
+        components: found.get(`${prefix}/components/ui`) ?? normalizeAbsolute(dir, "components/ui"),
+        lib: found.get(`${prefix}/lib`) ?? normalizeAbsolute(dir, "lib"),
+        hooks: found.get(`${prefix}/hooks`) ?? normalizeAbsolute(dir, "hooks"),
       },
     };
   }
@@ -252,7 +228,7 @@ export function resolveAliasesFromConfig(input: AliasResolutionInput): ResolvedA
   const lib = found.get("@/lib") ?? found.get("~/lib");
   const hooks = found.get("@/hooks") ?? found.get("~/hooks");
   if (components !== undefined && lib !== undefined && hooks !== undefined) {
-    const basePrefix = components.startsWith("~/") ? "~" : "@";
+    const basePrefix = found.has("~/components/ui") ? "~" : "@";
     return {
       components: `${basePrefix}/components/ui`,
       lib: `${basePrefix}/lib`,
@@ -268,29 +244,24 @@ export function resolveAliasesFromConfig(input: AliasResolutionInput): ResolvedA
 }
 
 function tsconfigSnippet(): string {
-  return [
-    "{",
-    '  "compilerOptions": {',
-    '    "baseUrl": ".",',
-    '    "paths": { "@/*": ["./src/*"] }',
-    "  }",
-    "}",
-  ].join("\n");
+  return ["{", '  "compilerOptions": {', '    "paths": { "@/*": ["./src/*"] }', "  }", "}"].join(
+    "\n",
+  );
 }
 
 function viteSnippet(): string {
   return [
-    "import { defineConfig } from \"vite\";",
+    'import { defineConfig } from "vite";',
+    'import { fileURLToPath } from "node:url";',
     "",
     "export default defineConfig({",
-    "  resolve: { alias: { \"@\": \"/src\" } },",
+    '  resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },',
     "});",
   ].join("\n");
 }
 
 export function viteHint(isVite: boolean): string {
-  const base =
-    `add paths to tsconfig.json: ${tsconfigSnippet()}`;
+  const base = `add paths to tsconfig.json: ${tsconfigSnippet()}`;
   if (isVite) return `${base} and mirror it in vite.config.ts: ${viteSnippet()}`;
   return base;
 }

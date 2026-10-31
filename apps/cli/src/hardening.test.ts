@@ -47,9 +47,9 @@ describe("config mode preservation", () => {
     };
     const config = parseConfig(
       JSON.stringify({
-        $schema: "https://framebits.dev/schema/config.json",
+        $schema: "https://framebits.trqsh.uz/schema/config.json",
         schemaVersion: 1,
-        registry: "https://framebits.dev/r",
+        registry: "https://framebits.trqsh.uz/r",
         framework: "next",
         typescript: true,
         tailwind: { version: 3 },

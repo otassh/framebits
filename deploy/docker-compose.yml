@@ -7,7 +7,7 @@
 #
 # Required env (see deploy/README.md, never commit): POSTGRES_PASSWORD.
 # Optional: POSTGRES_USER/POSTGRES_DB (default framebits), DOMAIN
-# (default framebits.dev), GIT_SHA (image tags, default local).
+# (default framebits.trqsh.uz), GIT_SHA (image tags, default local).
 name: framebits
 
 networks:
@@ -34,7 +34,7 @@ services:
       - "80:80"
       - "443:443"
     environment:
-      DOMAIN: ${DOMAIN:-framebits.dev}
+      DOMAIN: ${DOMAIN:-framebits.trqsh.uz}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - /var/www:/var/www:ro
@@ -49,7 +49,7 @@ services:
     healthcheck:
       # Caddy only serves {$DOMAIN}; plain localhost Host would 404/mismatch,
       # so send the configured Host explicitly. $$ escapes Compose interpolation.
-      test: ["CMD-SHELL", "wget --header \"Host: $${DOMAIN:-framebits.dev}\" -qO- http://127.0.0.1:80/healthz || exit 1"]
+      test: ["CMD-SHELL", "wget --header \"Host: $${DOMAIN:-framebits.trqsh.uz}\" -qO- http://127.0.0.1:80/healthz || exit 1"]
       interval: 15s
       timeout: 5s
       start_period: 10s

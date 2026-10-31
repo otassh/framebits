@@ -5,7 +5,7 @@ const development = { DATABASE_URL: "postgres://framebits:local@localhost:5432/f
 const production = {
   ...development,
   NODE_ENV: "production",
-  WEB_ORIGIN: "https://framebits.dev",
+  WEB_ORIGIN: "https://framebits.trqsh.uz",
   GITHUB_CLIENT_ID: "test-client-id",
   GITHUB_CLIENT_SECRET: "test-client-secret-for-unit-tests",
   RATE_LIMIT_SECRET: "unit-test-rate-limit-secret-32-characters",
@@ -26,7 +26,7 @@ describe("API configuration", () => {
   it("builds the callback from the configured HTTPS origin", () => {
     expect(readConfig(production)).toMatchObject({
       secureCookies: true,
-      github: { callbackUrl: "https://framebits.dev/api/auth/github/callback" },
+      github: { callbackUrl: "https://framebits.trqsh.uz/api/auth/github/callback" },
     });
   });
 

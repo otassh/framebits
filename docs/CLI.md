@@ -38,11 +38,79 @@ Detection:
   usable alias → exit 2 with a `tsconfig.json` `paths` snippet (plus a Vite
   `resolve.alias` snippet when Vite is detected).
 
+Relative `extends` chains and referenced configs are read from the app directory
+as JSONC, including comments and trailing commas. Inherited paths and `baseUrl`
+are resolved relative to the config that declares them. Package-based extends
+and configs outside the app directory are not followed. A `baseUrl` without a
+`paths` alias does not define an `@/` alias.
+
 ### `add <slug...> [--overwrite] [--dry-run] [--yes] [--cwd <dir>] [--registry <url>] [--timeout <seconds>] [--debug]`
 
 `add` before `init` → exit 2 ("run `framebits init` first"). Slug args
 (`slug` or `slug@1.2.3`) are validated before any request. Exactly one network
 fetch per item.
+
+## Consumer project setup
+
+The permanent production registry is `https://framebits.trqsh.uz/r`. Override it
+with `init --registry <url>` when testing a locally hosted registry; subsequent
+`add` commands use the saved URL. Registry hosting must serve JSON at
+`/r/index.json` and `/r/<slug>.json`.
+
+For an existing project configured with the former placeholder domain, update
+the saved registry explicitly after upgrading the CLI:
+
+```sh
+pnpm dlx @framebits/cli init --yes --registry https://framebits.trqsh.uz/r
+```
+
+In a TypeScript React project with Tailwind configured:
+
+```sh
+pnpm dlx @framebits/cli init --yes
+pnpm dlx @framebits/cli add aurora-text shimmer-button --yes
+```
+
+Next.js projects generated with the `@/*` alias already have the required mapping.
+In Vite, add this to `compilerOptions` in `tsconfig.app.json`:
+
+```json
+"paths": { "@/*": ["./src/*"] }
+```
+
+Preserve the existing Vite plugins and add the corresponding bundler alias:
+
+```ts
+import { fileURLToPath } from "node:url";
+
+// Inside defineConfig({ ... }):
+resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } }
+```
+
+The CLI reads this configuration; it never rewrites executable build configs.
+For Tailwind 3, include `./src/**/*.{ts,tsx}` in the configured content paths.
+
+## Install verification
+
+Run `node apps/cli/scripts/e2e-real.mjs all` from the repository root. This packs
+the CLI and invokes its installed `framebits` bin in fresh Next.js App Router
+with Tailwind 4, Vite with Tailwind 3 (`@` alias), and Vite with Tailwind 4 (`~`
+alias) projects. All package operations use pnpm. It verifies:
+
+- Dry runs change no consumer files.
+- All three published components, their transitive `cn` helper, and their npm
+  dependencies install using the registry URL saved by `init`.
+- Repeated `init` and `add` leave a byte-identical project.
+- Conflicts preserve user changes; explicit `--overwrite` restores registry files.
+- Production builds import every component and include the Tailwind utilities,
+  `.animate-shimmer` class, and `@keyframes shimmer` in emitted CSS.
+- Each component also installs and builds alone in a fresh Vite/Tailwind 3
+  consumer, so another component cannot hide a missing dependency.
+
+The `e2e-real` workflow runs these scenarios on Linux and Windows for every pull
+request and push to main, and weekly. To run a single scenario, pass `next`,
+`vite3`, or `vite4` instead of `all`. These checks require npm-registry network
+access; the application registry itself is built locally and served over HTTP.
 
 ## Network timeout
 

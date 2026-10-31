@@ -1,6 +1,15 @@
 export const SHARED_PACKAGE_NAME = "@framebits/shared";
 
-export { DEFAULT_REGISTRY_URL, PLACEHOLDER_DOMAIN, PROJECT_NAME } from "./site.js";
+export {
+  CONFIG_SCHEMA_URL,
+  DEFAULT_REGISTRY_URL,
+  PROJECT_NAME,
+  SITE_DOMAIN,
+  SITE_ORIGIN,
+} from "./site.js";
+
+export { MAX_TSCONFIG_DEPTH, MAX_TSCONFIG_FILES, TsconfigSchema } from "./tsconfig.js";
+export type { Tsconfig } from "./tsconfig.js";
 
 export { ALLOWED_DEPENDENCIES, AllowedDependencySchema } from "./allowed-dependencies.js";
 export type { AllowedDependency } from "./allowed-dependencies.js";
@@ -90,11 +99,7 @@ export {
 } from "./paths.js";
 export type { RelativePath } from "./paths.js";
 
-export {
-  PreviewAssetPathSchema,
-  PreviewWebpSchema,
-  RegistryPreviewsSchema,
-} from "./preview.js";
+export { PreviewAssetPathSchema, PreviewWebpSchema, RegistryPreviewsSchema } from "./preview.js";
 export type { RegistryPreviews } from "./preview.js";
 
 export {
@@ -108,7 +113,13 @@ export {
   SCHEMA_VERSION,
   TailwindFragmentSchema,
 } from "./registry-item.js";
-export type { ComponentStyles, CssVars, RegistryFile, RegistryItem, TailwindFragment } from "./registry-item.js";
+export type {
+  ComponentStyles,
+  CssVars,
+  RegistryFile,
+  RegistryItem,
+  TailwindFragment,
+} from "./registry-item.js";
 
 export { RegistryIndexItemSchema, RegistryIndexSchema } from "./registry-index.js";
 export type { RegistryIndex, RegistryIndexItem } from "./registry-index.js";
@@ -132,11 +143,7 @@ export type {
   PlaygroundValues,
 } from "./playground.js";
 
-export {
-  MAX_SEARCH_INDEX_KEYS,
-  SearchIndexDocSchema,
-  SearchIndexSchema,
-} from "./search-index.js";
+export { MAX_SEARCH_INDEX_KEYS, SearchIndexDocSchema, SearchIndexSchema } from "./search-index.js";
 export type { SearchIndex, SearchIndexDoc } from "./search-index.js";
 
 export {

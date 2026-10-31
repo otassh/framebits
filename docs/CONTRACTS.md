@@ -2,9 +2,11 @@
 
 > Source of truth for validation: Zod schemas in `packages/shared/src/`.
 > This document mirrors the code; if they ever disagree,
-> the code wins and this doc must be fixed. All schemas are `.strict()`
-> (unknown keys rejected) with inferred `z.infer` types. Brand constants live in
-> `src/site.ts` (`PROJECT_NAME`, `PLACEHOLDER_DOMAIN`, `DEFAULT_REGISTRY_URL`).
+> the code wins and this doc must be fixed. Registry and CLI configuration schemas
+> reject unknown keys, with inferred `z.infer` types. `TsconfigSchema` validates
+> the detection fields and ignores unrelated TypeScript options. Brand constants
+> live in `src/site.ts` (`PROJECT_NAME`, `SITE_DOMAIN`, `SITE_ORIGIN`,
+> `DEFAULT_REGISTRY_URL`, `CONFIG_SCHEMA_URL`).
 
 ## Schemas
 

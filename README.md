@@ -23,6 +23,10 @@
 
 ## 🚀 Quick start
 
+Use a TypeScript React project with Tailwind and an import alias configured.
+The default registry is `https://framebits.trqsh.uz/r`. Vite projects need the
+alias in both TypeScript and Vite; see the [consumer setup guide](docs/CLI.md#consumer-project-setup).
+
 ```sh
 npx @framebits/cli init
 npx @framebits/cli add aurora-text
@@ -102,6 +106,7 @@ Not built yet: Task 6 (Docker/Caddy/deploy), Task 7 (`packages/db`), Task 8 (`ap
 - [Changelog](https://otassh.github.io/framebits/) — every release, rendered from [`CHANGELOG.md`](CHANGELOG.md)
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — how to add a component (generator: `pnpm new-component <slug> --category=<cat>`)
 - [`docs/CLI.md`](docs/CLI.md) — commands, target mapping, security model
+- [`docs/CLI_COMPARISON.md`](docs/CLI_COMPARISON.md) — React Bits comparison and real consumer install verification
 - [`docs/CONTRACTS.md`](docs/CONTRACTS.md) — schemas and registry contracts
 - [`deploy/README.md`](deploy/README.md) — VPS setup, hardening, backup/restore
 

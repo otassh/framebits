@@ -112,7 +112,7 @@ wait_for() {
   return 1
 }
 
-DOMAIN="${DOMAIN:-framebits.dev}"
+DOMAIN="${DOMAIN:-framebits.trqsh.uz}"
 if ! wait_for "https://$DOMAIN/r/index.json" "registry"; then
   log "registry health check failed; rolling back"
   bash "deploy/rollback.sh"
