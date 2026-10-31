@@ -15,6 +15,6 @@ export const DOC_NAV: readonly DocNavItem[] = [
 
 export const DOC_COMMANDS = {
   init: "npx @framebits/cli init",
-  add: "npx @framebits/cli add aurora-text",
-  dryRun: "npx @framebits/cli add aurora-text --dry-run",
+  add: "npx @framebits/cli add framebits-logo-3d",
+  dryRun: "npx @framebits/cli add framebits-logo-3d --dry-run",
 } as const;

@@ -179,7 +179,7 @@ try {
   const registry = await response.json();
   const items = activeComponents(registry);
   assert(items.length > 0, "registry must contain a component");
-  const demo = items.find((item) => item.slug === "aurora-text") ?? items[0];
+  const demo = items.find((item) => item.slug === "framebits-logo-3d") ?? items[0];
   await mkdir(outputDir, { recursive: true });
   browser = await chromium.launch({
     headless: true,
@@ -314,6 +314,10 @@ try {
   await assertCurrent(page, `/components/${demo.slug}`);
   await page.getByRole("button", { name: "Component list", exact: true }).click();
   await page.setViewportSize({ width: 1280, height: 800 });
+  await page.waitForFunction(
+    () =>
+      document.querySelector(".component-browser-toggle").getAttribute("aria-expanded") === "false",
+  );
   await page.locator(".component-browser-link[aria-current='page']").focus();
   await page.setViewportSize({ width: 390, height: 844 });
   await page
@@ -324,6 +328,9 @@ try {
       .getByRole("button", { name: "Component list", exact: true })
       .getAttribute("aria-expanded"),
     "false",
+  );
+  await page.waitForFunction(
+    () => document.activeElement === document.querySelector(".component-browser-toggle"),
   );
   assert.equal(
     await page

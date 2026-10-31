@@ -3,7 +3,7 @@
  * temp dirs, init + add through the real command functions. No external network.
  */
 import { createServer, type Server } from "node:http";
-import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { cp, mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,6 +18,7 @@ const repoRoot = fileURLToPath(new URL("../../..", import.meta.url));
 const registrySource = join(repoRoot, "registry");
 
 let outDir = "";
+let fixtureRoot = "";
 let server: Server | undefined;
 let baseUrl = "";
 let previousCwd = "";
@@ -242,9 +243,63 @@ const NO_ALIAS: Record<string, string> = {
 beforeAll(async () => {
   previousCwd = process.cwd();
   outDir = await mkdtemp(join(tmpdir(), "cli-registry-"));
+  fixtureRoot = await mkdtemp(join(tmpdir(), "cli-registry-source-"));
+  await cp(registrySource, fixtureRoot, { recursive: true });
+  // Synthetic items exercise dependency resolution and CSS installation without
+  // requiring the public catalog to ship text and button demos.
+  const fixtureMeta = {
+    type: "component",
+    tags: [],
+    description: "Synthetic component for CLI installation coverage.",
+    registryDependencies: ["cn"],
+    difficulty: "easy",
+    performance: "light",
+    status: "published",
+    addedAt: "2026-10-05",
+  };
+  const fixtureFiles: Record<string, string> = {
+    "text-animations/aurora-text/meta.json": JSON.stringify({
+      ...fixtureMeta,
+      slug: "aurora-text",
+      title: "Test text",
+      category: "text-animations",
+      dependencies: { motion: "^14.0.0" },
+    }),
+    "text-animations/aurora-text/aurora-text.tsx":
+      'import { motion } from "motion/react";\nimport { cn } from "@/lib/cn";\nexport function AuroraText() { return <motion.span className={cn("fixture")} />; }\n',
+    "text-animations/aurora-text/demo.tsx":
+      'import { AuroraText } from "./aurora-text";\nexport default function Demo() { return <AuroraText />; }\n',
+    "buttons/shimmer-button/meta.json": JSON.stringify({
+      ...fixtureMeta,
+      slug: "shimmer-button",
+      title: "Test button",
+      category: "buttons",
+      dependencies: {},
+    }),
+    "buttons/shimmer-button/shimmer-button.tsx":
+      'import { cn } from "@/lib/cn";\nexport function ShimmerButton() { return <button className={cn("animate-shimmer")} />; }\n',
+    "buttons/shimmer-button/demo.tsx":
+      'import { ShimmerButton } from "./shimmer-button";\nexport default function Demo() { return <ShimmerButton />; }\n',
+    "buttons/shimmer-button/styles.json": JSON.stringify({
+      tailwind: {
+        keyframes: {
+          shimmer: {
+            from: { "background-position": "200% 0" },
+            to: { "background-position": "-200% 0" },
+          },
+        },
+        animation: { shimmer: "shimmer 2s linear infinite" },
+      },
+    }),
+  };
+  for (const [rel, content] of Object.entries(fixtureFiles)) {
+    const file = join(fixtureRoot, "components", rel);
+    await mkdir(join(file, ".."), { recursive: true });
+    await writeFile(file, content, "utf8");
+  }
   const { loadRegistry } = await import("@framebits/builder");
   const { buildTree } = await import("../../../packages/builder/src/registry/emit.js");
-  const loaded = await loadRegistry({ registryRoot: registrySource, skipTypecheck: true });
+  const loaded = await loadRegistry({ registryRoot: fixtureRoot, skipTypecheck: true });
   if (loaded.diagnostics.some((d) => d.severity === "error")) {
     throw new Error("sample registry failed to load");
   }
@@ -298,18 +353,19 @@ beforeAll(async () => {
   baseUrl = `http://127.0.0.1:${String(port)}/r`;
 }, 120000);
 
-afterAll(() => {
+afterAll(async () => {
   process.chdir(previousCwd);
   if (server !== undefined) {
     const active: Server = server;
-    return new Promise<void>((resolveServer) => {
+    await new Promise<void>((resolveServer) => {
       active.close(() => {
         resolveServer();
       });
-    }).then(() => rm(outDir, { recursive: true, force: true }));
+    });
   }
-  if (outDir !== "") return rm(outDir, { recursive: true, force: true });
-  return Promise.resolve();
+  for (const root of [outDir, fixtureRoot]) {
+    if (root !== "") await rm(root, { recursive: true, force: true });
+  }
 });
 
 async function initProject(dir: string, registry: string): Promise<void> {

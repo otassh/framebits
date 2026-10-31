@@ -177,21 +177,6 @@
 .component-ledger .card-preview .preview-generated img {
   object-fit: contain;
 }
-.component-ledger .card-preview-aurora-text {
-  --card-demo-font: 1.5rem;
-}
-.component-ledger .card-preview-aurora-text .preview-live {
-  font-size: var(--card-demo-font);
-}
-.component-ledger .component-card .card-preview-shimmer-button .preview-generated img {
-  width: 780px;
-}
-.component-ledger .card-preview-shimmer-button .preview-live > div {
-  width: max-content;
-  max-width: none;
-  flex-wrap: nowrap;
-  transform: scale(0.65);
-}
 .component-ledger .card-preview-framebits-logo-3d .preview-live {
   padding: 0;
 }
@@ -690,15 +675,6 @@
   .component-ledger .component-card .card-preview {
     grid-column: 2;
     height: 86px;
-  }
-  .component-ledger .card-preview-aurora-text {
-    --card-demo-font: 1rem;
-  }
-  .component-ledger .component-card .card-preview-shimmer-button .preview-generated img {
-    width: 480px;
-  }
-  .component-ledger .card-preview-shimmer-button .preview-live > div {
-    transform: scale(0.4);
   }
   .component-ledger .card-preview .preview-live {
     padding: 0.25rem;

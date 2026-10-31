@@ -27,7 +27,7 @@ const PINS = {
   postcss: "8.5.29",
   autoprefixer: "10.6.1",
 };
-const SLUGS = ["aurora-text", "shimmer-button", "framebits-logo-3d"];
+const SLUGS = ["framebits-logo-3d"];
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 
 function log(message) {
@@ -136,16 +136,6 @@ function closeServer(server) {
 function demoSource(alias, slugs = SLUGS) {
   const demos = [
     {
-      slug: "aurora-text",
-      name: "AuroraText",
-      jsx: '<AuroraText text="Framebits consumer test" />',
-    },
-    {
-      slug: "shimmer-button",
-      name: "ShimmerButton",
-      jsx: '<ShimmerButton label="Install verified" />',
-    },
-    {
       slug: "framebits-logo-3d",
       name: "FrameBitsLogo3D",
       jsx: '<FrameBitsLogo3D quality="low" intro={false} style={{ height: 300 }} />',
@@ -176,7 +166,7 @@ async function verifyStandalone(workRoot, baseline, tools, registryUrl) {
       cwd: tools,
     });
     const config = JSON.parse(readFileSync(join(project, "framebits.json"), "utf8"));
-    const expected = slug === "framebits-logo-3d" ? [slug] : [slug, "cn"];
+    const expected = [slug];
     assert.deepEqual(Object.keys(config.installed).sort(), expected.sort());
     writeFileSync(join(project, "src", "App.tsx"), demoSource("@", [slug]));
     await run("pnpm", ["run", "build"], { cwd: project });
@@ -196,7 +186,7 @@ async function installAndVerify(project, tools, registryUrl, alias, tailwind, fr
 
   const before = snapshot(project);
   const dryRun = await cli(["add", ...SLUGS, "--dry-run", "--yes"]);
-  assert(dryRun.stdout.includes("patch-css"), "dry run must include the CSS plan");
+  assert(dryRun.stdout.includes("framebits-logo-3d"), "dry run must include the logo install plan");
   assert.deepEqual(snapshot(project), before, "dry run must leave the consumer untouched");
   // No --registry here: exercise the URL saved by init, using the packed bin.
   await cli(["add", ...SLUGS, "--yes"]);
@@ -206,20 +196,9 @@ async function installAndVerify(project, tools, registryUrl, alias, tailwind, fr
       `${slug} must be installed`,
     );
   }
-  assert(
-    existsSync(join(project, "src", "lib", "cn.ts")),
-    "transitive registry helper must be installed",
-  );
   const installedConfig = JSON.parse(readFileSync(join(project, "framebits.json"), "utf8"));
-  assert.deepEqual(Object.keys(installedConfig.installed).sort(), [...SLUGS, "cn"].sort());
-  for (const dep of [
-    "motion",
-    "clsx",
-    "tailwind-merge",
-    "three",
-    "@types/three",
-    "@react-three/fiber",
-  ]) {
+  assert.deepEqual(Object.keys(installedConfig.installed).sort(), [...SLUGS].sort());
+  for (const dep of ["three", "@types/three", "@react-three/fiber"]) {
     assert(existsSync(join(project, "node_modules", dep)), `missing consumer dependency ${dep}`);
   }
 
@@ -228,7 +207,7 @@ async function installAndVerify(project, tools, registryUrl, alias, tailwind, fr
   await cli(["add", ...SLUGS, "--yes"]);
   assert.deepEqual(snapshot(project), installed, "repeat init and add must be byte-identical");
 
-  const component = join(project, "src", "components", "ui", "aurora-text.tsx");
+  const component = join(project, "src", "components", "ui", "framebits-logo-3d.tsx");
   const original = readFileSync(component, "utf8");
   writeFileSync(component, `${original}\n// Consumer customization\n`);
   const customized = snapshot(project);
@@ -249,10 +228,8 @@ function verifyBuiltCss(buildRoot) {
   const css = filesUnder(buildRoot, ".css")
     .map((path) => readFileSync(path, "utf8"))
     .join("\n");
-  assert.match(css, /@keyframes shimmer\s*\{/, "missing shimmer keyframes in production CSS");
-  assert.match(css, /\.animate-shimmer\s*\{/, "missing shimmer animation class in production CSS");
-  assert.match(css, /\.bg-clip-text\s*\{/, "missing component Tailwind utility in production CSS");
-  log("ok: production CSS contains component utilities, shimmer animation class, and keyframes");
+  assert(css.trim().length > 0, "production build must emit consumer styles");
+  log("ok: production build contains consumer styles");
 }
 
 async function scenarioNext(workRoot, tools, registryUrl) {

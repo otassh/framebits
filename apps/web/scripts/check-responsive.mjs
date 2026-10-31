@@ -30,15 +30,7 @@ const viewports = [
   [1440, 900],
   [1920, 1080],
 ];
-const routes = [
-  "/",
-  "/components",
-  "/docs",
-  "/components/aurora-text",
-  "/components/shimmer-button",
-  "/components/framebits-logo-3d",
-  "/missing-page",
-];
+const routes = ["/", "/components", "/docs", "/components/framebits-logo-3d", "/missing-page"];
 let server;
 let browser;
 let serverOutput = "";
@@ -96,9 +88,11 @@ async function openPage(page, baseUrl, route) {
   await page.locator("h1").waitFor();
   if (route === "/components") await page.locator(".component-card").first().waitFor();
   if (route.startsWith("/components/")) await page.locator(".component-workspace").waitFor();
-  if (route === "/components/aurora-text") await page.locator(".preview-live > span").waitFor();
-  if (route === "/components/shimmer-button")
-    await page.locator(".preview-live button").first().waitFor();
+  if (route === "/components/framebits-logo-3d")
+    await page
+      .locator(".preview-live canvas, .preview-live svg, .preview-live img")
+      .first()
+      .waitFor();
   await page.evaluate(() => document.fonts.ready);
 }
 
@@ -234,10 +228,10 @@ try {
         assert.equal(await page.locator(".preview-live").count(), 0, "hidden demos stop rendering");
         await assertLayout(page, `${width}px ${route} source view`);
         await preview.click();
-        if (route === "/components/aurora-text")
-          await page.locator(".preview-live > span").waitFor();
-        if (route === "/components/shimmer-button")
-          await page.locator(".preview-live button").first().waitFor();
+        await page
+          .locator(".preview-live canvas, .preview-live svg, .preview-live img")
+          .first()
+          .waitFor();
       }
       if (route === "/" && width <= 600) {
         const actions = await page.locator(".hero-actions").boundingBox();
@@ -250,7 +244,7 @@ try {
       }
       if (
         [320, 820, 1440].includes(width) &&
-        ["/", "/components", "/docs", "/components/aurora-text"].includes(route)
+        ["/", "/components", "/docs", "/components/framebits-logo-3d"].includes(route)
       ) {
         await page.screenshot({
           path: join(outputDir, `${width}-${route.replaceAll("/", "_")}.png`),
@@ -269,35 +263,26 @@ try {
   await page.setViewportSize({ width: 390, height: 844 });
   await openPage(page, baseUrl, "/components");
   const search = page.getByRole("searchbox", { name: "Search components" });
-  await search.fill("aurora");
+  await search.fill("framebits");
   await page.waitForFunction(() => document.querySelectorAll(".component-card").length === 1);
   await search.fill("no-such-component");
   await page.getByRole("heading", { name: "No matching components" }).waitFor();
   await assertLayout(page, "mobile empty search");
   await page.getByRole("button", { name: "Reset filters" }).click();
   assert.equal(await search.inputValue(), "");
-  await page.getByRole("button", { name: "Text Animations" }).click();
+  await page.getByRole("button", { name: "3D" }).click();
   await page.waitForFunction(() => document.querySelectorAll(".component-card").length === 1);
-  await openPage(page, baseUrl, "/components/shimmer-button");
-  const demoButton = page.locator(".preview-live button").first();
-  const demoStyles = await demoButton.evaluate((el) => {
-    const style = getComputedStyle(el);
-    return {
-      radius: style.borderRadius,
-      padding: style.paddingLeft,
-      animation: style.animationName,
-    };
-  });
-  assert.notEqual(demoStyles.radius, "0px", "live demo Tailwind utilities must load");
-  assert.notEqual(demoStyles.padding, "0px", "live demo button spacing must load");
-  await openPage(page, baseUrl, "/components/aurora-text");
-  const textStyle = await page
-    .locator(".preview-live > span")
-    .evaluate((el) => getComputedStyle(el).backgroundClip);
-  assert.equal(textStyle, "text", "live gradient demo must apply its text clipping utility");
-  await openPage(page, baseUrl, "/components/shimmer-button");
+  await openPage(page, baseUrl, "/components/framebits-logo-3d");
+  const logoPreview = page
+    .locator(".preview-live canvas, .preview-live svg, .preview-live img")
+    .first();
+  assert.equal(
+    await logoPreview.isVisible(),
+    true,
+    "logo preview or its WebGL fallback is visible",
+  );
   const source = await page.evaluate(async () => {
-    const response = await fetch("/r/shimmer-button.json");
+    const response = await fetch("/r/framebits-logo-3d.json");
     return (await response.json()).files[0].content;
   });
   await page.getByRole("button", { name: "Copy source", exact: true }).click();
@@ -414,19 +399,20 @@ try {
     await touchPage.getByRole("searchbox").evaluate((el) => getComputedStyle(el).fontSize),
     "16px",
   );
-  await openPage(touchPage, baseUrl, "/components/shimmer-button");
-  assert.notEqual(
-    await touchPage
-      .locator(".preview-live button")
-      .first()
-      .evaluate((el) => getComputedStyle(el).animationName),
-    "none",
-    "default preview animates",
+  await openPage(touchPage, baseUrl, "/components/framebits-logo-3d");
+  const touchPreview = touchPage
+    .locator(".preview-live canvas, .preview-live svg, .preview-live img")
+    .first();
+  await touchPreview.waitFor();
+  assert.equal(
+    await touchPreview.isVisible(),
+    true,
+    "touch preview renders the logo or its fallback",
   );
   await touchPage.getByRole("tab", { name: "Code", exact: true }).tap();
   await touchPage.locator(".code-panel pre").waitFor();
   await touchPage.getByRole("tab", { name: "Preview", exact: true }).tap();
-  await touchPage.locator(".preview-live button").first().waitFor();
+  await touchPreview.waitFor();
   await touchContext.close();
   checks++;
 

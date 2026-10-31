@@ -7,7 +7,7 @@
  * clean temp dir with pnpm -> run `framebits --version` and `--help` (direct
  * node invocation and npx-style) -> build a real registry with the builder,
  * serve it over local http, init a fixture project with the packed binary and
- * run `framebits add aurora-text --dry-run` (exit 0, project untouched).
+ * run `framebits add framebits-logo-3d --dry-run` (exit 0, project untouched).
  *
  * Public organization-scoped package (MIT): this script
  * never publishes. It only packs and installs locally. The LICENSE in the
@@ -324,9 +324,9 @@ try {
   );
   process.stdout.write(`${built.stdout}`);
   const indexFile = join(registryOutDir, "r", "index.json");
-  const itemFile = join(registryOutDir, "r", "aurora-text.json");
+  const itemFile = join(registryOutDir, "r", "framebits-logo-3d.json");
   if (!existsSync(indexFile) || !existsSync(itemFile)) {
-    throw new Error("builder output is missing r/index.json or r/aurora-text.json");
+    throw new Error("builder output is missing r/index.json or r/framebits-logo-3d.json");
   }
 
   const { server, baseUrl } = await serveDirectory(registryOutDir);
@@ -359,23 +359,23 @@ try {
     const before = snapshotDir(projectDir);
     const add = await runAsync(
       asCommand,
-      [...asArgs, "add", "aurora-text", "--dry-run", "--yes", "--registry", baseUrl],
+      [...asArgs, "add", "framebits-logo-3d", "--dry-run", "--yes", "--registry", baseUrl],
       { cwd: projectDir },
     );
-    if (!add.stdout.toLowerCase().includes("aurora-text")) {
+    if (!add.stdout.toLowerCase().includes("framebits-logo-3d")) {
       throw new Error(
-        `add --dry-run output does not mention aurora-text:\nstdout:\n${add.stdout}\nstderr:\n${add.stderr}`,
+        `add --dry-run output does not mention framebits-logo-3d:\nstdout:\n${add.stdout}\nstderr:\n${add.stderr}`,
       );
     }
     if (!snapshotsEqual(before, snapshotDir(projectDir))) {
       throw new Error("add --dry-run modified the project directory (must write nothing)");
     }
-    process.stdout.write("clean-room add aurora-text --dry-run against local registry: OK\n");
+    process.stdout.write("clean-room add framebits-logo-3d --dry-run against local registry: OK\n");
 
     // 8. Force a real overwrite so the packed binary must create a backup.
     // The journal belongs in a unique OS-temp directory, never beside the
     // installed package, and must be removed after the transaction succeeds.
-    const componentTarget = join(projectDir, "src", "components", "ui", "aurora-text.tsx");
+    const componentTarget = join(projectDir, "src", "components", "ui", "framebits-logo-3d.tsx");
     mkdirSync(dirname(componentTarget), { recursive: true });
     writeFileSync(componentTarget, "export const conflict = true;\n", "utf8");
     await runAsync(
@@ -383,7 +383,7 @@ try {
       [
         ...asArgs,
         "add",
-        "aurora-text",
+        "framebits-logo-3d",
         "--overwrite",
         "--no-install",
         "--yes",
@@ -405,7 +405,7 @@ try {
     if (journalEntries.length > 0) {
       throw new Error(`packed CLI left OS-temp journal entries: ${journalEntries.join(", ")}`);
     }
-    if (!readFileSync(componentTarget, "utf8").includes("AuroraText")) {
+    if (!readFileSync(componentTarget, "utf8").includes("FrameBitsLogo3D")) {
       throw new Error("packed CLI did not overwrite the fixture component");
     }
     process.stdout.write("clean-room real add cleans its isolated transaction journal: OK\n");
