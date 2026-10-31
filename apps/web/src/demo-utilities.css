@@ -2,16 +2,3 @@
 @import "tailwindcss/theme.css";
 @import "tailwindcss/utilities.css" source(none);
 @source "../../../registry/components";
-
-@theme {
-  --animate-shimmer: framebits-shimmer 2s linear infinite;
-
-  @keyframes framebits-shimmer {
-    from {
-      background-position: 200% 0;
-    }
-    to {
-      background-position: -200% 0;
-    }
-  }
-}

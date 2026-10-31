@@ -15,16 +15,16 @@ const state: IndexState = {
     generatedAt: "2026-10-08T10:00:00.000Z",
     items: [
       {
-        slug: "aurora-text",
+        slug: "framebits-logo-3d",
         type: "component",
-        title: "Aurora Text",
-        category: "text-animations",
-        tags: ["gradient"],
-        description: "Animated gradient text for React interfaces.",
+        title: "FrameBits Logo 3D",
+        category: "3d",
+        tags: ["logo"],
+        description: "Interactive 3D FrameBits emblem for React interfaces.",
         version: "1.0.0",
         hash: `sha256:${"0".repeat(64)}`,
-        performance: "light",
-        difficulty: "easy",
+        performance: "heavy",
+        difficulty: "hard",
         addedAt: "2026-10-08",
       },
     ],
@@ -37,7 +37,7 @@ describe("public pages", () => {
     expect(html).toContain('href="/components"');
     expect(html).toContain('href="/docs"');
     expect(html).toContain('class="hero-ballpit"');
-    expect(html).toContain('href="/components/aurora-text"');
+    expect(html).toContain('href="/components/framebits-logo-3d"');
     expect(html).not.toContain('class="destination-card"');
     expect(html).not.toContain('type="search"');
     expect(html).not.toContain("npx @framebits/cli init");
@@ -47,7 +47,7 @@ describe("public pages", () => {
     const html = renderToStaticMarkup(createElement(CatalogPage, { state, retry: () => {} }));
     expect(html).toContain('type="search"');
     expect(html).toContain('aria-label="Filter by category"');
-    expect(html).toContain('href="/components/aurora-text"');
+    expect(html).toContain('href="/components/framebits-logo-3d"');
     expect(html).not.toContain('class="hero"');
     expect(html).not.toContain('class="hero-ballpit"');
     expect(html).not.toContain("Initialize your project");
@@ -68,7 +68,7 @@ describe("public pages", () => {
   it("renders setup independently of the live registry", () => {
     const html = renderToStaticMarkup(createElement(DocsPage));
     expect(html).toContain("npx @framebits/cli init");
-    expect(html).toContain("npx @framebits/cli add aurora-text");
+    expect(html).toContain("npx @framebits/cli add framebits-logo-3d");
     expect(html).toContain('id="cli-options"');
     expect(html).toContain('aria-label="Quick commands"');
     expect(html).toContain("The published CLI needs a registry compatibility update.");
@@ -83,7 +83,7 @@ describe("public pages", () => {
   it.each([
     [{ kind: "home" } as const, "/"],
     [{ kind: "catalog" } as const, "/components"],
-    [{ kind: "component", slug: "aurora-text" } as const, "/components"],
+    [{ kind: "component", slug: "framebits-logo-3d" } as const, "/components"],
     [{ kind: "docs" } as const, "/docs"],
   ])("marks the current navigation destination for %j", (route, href) => {
     const html = renderToStaticMarkup(createElement(Header, { route }));
